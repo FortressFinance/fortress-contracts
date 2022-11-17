@@ -253,7 +253,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
         _mint(_receiver, _shares);
 
-        _costumDeposit(_assets);
+        _customDeposit(_assets);
 
         emit Deposit(_caller, _receiver, _assets, _shares);
     }
@@ -274,22 +274,19 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _burn(_owner, _shares);
         
         if (totalSupply == 0) {
-            if (isPendingRewards()) {
-                revert NoPendingRewards();
-            }
             _assets = totalAssets();
         }
 
-        _costumWithdraw(_assets);
+        _customWithdraw(_assets);
         
         emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
     }
 
     function _harvest(address _recipient, uint256 _minimumOut) internal virtual returns (uint256) {}
 
-    function _costumDeposit(uint256 _assets) internal virtual {}
+    function _customDeposit(uint256 _assets) internal virtual {}
 
-    function _costumWithdraw(uint256 _assets) internal virtual {}
+    function _customWithdraw(uint256 _assets) internal virtual {}
 
     /********************************** Events **********************************/
 

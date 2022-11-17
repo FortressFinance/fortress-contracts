@@ -118,8 +118,6 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
 
         // ---------------- redeem ---------------
 
-        skip(216000);
-
         shares = auraBALCompounder.balanceOf(address(alice));
         vm.prank(alice);
         aliceAmountOut = auraBALCompounder.redeem(shares, address(alice), address(alice));
@@ -232,8 +230,6 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
 
         // ---------------- redeem ---------------
 
-        skip(216000);
-
         shares = auraBALCompounder.balanceOf(address(alice));
         vm.prank(alice);
         aliceAmountOut = auraBALCompounder.redeem(shares, address(alice), address(alice));
@@ -271,6 +267,8 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
         // Fast forward 1 month
         skip(216000);
         assertEq(auraBALCompounder.isPendingRewards(), false, "testDeposit: E42");
+        console.log("totalAssets: ", auraBALCompounder.totalAssets());
+        console.log("totalSupply: ", auraBALCompounder.totalSupply());
     }
 
     function testWithdraw(uint256 _amount) public {
@@ -342,8 +340,6 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
 
         // ---------------- withdraw ----------------
 
-        skip(216000);
-
         shares = auraBALCompounder.balanceOf(address(alice));
         uint256 assetsClaim = auraBALCompounder.previewRedeem(shares);
         vm.prank(alice);
@@ -367,18 +363,14 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
         vm.prank(charlie);
         charlieAmountOut = auraBALCompounder.withdraw(assetsClaim, address(charlie), address(charlie));
         
-        assertEq(IERC20(auraBAL).balanceOf(address(charlie)), assetsClaim, "testWithdraw: E24");
-        assertApproxEqAbs(IERC20(auraBAL).balanceOf(address(charlie)), charlieAmountOut, 1e18, "testWithdraw: E25");
-        assertApproxEqAbs(auraBALCompounder.balanceOf(address(charlie)), 0, 1e16, "testWithdraw: E26");
+        assertEq(IERC20(auraBAL).balanceOf(address(charlie)), assetsClaim, "testWithdraw: E26");
+        assertApproxEqAbs(IERC20(auraBAL).balanceOf(address(charlie)), charlieAmountOut, 1e20, "testWithdraw: E27");
+        assertApproxEqAbs(auraBALCompounder.balanceOf(address(charlie)), 0, 1e16, "testWithdraw: E28");
         
-        assertApproxEqAbs(aliceAmountOut, bobAmountOut, 1e19, "testWithdraw: E27");
-        assertApproxEqAbs(aliceAmountOut, charlieAmountOut, 1e19, "testWithdraw: E28");
-        assertApproxEqAbs(auraBALCompounder.totalAssets(), 0, 1e18, "testWithdraw: E29");
-        assertApproxEqAbs(auraBALCompounder.totalSupply(), 0, 1e18, "testWithdraw: E30");
-        
-        // Fast forward 1 month
-        skip(216000);
-        assertEq(auraBALCompounder.isPendingRewards(), false, "testWithdraw: E31");
+        assertApproxEqAbs(aliceAmountOut, bobAmountOut, 1e19, "testWithdraw: E29");
+        assertApproxEqAbs(aliceAmountOut, charlieAmountOut, 1e19, "testWithdraw: E30");
+        assertApproxEqAbs(auraBALCompounder.totalAssets(), 0, 1e18, "testWithdraw: E31");
+        assertApproxEqAbs(auraBALCompounder.totalSupply(), 0, 1e18, "testWithdraw: E32");
     }
 
     function testRedeemUnderlying(uint256 _amount) public {
@@ -449,8 +441,6 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
         assertEq(auraBALCompounder.totalSupply(), accumulatedShares, "testRedeemUnderlying: E19");
 
         // ---------------- redeem ---------------
-
-        skip(216000);
 
         shares = auraBALCompounder.balanceOf(address(alice));
         vm.prank(alice);

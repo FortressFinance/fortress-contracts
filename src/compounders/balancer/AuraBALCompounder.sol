@@ -94,11 +94,11 @@ contract AuraBALCompounder is BalancerOperations, TokenCompounderBase {
 
     /********************************** Internal Functions **********************************/
 
-    function _costumDeposit(uint256 _assets) internal override {
+    function _customDeposit(uint256 _assets) internal override {
         IAuraBALRewards(auraBAL_STAKING).stake(_assets);
     }
 
-    function _costumWithdraw(uint256 _assets) internal override {
+    function _customWithdraw(uint256 _assets) internal override {
         IAuraBALRewards(auraBAL_STAKING).withdraw(_assets, false);
     }
 

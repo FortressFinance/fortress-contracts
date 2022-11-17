@@ -362,9 +362,6 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         _burn(_owner, _shares);
         
         if (totalSupply == 0) {
-            if (isPendingRewards()) {
-                revert NoPendingRewards();
-            }
             _assets = totalAssets();
         }
 
