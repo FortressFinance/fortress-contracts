@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.8;
 
-import "src/compounders/balancer/AuraBALCompounder.sol";
+import "src/compounders/balancer/AuraBalCompounder.sol";
 import "src/interfaces/IBalancerVault.sol";
 import "src/interfaces/IBalancerPool.sol";
 
@@ -13,13 +13,13 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
 
     address BALANCER_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
 
-    AuraBALCompounder auraBALCompounder;
+    AuraBalCompounder auraBALCompounder;
     
     function setUp() public {
         
         _setUp();
 
-        auraBALCompounder = new AuraBALCompounder(platform, address(fortressSwap));
+        auraBALCompounder = new AuraBalCompounder(platform, address(fortressSwap));
     }
 
     // ------------------------------------------------------------------------------------------
@@ -267,8 +267,6 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
         // Fast forward 1 month
         skip(216000);
         assertEq(auraBALCompounder.isPendingRewards(), false, "testDeposit: E42");
-        console.log("totalAssets: ", auraBALCompounder.totalAssets());
-        console.log("totalSupply: ", auraBALCompounder.totalSupply());
     }
 
     function testWithdraw(uint256 _amount) public {

@@ -47,6 +47,8 @@ contract Addresses {
     address constant wstETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     // The address of rETH token.
     address constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;
+    // The address of sfrxETH token.
+    address constant sfrxETH = 0xac3E018457B222d93114458476f3E3416Abbe38F;
 
     // The address of LDO token.
     address constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;
@@ -203,6 +205,10 @@ contract Addresses {
     address constant sUSD4POOL = 0xA5407eAE9Ba41422680e2e00537571bcC53efBfD;
     // The address of USDD/3CRV pool (https://curve.fi/factory/116).
     address constant USDD3CRV = 0xe6b5CC1B4b47305c58392CE3D359B10282FC36Ea;
+    // The address of sdFXS/FXS pool (https://curve.fi/#/ethereum/pools/factory-v2-100).
+    address constant curvesdFXSFXS = 0x8c524635d52bd7b1Bd55E062303177a7d916C046;
+    // The address of frxETH/ETH pool (https://curve.fi/#/ethereum/pools/frxeth/deposit).
+    address constant curveETHfrxETH = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
 
     // ------------------------------------- Uniswap -------------------------------------
 
@@ -239,6 +245,8 @@ contract Addresses {
     address constant BALANCER_FIATUSDCDAI = 0x178E029173417b1F9C8bC16DCeC6f697bC323746;
     // The address of rETH/WETH Balancer pool.
     address constant BALANCER_RETHWETH = 0x1E19CF2D73a72Ef1332C882F20534B6519Be0276;
+    // The address of sfrxETH/stETH/rETH Balancer pool (https://etherscan.io/address/0x8e85e97ed19c0fa13b2549309965291fbbc0048b).
+    address constant BALANCER_3ETH = 0x8e85e97ed19C0fa13B2549309965291fbbc0048b;
 
     // ------------------------------------- Aura -------------------------------------
 

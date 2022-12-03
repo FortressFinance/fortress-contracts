@@ -14,6 +14,12 @@ pragma solidity 0.8.8;
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
 
+//  _____             _____     _ _____                             _         
+// |  _  |_ _ ___ ___| __  |___| |     |___ _____ ___ ___ _ _ ___ _| |___ ___ 
+// |     | | |  _| .'| __ -| .'| |   --| . |     | . | . | | |   | . | -_|  _|
+// |__|__|___|_| |__,|_____|__,|_|_____|___|_|_|_|  _|___|___|_|_|___|___|_|  
+//                                               |_|                          
+
 import "src/utils/BalancerOperations.sol";
 import "src/compounders/TokenCompounderBase.sol";
 
@@ -21,7 +27,7 @@ import "src/fortress-interfaces/IFortressSwap.sol";
 import "src/interfaces/IAuraBALRewards.sol";
 import "src/interfaces/IAsset.sol";
 
-contract AuraBALCompounder is BalancerOperations, TokenCompounderBase {
+contract AuraBalCompounder is BalancerOperations, TokenCompounderBase {
 
     using SafeERC20 for IERC20;
 
@@ -115,7 +121,7 @@ contract AuraBALCompounder is BalancerOperations, TokenCompounderBase {
         IAuraBALRewards(auraBAL_STAKING).withdraw(_assets, false);
     }
 
-    function _harvest(address _recipient, uint256 _minBounty) internal override returns (uint256 _rewards) {
+    function _harvest(address _receiver, uint256 _minBounty) internal override returns (uint256 _rewards) {
         
         IAuraBALRewards(auraBAL_STAKING).getReward();
         
@@ -248,12 +254,12 @@ contract AuraBALCompounder is BalancerOperations, TokenCompounderBase {
                 if (!(_harvestBounty >= _minBounty)) revert InsufficientAmountOut();
                 
                 _rewards = _rewards - _harvestBounty;
-                IERC20(AURA_BAL).safeTransfer(_recipient, _harvestBounty);
+                IERC20(AURA_BAL).safeTransfer(_receiver, _harvestBounty);
             }
             
             IAuraBALRewards(auraBAL_STAKING).stake(_rewards);
             
-            emit Harvest(_recipient, _rewards);
+            emit Harvest(_receiver, _rewards);
             return _rewards;
         } else {
             revert NoPendingRewards();
@@ -264,22 +270,22 @@ contract AuraBALCompounder is BalancerOperations, TokenCompounderBase {
     /// @param _amount - The amount of BAL to swap.
     /// @return - The amount of auraBAL in return.
     function _swapBALToAuraBAL(uint256 _amount) internal returns (uint256) {
-        address _balancerETHBAL = BALANCER_WETHBAL;
+        address _balancerWETHBAL = BALANCER_WETHBAL;
         
-        _amount = _addLiquidity(_balancerETHBAL, BAL, _amount);
+        _amount = _addLiquidity(_balancerWETHBAL, BAL, _amount);
         
-        return IFortressSwap(swap).swap(_balancerETHBAL, AURA_BAL, _amount);
+        return IFortressSwap(swap).swap(_balancerWETHBAL, AURA_BAL, _amount);
     }
 
     /// @dev Swap auraBAL to BAL.
     /// @param _amount - The amount of auraBAL to swap.
     /// @return - The amount of BAL in return.
     function _swapAuraBALToBAL(uint256 _amount) internal returns (uint256) {
-        address _balancerETHBAL = BALANCER_WETHBAL;
+        address _balancerWETHBAL = BALANCER_WETHBAL;
         address _aura_bal = AURA_BAL;
 
-        _amount = IFortressSwap(swap).swap(_aura_bal, _balancerETHBAL, _amount);
+        _amount = IFortressSwap(swap).swap(_aura_bal, _balancerWETHBAL, _amount);
 
-        return _removeLiquidity(_balancerETHBAL, BAL, _amount);
+        return _removeLiquidity(_balancerWETHBAL, BAL, _amount);
     }
 }

@@ -13,6 +13,14 @@ pragma solidity 0.8.8;
 // ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
+                                                                                    
+//  _____    _           _____                             _         _____             
+// |_   ____| |_ ___ ___|     |___ _____ ___ ___ _ _ ___ _| |___ ___| __  |___ ___ ___ 
+//   | || . | '_| -_|   |   --| . |     | . | . | | |   | . | -_|  _| __ -| .'|_ -| -_|
+//   |_||___|_,_|___|_|_|_____|___|_|_|_|  _|___|___|_|_|___|___|_| |_____|__,|___|___|
+//                                      |_|                                            
+
+// Github - https://github.com/FortressFinance
 
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -44,6 +52,12 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     address public swap;
     /// @notice The fee denominator.
     uint256 internal constant FEE_DENOMINATOR = 1e9;
+    /// @notice The maximum withdrawal fee.
+    uint256 internal constant MAX_WITHDRAW_FEE = 1e8; // 10%
+    /// @notice The maximum platform fee.
+    uint256 internal constant MAX_PLATFORM_FEE = 2e8; // 20%
+    /// @notice The maximum harvest fee.
+    uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
 
     /********************************** Constructor **********************************/
 
@@ -78,15 +92,29 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _shares - The amount of _shares to redeem.
     /// @return - The amount of _assets in return, after subtracting a withdrawal fee.
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
-        uint256 _assets = convertToAssets(_shares); 
-        return _assets - ((_assets * withdrawFeePercentage) / FEE_DENOMINATOR);
+        // Calculate assets based on a user's % ownership of vault shares
+        uint256 assets = convertToAssets(_shares);
+
+        uint256 _totalSupply = totalSupply;
+
+        // Calculate a fee - zero if user is the last to withdraw
+        uint256 _fee = (_totalSupply == 0 || _totalSupply - _shares == 0) ? 0 : assets.mulDivDown(withdrawFeePercentage, FEE_DENOMINATOR);
+
+        // Redeemable amount is the post-withdrawal-fee amount
+        return assets - _fee;
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.
     /// @param _assets - The amount of _assets to withdraw.
     /// @return - The amount of shares to burn, after subtracting a fee.
-    function previewWithdraw(uint256 _assets) public view virtual override returns (uint256) {
-        return convertToShares(_assets + ((_assets * withdrawFeePercentage) / FEE_DENOMINATOR));
+    function previewWithdraw(uint256 _assets) public view override returns (uint256) {
+        // Calculate shares based on the specified assets' proportion of the pool
+        uint256 _shares = convertToShares(_assets);
+
+        uint256 _totalSupply = totalSupply;
+
+        // Factor in additional shares to fulfill withdrawal if user is not the last to withdraw
+        return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - withdrawFeePercentage);
     }
 
     /********************************** Mutated Functions **********************************/
@@ -168,10 +196,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     function redeemUnderlying(uint256 _shares, address _receiver, address _owner, uint256 _minAmount) external virtual nonReentrant returns (uint256 _assets) {}
 
     /// @dev Harvest the pending rewards and convert to underlying token, then stake.
-    /// @param _recipient - The address of account to receive harvest bounty.
-    /// @param _minBounty - The minimum amount of harvest bounty _recipient should get.
-    function harvest(address _recipient, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
-        return _harvest(_recipient, _minBounty);
+    /// @param _receiver - The address of account to receive harvest bounty.
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    function harvest(address _receiver, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
+        return _harvest(_receiver, _minBounty);
     }
 
     /********************************** Restricted Functions **********************************/
@@ -180,6 +208,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _feePercentage - The fee percentage to update.
     function updateWithdrawFeePercentage(uint256 _feePercentage) external {
         if (msg.sender != owner) revert Unauthorized();
+        if (_feePercentage > MAX_WITHDRAW_FEE) revert InvalidAmount();
 
         withdrawFeePercentage = _feePercentage;
 
@@ -190,6 +219,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _feePercentage - The fee percentage to update.
     function updatePlatformFeePercentage(uint256 _feePercentage) external {
         if (msg.sender != owner) revert Unauthorized();
+        if (_feePercentage > MAX_PLATFORM_FEE) revert InvalidAmount();
 
         platformFeePercentage = _feePercentage;
 
@@ -197,13 +227,14 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Update the harvest bounty percentage.
-    /// @param _percentage - The fee percentage to update.
-    function updateHarvestBountyPercentage(uint256 _percentage) external {
+    /// @param _feePercentage - The fee percentage to update.
+    function updateHarvestBountyPercentage(uint256 _feePercentage) external {
         if (msg.sender != owner) revert Unauthorized();
+        if (_feePercentage > MAX_HARVEST_BOUNTY) revert InvalidAmount();
 
-        harvestBountyPercentage = _percentage;
+        harvestBountyPercentage = _feePercentage;
 
-        emit UpdateHarvestBountyPercentage(_percentage);
+        emit UpdateHarvestBountyPercentage(_feePercentage);
     }
 
     /// @dev Update the recipient.
@@ -286,16 +317,12 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         
         _burn(_owner, _shares);
         
-        if (totalSupply == 0) {
-            _assets = totalAssets();
-        }
-
         _customWithdraw(_assets);
         
         emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
     }
 
-    function _harvest(address _recipient, uint256 _minimumOut) internal virtual returns (uint256) {}
+    function _harvest(address _receiver, uint256 _minimumOut) internal virtual returns (uint256) {}
 
     function _customDeposit(uint256 _assets) internal virtual {}
 
@@ -320,6 +347,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     error Unauthorized();
     error InsufficientBalance();
     error InsufficientAllowance();
+    error InvalidAmount();
     error ZeroAddress();
     error ZeroAmount();
     error InsufficientAmountOut();

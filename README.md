@@ -24,7 +24,7 @@ git clone https://github.com/FortressFinance/fortress-contracts.git
 # Change directory into the cloned repo
 cd fortress-contracts
 
-# Create an .env file
+# Create a .env file
 touch .env
 
 # Add your mainnet RPC URL to the .env file

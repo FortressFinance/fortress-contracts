@@ -13,22 +13,30 @@ pragma solidity 0.8.8;
 // ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-                                                                             
-//  _____     _                     _____                             _         
-// | __  |___| |___ ___ ___ ___ ___|     |___ _____ ___ ___ _ _ ___ _| |___ ___ 
-// | __ -| .'| | .'|   |  _| -_|  _|   --| . |     | . | . | | |   | . | -_|  _|
-// |_____|__,|_|__,|_|_|___|___|_| |_____|___|_|_|_|  _|___|___|_|_|___|___|_|  
-//                                                 |_|                          
+
+//  _____                 _____ _   _   _____                     _           _           
+// |     |_ _ ___ _ _ ___|   __| |_| |_|     |___ ___ ___ ___ ___| |_ ___ ___| |_ ___ ___ 
+// |   --| | |  _| | | -_|   __|  _|   |   --| . |   |  _| -_|   |  _|  _| .'|  _| . |  _|
+// |_____|___|_|  \_/|___|_____|_| |_|_|_____|___|_|_|___|___|_|_|_| |_| |__,|_| |___|_|  
 
 // Github - https://github.com/FortressFinance
 
-import "src/utils/BalancerOperations.sol";
-import "src/compounders/AMMCompounderBase.sol";
+import "src/concentrators/AMMConcentratorBase.sol";
+import "src/utils/CurveOperations.sol";
 
-contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
-    
+contract CurveEthConcentrator is CurveOperations, AMMConcentratorBase {
+
     using SafeERC20 for IERC20;
 
+    /// @notice The address of the underlying Curve pool.
+    address private immutable poolAddress;
+    /// @notice The type of the pool, used in CurveOperations.
+    uint256 private immutable poolType;
+    /// @notice The address of Curve frxETH/ETH LP token.
+    address private constant FRXETHCRV = 0xf43211935C781D5ca1a41d2041F397B8A7366C7A;
+    /// @notice The address of frxETH/ETH pool.
+    address constant FRXETHETH = 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577;
+    
     /********************************** Constructor **********************************/
 
     constructor(
@@ -39,27 +47,37 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
         address _swap,
         uint256 _boosterPoolId,
         address[] memory _rewardAssets,
-        address[] memory _underlyingAssets
+        address[] memory _underlyingAssets,
+        address _compounder,
+        uint256 _poolType
         )
-        AMMCompounderBase(
+        AMMConcentratorBase(
             _asset,
             _name,
             _symbol,
             _platform,
             _swap,
-            address(0x7818A1DA7BD1E64c199029E86Ba244a9798eEE10), // Aura Booster
+            address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
             _boosterPoolId,
             _rewardAssets,
-            _underlyingAssets
-        ) {}
+            _underlyingAssets,
+            _compounder
+        ) {
+            IERC20(FRXETHCRV).safeApprove(_compounder, type(uint256).max);
+
+            poolType = _poolType;
+            poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
+        }
 
     /********************************** Mutated Functions **********************************/
 
-    /// @notice See {AMMCompounderBase - depositSingleUnderlying}
-    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) public payable override nonReentrant returns (uint256 _shares) {
+    /// @notice See {AMMConcentratorBase - depositSingleUnderlying}
+    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable override nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
-        
+
+        _updateRewards(msg.sender);
+
         if (msg.value > 0) {
             if (msg.value != _underlyingAmount) revert InvalidAmount();
             if (_underlyingAsset != ETH) revert InvalidAsset();
@@ -67,26 +85,28 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
             IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
         }
 
-        uint256 _assets = _addLiquidity(address(asset), _underlyingAsset, _underlyingAmount);
+        uint256 _assets = _addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
-        
+
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
-        
+
         return _shares;
     }
 
-    /// @notice See {AMMCompounderBase - redeemSingleUnderlying}
+    /// @notice See {AMMConcentratorBase - redeemSingleUnderlying}
     function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
         
+        _updateRewards(_owner);
+
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
-        
-        _underlyingAmount = _removeLiquidity(address(asset), _underlyingAsset, _assets);
+
+        _underlyingAmount = _removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
-        
+
         if (_underlyingAsset == ETH) {
             (bool sent,) = msg.sender.call{value: _underlyingAmount}("");
             if (!sent) revert FailedToSendETH();
@@ -99,38 +119,29 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
 
     /********************************** Internal Functions **********************************/
 
-    function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal override returns (uint256 _rewards) {
+    function _harvest(address _receiver, uint256 _minBounty) internal override returns (uint256 _rewards) {
         
         IConvexBasicRewards(crvRewards).getReward();
 
-        address _rewardAsset;
+        address _eth = ETH;
+        address _token;
         address _swap = swap;
         address[] memory _rewardAssets = rewardAssets;
         for (uint256 i = 0; i < _rewardAssets.length; i++) {
-            _rewardAsset = _rewardAssets[i];
-            if (_rewardAsset != _underlyingAsset) {
-                if (_rewardAsset == ETH) {
-                    // slither-disable-next-line arbitrary-send-eth
-                    IFortressSwap(_swap).swap{ value: address(this).balance }(_rewardAsset, _underlyingAsset, address(this).balance);
-                } else {
-                    uint256 _balance = IERC20(_rewardAsset).balanceOf(address(this));
-                    if (_balance > 0) {
-                        IFortressSwap(_swap).swap(_rewardAsset, _underlyingAsset, _balance);
-                    }
+            _token = _rewardAssets[i];
+            if (_token != _eth) {
+                uint256 _balance = IERC20(_token).balanceOf(address(this));
+                if (_balance > 0) {
+                    IFortressSwap(_swap).swap(_token, _eth, _balance);
                 }
             }
         }
-
-        if (_underlyingAsset == ETH) {
-            _rewards = address(this).balance;
-        } else {
-            _rewards = IERC20(_underlyingAsset).balanceOf(address(this));
-        }
-
-        if (_rewards > 0) {
-            address _lpToken = address(asset);
-            _rewards = _addLiquidity(_lpToken, _underlyingAsset, _rewards);
         
+        _rewards = address(this).balance;
+        if (_rewards > 0) {
+            _rewards = _addLiquidity(FRXETHETH, 5, _eth, _rewards);
+            
+            address _lpToken = FRXETHCRV;
             uint256 _platformFee = platformFeePercentage;
             uint256 _harvestBounty = harvestBountyPercentage;
             if (_platformFee > 0) {
@@ -141,12 +152,15 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
             if (_harvestBounty > 0) {
                 _harvestBounty = (_harvestBounty * _rewards) / FEE_DENOMINATOR;
                 if (!(_harvestBounty >= _minBounty)) revert InsufficientAmountOut();
+
                 _rewards = _rewards - _harvestBounty;
                 IERC20(_lpToken).safeTransfer(_receiver, _harvestBounty);
             }
+            
+            _rewards = ERC4626(compounder).deposit(_rewards, address(this));
 
-            IConvexBooster(booster).deposit(boosterPoolId, _rewards, true);
-
+            accRewardPerShare = accRewardPerShare + ((_rewards * PRECISION) / totalSupply);
+            
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
             return _rewards;

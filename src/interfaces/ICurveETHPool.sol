@@ -10,6 +10,7 @@ pragma solidity 0.8.8;
 // https://curve.fi/factory/155 - fraxETH
 // https://curve.fi/factory/38 - alETH
 // https://curve.fi/factory/194 - pETH
+// https://curve.fi/#/ethereum/pools/frxeth - frxETH
 
 interface ICurveETHPool {
 

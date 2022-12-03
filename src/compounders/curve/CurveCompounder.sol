@@ -14,6 +14,14 @@ pragma solidity 0.8.8;
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
 
+//  _____                 _____                             _         
+// |     |_ _ ___ _ _ ___|     |___ _____ ___ ___ _ _ ___ _| |___ ___ 
+// |   --| | |  _| | | -_|   --| . |     | . | . | | |   | . | -_|  _|
+// |_____|___|_|  \_/|___|_____|___|_|_|_|  _|___|___|_|_|___|___|_|  
+//                                       |_|                          
+
+// Github - https://github.com/FortressFinance
+
 import "src/utils/CurveOperations.sol";
 import "src/compounders/AMMCompounderBase.sol";
 
@@ -21,10 +29,10 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
     
     using SafeERC20 for IERC20;
 
-    /// @notice The address of the underlying Curve pool.
-    address public poolAddress;
-    /// @notice The type of the pool, used in CurveOperations.
-    uint256 public poolType;
+    /// @notice The address of the vault's Curve pool.
+    address private immutable poolAddress;
+    /// @notice The internal type of pool, used in CurveOperations.
+    uint256 private immutable poolType;
     
     /********************************** Constructor **********************************/
 
@@ -51,7 +59,7 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
             _underlyingAssets
         ) {
             poolType = _poolType;
-            poolAddress = metaRegistry.get_pool_from_lp_token(address(asset));
+            poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
     }
 
     /********************************** Mutated Functions **********************************/
@@ -79,8 +87,8 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
 
     /// @notice See {AMMCompounderBase - redeemSingleUnderlying}
     function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) external override nonReentrant returns (uint256 _underlyingAmount) {
-        if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
+        if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
@@ -101,13 +109,12 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
     /********************************** Internal Functions **********************************/
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal override returns (uint256 _rewards) {
-        PoolInfo memory _poolInfo = poolInfo;
-
-        IConvexBasicRewards(_poolInfo.crvRewards).getReward();
-
-        address[] memory _rewardAssets = _poolInfo.rewardAssets;
+        
+        IConvexBasicRewards(crvRewards).getReward();
+        
         address _rewardAsset;
         address _swap = swap;
+        address[] memory _rewardAssets = rewardAssets;
         for (uint256 i = 0; i < _rewardAssets.length; i++) {
             _rewardAsset = _rewardAssets[i];
             if (_rewardAsset != _underlyingAsset) {
@@ -132,8 +139,8 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
         if (_rewards > 0) {
             _rewards = _addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
         
-            uint256 _platformFee = _poolInfo.platformFeePercentage;
-            uint256 _harvestBounty = _poolInfo.harvestBountyPercentage;
+            uint256 _platformFee = platformFeePercentage;
+            uint256 _harvestBounty = harvestBountyPercentage;
             address _lpToken = address(asset);
             if (_platformFee > 0) {
                 _platformFee = (_platformFee * _rewards) / FEE_DENOMINATOR;
@@ -147,7 +154,7 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
                 IERC20(_lpToken).safeTransfer(_receiver, _harvestBounty);
             }
 
-            IConvexBooster(_poolInfo.booster).deposit(_poolInfo.boosterPoolId, _rewards, true);
+            IConvexBooster(booster).deposit(boosterPoolId, _rewards, true);
 
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 

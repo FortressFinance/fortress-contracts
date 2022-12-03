@@ -14,6 +14,14 @@ pragma solidity 0.8.8;
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
 
+//  _____     _                     _____                 _   _             
+// | __  |___| |___ ___ ___ ___ ___|     |___ ___ ___ ___| |_|_|___ ___ ___ 
+// | __ -| .'| | .'|   |  _| -_|  _|  |  | . | -_|  _| .'|  _| | . |   |_ -|
+// |_____|__,|_|__,|_|_|___|___|_| |_____|  _|___|_| |__,|_| |_|___|_|_|___|
+//                                       |_|                                
+
+// Github - https://github.com/FortressFinance
+
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -38,8 +46,9 @@ contract BalancerOperations {
         IBalancerVault _vault = IBalancerVault(BALANCER_VAULT);
 
         (address[] memory _tokens,,) = _vault.getPoolTokens(_poolId);
-        uint256 _before = IERC20(_poolAddress).balanceOf(address(this));
 
+        uint256 _before = IERC20(_poolAddress).balanceOf(address(this));
+        
         if (_asset == ETH) {
             _wrapETH(_amount);
             _asset = WETH;
@@ -49,6 +58,8 @@ contract BalancerOperations {
         for (uint256 _i = 0; _i < _tokens.length; _i++) {
             if (_tokens[_i] == _asset) {
                 _amounts[_i] = _amount;
+
+                uint256[] memory _noBptAmounts = _isComposablePool(_tokens, _poolAddress) ? _dropBptItem(_tokens, _amounts, _poolAddress) : _amounts;
                 
                 _approveOperations(_tokens[_i], address(_vault), _amount);
                 _vault.joinPool(
@@ -60,12 +71,13 @@ contract BalancerOperations {
                         maxAmountsIn: _amounts,
                         userData: abi.encode(
                             IBalancerVault.JoinKind.EXACT_TOKENS_IN_FOR_BPT_OUT,
-                            _amounts, // amountsIn
+                            _noBptAmounts, // amountsIn
                             0 // minimumBPT
                         ),
                         fromInternalBalance: false
                     })
                 );
+                break;
             }
         }
         return (IERC20(_poolAddress).balanceOf(address(this)) - _before);
@@ -96,9 +108,31 @@ contract BalancerOperations {
                         toInternalBalance: false
                     })
                 );
+                break;
             }
         }
         return (IERC20(_asset).balanceOf(address(this)) - _before);
+    }
+
+    function _isComposablePool(address[] memory _tokens, address _poolAddress) internal pure returns (bool) {
+        for(uint256 i = 0; i < _tokens.length; i++) {
+            if (_tokens[i] == _poolAddress) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    function _dropBptItem(address[] memory _tokens, uint256[] memory _amounts, address _poolAddress) internal pure returns (uint256[] memory) {
+        uint256[] memory _noBPTAmounts = new uint256[](_tokens.length - 1);
+        uint256 _j = 0;
+        for(uint256 _i = 0; _i < _tokens.length; _i++) {
+            if (_tokens[_i] != _poolAddress) {
+                _noBPTAmounts[_j] = _amounts[_i];
+                _j++;
+            }
+        }
+        return _noBPTAmounts;
     }
 
     function _approveOperations(address _token, address _spender, uint256 _amount) internal virtual {

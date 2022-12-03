@@ -371,8 +371,8 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
         _sharesCharlie = _depositSingleUnwrapped(charlie, _asset, _underlyingCharlie);
         
         assertEq(balancerCompounder.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositUnderlying: E1");
-        (,,,,,address crvRewards,,) = balancerCompounder.poolInfo();
-        assertEq(balancerCompounder.totalAssets(), IConvexBasicRewards(crvRewards).balanceOf(address(balancerCompounder)), "_testDepositUnderlying: E2");
+        // (,,,,,address crvRewards,,) = balancerCompounder.poolInfo();
+        assertEq(balancerCompounder.totalAssets(), IConvexBasicRewards(balancerCompounder.crvRewards()).balanceOf(address(balancerCompounder)), "_testDepositUnderlying: E2");
         assertApproxEqAbs(_sharesAlice, _sharesBob, 1e20, "_testDepositUnderlying: E3");
         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e20, "_testDepositUnderlying: E4");
 
@@ -380,19 +380,19 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
     }
 
     function _testHarvest(address _asset, uint256 _totalShare) internal {
-        (,,,,,address crvRewards,,) = balancerCompounder.poolInfo();
-        assertTrue(IConvexBasicRewards(crvRewards).earned(address(balancerCompounder)) == 0, "_testHarvest: E1");
+        // (,,,,,address crvRewards,,) = balancerCompounder.poolInfo();
+        assertTrue(IConvexBasicRewards(balancerCompounder.crvRewards()).earned(address(balancerCompounder)) == 0, "_testHarvest: E1");
 
         // Fast forward 1 month
         skip(216000);
 
-        assertTrue(IConvexBasicRewards(crvRewards).earned(address(balancerCompounder)) > 0, "_testHarvest: E2");
+        assertTrue(IConvexBasicRewards(balancerCompounder.crvRewards()).earned(address(balancerCompounder)) > 0, "_testHarvest: E2");
         
         uint256 _underlyingBefore = balancerCompounder.totalAssets();
         vm.prank(harvester);
         uint256 _newUnderlying = balancerCompounder.harvest(address(harvester), _asset, 0);
 
-        assertTrue(IConvexBasicRewards(crvRewards).earned(address(balancerCompounder)) == 0, "_testHarvest: E3");
+        assertTrue(IConvexBasicRewards(balancerCompounder.crvRewards()).earned(address(balancerCompounder)) == 0, "_testHarvest: E3");
         assertTrue(ERC20(balancerCompounder.asset()).balanceOf(platform) > 0, "_testHarvest: E4");
         assertTrue(ERC20(balancerCompounder.asset()).balanceOf(harvester) > 0, "_testHarvest: E5");
         assertTrue(balancerCompounder.totalAssets() == (_underlyingBefore + _newUnderlying), "_testHarvest: E6");
@@ -427,8 +427,8 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
         _sharesCharlie = _depositSingleUnwrappedETH(charlie, _amount);
         
         assertEq(balancerCompounder.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositSingleUnwrappedETH: E1");
-        (,,,,,address crvRewards,,) = balancerCompounder.poolInfo();
-        assertEq(balancerCompounder.totalAssets(), IConvexBasicRewards(crvRewards).balanceOf(address(balancerCompounder)), "_testDepositSingleUnwrappedETH: E2");
+        // (,,,,,address crvRewards,,) = balancerCompounder.poolInfo();
+        assertEq(balancerCompounder.totalAssets(), IConvexBasicRewards(balancerCompounder.crvRewards()).balanceOf(address(balancerCompounder)), "_testDepositSingleUnwrappedETH: E2");
         assertApproxEqAbs(_sharesAlice, _sharesBob, 1e17, "_testDepositSingleUnwrappedETH: E3");
         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e17, "_testDepositSingleUnwrappedETH: E4");
 
@@ -483,8 +483,8 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
 
         assertEq(balancerCompounder.totalAssets(), 0, "_testRedeem: E7");
         assertEq(balancerCompounder.totalSupply(), 0, "_testRedeem: E8");
-        assertApproxEqAbs(_tokenOutAlice, _tokenOutBob, 1e19, "_testRedeem: E9");
-        assertApproxEqAbs(_tokenOutAlice, _tokenOutCharlie, 1e19, "_testRedeem: E10");
+        assertApproxEqAbs(_tokenOutAlice, _tokenOutBob, 1e20, "_testRedeem: E9");
+        assertApproxEqAbs(_tokenOutAlice, _tokenOutCharlie, 1e20, "_testRedeem: E10");
 
         return (_tokenOutAlice, _tokenOutBob, _tokenOutCharlie);
     }

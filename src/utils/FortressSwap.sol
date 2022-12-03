@@ -14,6 +14,14 @@ pragma solidity 0.8.8;
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
 
+//  _____         _                   _____               
+// |   __|___ ___| |_ ___ ___ ___ ___|   __|_ _ _ ___ ___ 
+// |   __| . |  _|  _|  _| -_|_ -|_ -|__   | | | | .'| . |
+// |__|  |___|_| |_| |_| |___|___|___|_____|_____|__,|  _|
+//                                                   |_|  
+
+// Github - https://github.com/FortressFinance
+
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
@@ -228,7 +236,7 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         emit UpdateOwner(_newOwner);
     }
 
-    /// @dev Rescue ERC20 tokens stuck in the contract.
+    /// @dev Rescue stuck ERC20 tokens.
     /// @param _tokens - The address of the tokens to rescue.
     /// @param _recipient - The address of the recipient of rescued tokens.
     function rescue(address[] memory _tokens, address _recipient) external {
@@ -242,7 +250,7 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         emit Rescue(_tokens, _recipient);
     }
 
-    /// @dev Rescue ETH stuck in the contract.
+    /// @dev Rescue stuck ETH.
     /// @param _recipient - The address of the recipient of rescued ETH.
     function rescueETH(address _recipient) external {
         if (msg.sender != owner) revert Unauthorized();

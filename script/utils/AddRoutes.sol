@@ -4,8 +4,9 @@ pragma solidity 0.8.8;
 import "src/utils/FortressSwap.sol";
 
 import "./Addresses.sol";
+import "./InitBase.sol";
 
-contract AddRoutes is Addresses {
+contract AddRoutes is Addresses, InitBase {
 
     // pool type -->
     // 0: UniswapV3
@@ -21,25 +22,25 @@ contract AddRoutes is Addresses {
     // 10: Curve4Pool
     // 11: FraxCryptoMeta
     // 12: BalancerSingleSwap
-    uint256[] _poolType1 = new uint256[](1);
-    uint256[] _poolType2 = new uint256[](2);
-    uint256[] _poolType3 = new uint256[](3);
-    uint256[] _poolType4 = new uint256[](4);
+    // uint256[] _poolType1 = new uint256[](1);
+    // uint256[] _poolType2 = new uint256[](2);
+    // uint256[] _poolType3 = new uint256[](3);
+    // uint256[] _poolType4 = new uint256[](4);
     
-    address[] _poolAddress1 = new address[](1);
-    address[] _poolAddress2 = new address[](2);
-    address[] _poolAddress3 = new address[](3);
-    address[] _poolAddress4 = new address[](4);
+    // address[] _poolAddress1 = new address[](1);
+    // address[] _poolAddress2 = new address[](2);
+    // address[] _poolAddress3 = new address[](3);
+    // address[] _poolAddress4 = new address[](4);
 
-    address[] _fromList1 = new address[](1);
-    address[] _fromList2 = new address[](2);
-    address[] _fromList3 = new address[](3);
-    address[] _fromList4 = new address[](4);
+    // address[] _fromList1 = new address[](1);
+    // address[] _fromList2 = new address[](2);
+    // address[] _fromList3 = new address[](3);
+    // address[] _fromList4 = new address[](4);
     
-    address[] _toList1 = new address[](1);
-    address[] _toList2 = new address[](2);
-    address[] _toList3 = new address[](3);
-    address[] _toList4 = new address[](4);
+    // address[] _toList1 = new address[](1);
+    // address[] _toList2 = new address[](2);
+    // address[] _toList3 = new address[](3);
+    // address[] _toList4 = new address[](4);
     
     function addRoutes(address _swapAddress) public {
         
@@ -69,6 +70,28 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(pETH, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
 
+        // frxETH --> ETH
+        _poolType1[0] = 2;
+
+        _poolAddress1[0] = curveETHfrxETH;
+        
+        _fromList1[0] = frxETH;
+        
+        _toList1[0] = ETH;
+
+        _fortressSwap.updateRoute(frxETH, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+
+        // USDT --> ETH
+        _poolType1[0] = 4;
+
+        _poolAddress1[0] = TRICRYPTO;
+        
+        _fromList1[0] = USDT;
+        
+        _toList1[0] = ETH;
+
+        _fortressSwap.updateRoute(USDT, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+
         // --------------------------------- from ETH ---------------------------------
 
         // ETH --> pETH
@@ -81,6 +104,17 @@ contract AddRoutes is Addresses {
         _toList1[0] = pETH;
 
         _fortressSwap.updateRoute(ETH, pETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+
+        // ETH --> frxETH
+        _poolType1[0] = 2;
+
+        _poolAddress1[0] = curveETHfrxETH;
+        
+        _fromList1[0] = ETH;
+        
+        _toList1[0] = frxETH;
+
+        _fortressSwap.updateRoute(ETH, frxETH, _poolType1, _poolAddress1, _fromList1, _toList1);
 
         // ETH --> FIAT
         _poolType3[0] = 4;
@@ -175,6 +209,21 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(ETH, wstETH, _poolType1, _poolAddress1, _fromList1, _toList1);
 
+        // ETH --> sfrxETH
+        _poolType2[0] = 12;
+        _poolType2[1] = 12;
+
+        _poolAddress2[0] = BALANCER_WETHWSTETH;
+        _poolAddress2[1] = BALANCER_3ETH;
+
+        _fromList2[0] = ETH;
+        _fromList2[1] = wstETH;
+
+        _toList2[0] = wstETH;
+        _toList2[1] = sfrxETH;
+
+        _fortressSwap.updateRoute(ETH, sfrxETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+
         // ETH --> FXS
         _poolType1[0] = 0;
 
@@ -200,6 +249,21 @@ contract AddRoutes is Addresses {
         _toList2[1] = cvxFXS;
         
         _fortressSwap.updateRoute(ETH, cvxFXS, _poolType2, _poolAddress2, _fromList2, _toList2);
+
+        // ETH --> sdFXS
+        _poolType2[0] = 0;
+        _poolType2[1] = 2;
+
+        _poolAddress2[0] = uniV3FXSETH;
+        _poolAddress2[1] = curvesdFXSFXS;
+        
+        _fromList2[0] = ETH;
+        _fromList2[1] = FXS;
+        
+        _toList2[0] = FXS;
+        _toList2[1] = sdFXS;
+        
+        _fortressSwap.updateRoute(ETH, sdFXS, _poolType2, _poolAddress2, _fromList2, _toList2);
 
         // ETH --> SPELL
         _poolType1[0] = 0;
@@ -470,6 +534,21 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(CRV, pETH, _poolType2, _poolAddress2, _fromList2, _toList2);
 
+        // CRV --> frxETH
+        _poolType2[0] = 5;
+        _poolType2[1] = 2;
+
+        _poolAddress2[0] = curveETHCRV;
+        _poolAddress2[1] = curveETHfrxETH;
+
+        _fromList2[0] = CRV;
+        _fromList2[1] = ETH;
+
+        _toList2[0] = ETH;
+        _toList2[1] = frxETH;
+
+        _fortressSwap.updateRoute(CRV, frxETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+        
         // CRV --> TUSD
         _poolType4[0] = 5;
         _poolType4[1] = 4;
@@ -526,6 +605,17 @@ contract AddRoutes is Addresses {
         _toList1[0] = cvxCRV;
 
         _fortressSwap.updateRoute(CRV, cvxCRV, _poolType1, _poolAddress1, _fromList1, _toList1);
+
+        // cvxCRV --> CRV
+        _poolType1[0] = 2;
+
+        _poolAddress1[0] = curveCRVcvxCRV;
+
+        _fromList1[0] = cvxCRV;
+
+        _toList1[0] = CRV;
+
+        _fortressSwap.updateRoute(cvxCRV, CRV, _poolType1, _poolAddress1, _fromList1, _toList1);
 
         // CRV --> stETH
         _poolType2[0] = 5;
@@ -704,6 +794,25 @@ contract AddRoutes is Addresses {
         _toList2[1] = FXS;
         
         _fortressSwap.updateRoute(CRV, FXS, _poolType2, _poolAddress2, _fromList2, _toList2);
+
+        // CRV --> sdFXS
+        _poolType3[0] = 5;
+        _poolType3[1] = 0;
+        _poolType3[2] = 2;
+
+        _poolAddress3[0] = curveETHCRV;
+        _poolAddress3[1] = uniV3FXSETH;
+        _poolAddress3[2] = curvesdFXSFXS;
+
+        _fromList3[0] = CRV;
+        _fromList3[1] = ETH;
+        _fromList3[2] = FXS;
+
+        _toList3[0] = ETH;
+        _toList3[1] = FXS;
+        _toList3[2] = sdFXS;
+
+        _fortressSwap.updateRoute(CRV, sdFXS, _poolType3, _poolAddress3, _fromList3, _toList3);
 
         // CRV --> wBTC
         _poolType3[0] = 5;
@@ -1271,6 +1380,21 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(CVX, pETH, _poolType2, _poolAddress2, _fromList2, _toList2);
 
+        // CVX --> frxETH
+        _poolType2[0] = 5;
+        _poolType2[1] = 2;
+
+        _poolAddress2[0] = curveETHCVX;
+        _poolAddress2[1] = curveETHfrxETH;
+
+        _fromList2[0] = CVX;
+        _fromList2[1] = ETH;
+
+        _toList2[0] = ETH;
+        _toList2[1] = frxETH;
+
+        _fortressSwap.updateRoute(CVX, frxETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+
         // CVX --> cvxFXS
         _poolType3[0] = 5;
         _poolType3[1] = 0;
@@ -1289,6 +1413,25 @@ contract AddRoutes is Addresses {
         _toList3[2] = cvxFXS;
         
         _fortressSwap.updateRoute(CVX, cvxFXS, _poolType3, _poolAddress3, _fromList3, _toList3);
+
+        // CVX --> sdFXS
+        _poolType3[0] = 5;
+        _poolType3[1] = 0;
+        _poolType3[2] = 2;
+
+        _poolAddress3[0] = curveETHCVX;
+        _poolAddress3[1] = uniV3FXSETH;
+        _poolAddress3[2] = curvesdFXSFXS;
+
+        _fromList3[0] = CVX;
+        _fromList3[1] = ETH;
+        _fromList3[2] = FXS;
+
+        _toList3[0] = ETH;
+        _toList3[1] = FXS;
+        _toList3[2] = sdFXS;
+
+        _fortressSwap.updateRoute(CVX, sdFXS, _poolType3, _poolAddress3, _fromList3, _toList3);
 
         // CVX --> LINK
         _poolType2[0] = 5;
@@ -1845,6 +1988,17 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(auraBAL, BALANCER_WETHBAL, _poolType1, _poolAddress1, _fromList1, _toList1);
 
+        // BAL --> ETH
+        _poolType1[0] = 12;
+
+        _poolAddress1[0] = BALANCER_WETHBAL;
+        
+        _fromList1[0] = BAL;
+        
+        _toList1[0] = ETH;
+
+        _fortressSwap.updateRoute(BAL, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+
         // BAL --> WETH
         _poolType1[0] = 12;
 
@@ -1886,6 +2040,25 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(BAL, wstETH, _poolType2, _poolAddress2, _fromList2, _toList2);
 
+        // BAL --> sfrxETH
+        _poolType3[0] = 12;
+        _poolType3[1] = 12;
+        _poolType3[2] = 12;
+
+        _poolAddress3[0] = BALANCER_WETHBAL;
+        _poolAddress3[1] = BALANCER_WETHWSTETH;
+        _poolAddress3[2] = BALANCER_3ETH;
+        
+        _fromList3[0] = BAL;
+        _fromList3[1] = WETH;
+        _fromList3[2] = wstETH;
+        
+        _toList3[0] = WETH;
+        _toList3[1] = wstETH;
+        _toList3[2] = sfrxETH;
+        
+        _fortressSwap.updateRoute(BAL, sfrxETH, _poolType3, _poolAddress3, _fromList3, _toList3);
+
         // AURA --> BAL
         _poolType2[0] = 12;
         _poolType2[1] = 12;
@@ -1912,6 +2085,17 @@ contract AddRoutes is Addresses {
 
         _fortressSwap.updateRoute(AURA, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
 
+        // AURA --> ETH
+        _poolType1[0] = 12;
+
+        _poolAddress1[0] = BALANCER_WETHAURA;
+
+        _fromList1[0] = AURA;
+
+        _toList1[0] = ETH;
+
+        _fortressSwap.updateRoute(AURA, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+
         // AURA --> wstETH
         _poolType2[0] = 12;
         _poolType2[1] = 12;
@@ -1926,6 +2110,25 @@ contract AddRoutes is Addresses {
         _toList2[1] = wstETH;
 
         _fortressSwap.updateRoute(AURA, wstETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+
+        // AURA --> sfrxETH
+        _poolType3[0] = 12;
+        _poolType3[1] = 12;
+        _poolType3[2] = 12;
+
+        _poolAddress3[0] = BALANCER_WETHAURA;
+        _poolAddress3[1] = BALANCER_WETHWSTETH;
+        _poolAddress3[2] = BALANCER_3ETH;
+        
+        _fromList3[0] = AURA;
+        _fromList3[1] = WETH;
+        _fromList3[2] = wstETH;
+        
+        _toList3[0] = WETH;
+        _toList3[1] = wstETH;
+        _toList3[2] = sfrxETH;
+        
+        _fortressSwap.updateRoute(AURA, sfrxETH, _poolType3, _poolAddress3, _fromList3, _toList3);
 
         // AURA --> SNX
         _poolType2[0] = 12;

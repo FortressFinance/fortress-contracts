@@ -8,6 +8,7 @@ pragma solidity 0.8.8;
 // https://curve.fi/eursusd
 // https://curve.fi/link
 // CRV/cvxCRV - https://curve.fi/factory/22
+// FXS/sdFXS - https://curve.fi/#/ethereum/pools/factory-v2-100
 
 interface ICurvePlainPool {
   

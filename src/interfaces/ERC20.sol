@@ -38,11 +38,11 @@ abstract contract ERC20 {
                             EIP-2612 STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    // uint256 internal immutable INITIAL_CHAIN_ID;
+    uint256 internal immutable INITIAL_CHAIN_ID;
 
-    // bytes32 internal immutable INITIAL_DOMAIN_SEPARATOR;
+    bytes32 internal immutable INITIAL_DOMAIN_SEPARATOR;
 
-    // mapping(address => uint256) public nonces;
+    mapping(address => uint256) public nonces;
 
     /*//////////////////////////////////////////////////////////////
                                CONSTRUCTOR
@@ -57,8 +57,8 @@ abstract contract ERC20 {
         symbol = _symbol;
         decimals = _decimals;
 
-        // INITIAL_CHAIN_ID = block.chainid;
-        // INITIAL_DOMAIN_SEPARATOR = computeDomainSeparator();
+        INITIAL_CHAIN_ID = block.chainid;
+        INITIAL_DOMAIN_SEPARATOR = computeDomainSeparator();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -113,68 +113,68 @@ abstract contract ERC20 {
                              EIP-2612 LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // function permit(
-    //     address owner,
-    //     address spender,
-    //     uint256 value,
-    //     uint256 deadline,
-    //     uint8 v,
-    //     bytes32 r,
-    //     bytes32 s
-    // ) public virtual {
-    //     require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public virtual {
+        require(deadline >= block.timestamp, "PERMIT_DEADLINE_EXPIRED");
 
-    //     // Unchecked because the only math done is incrementing
-    //     // the owner's nonce which cannot realistically overflow.
-    //     unchecked {
-    //         address recoveredAddress = ecrecover(
-    //             keccak256(
-    //                 abi.encodePacked(
-    //                     "\x19\x01",
-    //                     DOMAIN_SEPARATOR(),
-    //                     keccak256(
-    //                         abi.encode(
-    //                             keccak256(
-    //                                 "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-    //                             ),
-    //                             owner,
-    //                             spender,
-    //                             value,
-    //                             nonces[owner]++,
-    //                             deadline
-    //                         )
-    //                     )
-    //                 )
-    //             ),
-    //             v,
-    //             r,
-    //             s
-    //         );
+        // Unchecked because the only math done is incrementing
+        // the owner's nonce which cannot realistically overflow.
+        unchecked {
+            address recoveredAddress = ecrecover(
+                keccak256(
+                    abi.encodePacked(
+                        "\x19\x01",
+                        DOMAIN_SEPARATOR(),
+                        keccak256(
+                            abi.encode(
+                                keccak256(
+                                    "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+                                ),
+                                owner,
+                                spender,
+                                value,
+                                nonces[owner]++,
+                                deadline
+                            )
+                        )
+                    )
+                ),
+                v,
+                r,
+                s
+            );
 
-    //         require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
+            require(recoveredAddress != address(0) && recoveredAddress == owner, "INVALID_SIGNER");
 
-    //         allowance[recoveredAddress][spender] = value;
-    //     }
+            allowance[recoveredAddress][spender] = value;
+        }
 
-    //     emit Approval(owner, spender, value);
-    // }
+        emit Approval(owner, spender, value);
+    }
 
-    // function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-    //     return block.chainid == INITIAL_CHAIN_ID ? INITIAL_DOMAIN_SEPARATOR : computeDomainSeparator();
-    // }
+    function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
+        return block.chainid == INITIAL_CHAIN_ID ? INITIAL_DOMAIN_SEPARATOR : computeDomainSeparator();
+    }
 
-    // function computeDomainSeparator() internal view virtual returns (bytes32) {
-    //     return
-    //         keccak256(
-    //             abi.encode(
-    //                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-    //                 keccak256(bytes(name)),
-    //                 keccak256("1"),
-    //                 block.chainid,
-    //                 address(this)
-    //             )
-    //         );
-    // }
+    function computeDomainSeparator() internal view virtual returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                    keccak256(bytes(name)),
+                    keccak256("1"),
+                    block.chainid,
+                    address(this)
+                )
+            );
+    }
 
     /*//////////////////////////////////////////////////////////////
                         INTERNAL MINT/BURN LOGIC
