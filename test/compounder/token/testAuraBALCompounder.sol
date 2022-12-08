@@ -353,7 +353,7 @@ contract testAuraBALCompounder is TokenCompounderBaseTest {
         bobAmountOut = auraBALCompounder.withdraw(assetsClaim, address(bob), address(bob));
         
         assertEq(IERC20(auraBAL).balanceOf(address(bob)), assetsClaim, "testWithdraw: E23");
-        assertApproxEqAbs(IERC20(auraBAL).balanceOf(address(bob)), bobAmountOut, 1e18, "testWithdraw: E24");
+        assertApproxEqAbs(IERC20(auraBAL).balanceOf(address(bob)), bobAmountOut, 1e19, "testWithdraw: E24");
         assertApproxEqAbs(auraBALCompounder.balanceOf(address(bob)), 0, 1e16, "testWithdraw: E25");
         
         shares = auraBALCompounder.balanceOf(address(charlie));

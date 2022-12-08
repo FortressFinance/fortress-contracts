@@ -462,10 +462,6 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         
         _burn(_owner, _shares);
         
-        if (totalSupply == 0) {
-            _assets = totalAssets();
-        }
-
         IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
         
         emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
