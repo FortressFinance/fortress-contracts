@@ -177,7 +177,7 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
                 revert UnsupportedPoolType();
             }
         }
-
+        
         if (_toToken == ETH) {
             // slither-disable-next-line arbitrary-send-eth
             (bool sent,) = msg.sender.call{value: _amount}("");
@@ -265,17 +265,21 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
     /********************************** Internal Functions **********************************/
 
     function _swapUniV3(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
+        
+        bool _toETH = false;
         if (_fromToken == ETH) {
             _wrapETH(_amount);
             _fromToken = WETH;
         } else if (_toToken == ETH) {
             _toToken = WETH;
+            _toETH = true;
         }
         
         _approve(_fromToken, UNIV3_ROUTER, _amount);
 
         uint24 _fee = IUniswapV3Pool(_poolAddress).fee();
         
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
         IUniswapV3Router.ExactInputSingleParams memory _params = IUniswapV3Router.ExactInputSingleParams(
             _fromToken,
             _toToken,
@@ -287,21 +291,25 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
             0
         );
 
-        if (_toToken == WETH) {
-            _amount = IUniswapV3Router(UNIV3_ROUTER).exactInputSingle(_params);
+        IUniswapV3Router(UNIV3_ROUTER).exactInputSingle(_params);
+        _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
+
+        if (_toETH) {
             _unwrapETH(_amount);
-            return _amount;
-        } else {
-            return IUniswapV3Router(UNIV3_ROUTER).exactInputSingle(_params);
         }
+
+        return _amount;
     }
 
     function _swapFraxswapUniV2(address _fromToken, address _toToken, uint256 _amount) internal returns (uint256) {
+        
+        bool _toETH = false;
         if (_fromToken == ETH) {
             _wrapETH(_amount);
             _fromToken = WETH;
         } else if (_toToken == ETH) {
             _toToken = WETH;
+            _toETH = true;
         }
 
         _approve(_fromToken, FRAXSWAP_UNIV2_ROUTER, _amount);
@@ -310,28 +318,34 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         path[0] = _fromToken;
         path[1] = _toToken;
 
-        uint256[] memory _amounts;
-        if (_toToken == WETH) {
-            _amounts = IUniswapV2Router(FRAXSWAP_UNIV2_ROUTER).swapExactTokensForTokens(_amount, 0, path, address(this), block.timestamp);
+        // uint256[] memory _amounts;
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        IUniswapV2Router(FRAXSWAP_UNIV2_ROUTER).swapExactTokensForTokens(_amount, 0, path, address(this), block.timestamp);
+        _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
+
+        if (_toETH) {
             _unwrapETH(_amount);
-        } else {
-            _amounts = IUniswapV2Router(FRAXSWAP_UNIV2_ROUTER).swapExactTokensForTokens(_amount, 0, path, address(this), block.timestamp);
-        }
-        return _amounts[1];
+        } 
+
+        // return _amounts[1];
+        return _amount;
     }
 
     function _swapBalancerPoolSingle(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
         bytes32 _poolId = IBalancerPool(_poolAddress).getPoolId();
         
+        bool _toETH = false;
         if (_fromToken == ETH) {
             _wrapETH(_amount);
             _fromToken = WETH;
         } else if (_toToken == ETH) {
             _toToken = WETH;
+            _toETH = true;
         }
         
         _approve(_fromToken, BALANCER_VAULT, _amount);
-        _amount = IBalancerVault(BALANCER_VAULT).swap(
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        IBalancerVault(BALANCER_VAULT).swap(
             IBalancerVault.SingleSwap({
             poolId: _poolId,
             kind: IBalancerVault.SwapKind.GIVEN_IN,
@@ -349,6 +363,12 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
             0,
             block.timestamp
         );
+
+        _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
+
+        if (_toETH) {
+            _unwrapETH(_amount);
+        }
 
         return _amount;
     }
@@ -370,12 +390,15 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
             revert InvalidTokens();
         }
         
+        uint256 _before = _toToken == ETH ? address(this).balance : IERC20(_toToken).balanceOf(address(this));
+
         if (_fromToken == ETH) {
-            return _pool.exchange{ value: _amount }(_from, _to, _amount, 0);    
+            _pool.exchange{ value: _amount }(_from, _to, _amount, 0);    
         } else {
             _approve(_fromToken, _poolAddress, _amount);
-            return _pool.exchange(_from, _to, _amount, 0);
+            _pool.exchange(_from, _to, _amount, 0);
         }
+        return _toToken == ETH ? address(this).balance - _before : IERC20(_toToken).balanceOf(address(this)) - _before;
     }
 
     // ICurveCryptoV2Pool
@@ -394,12 +417,15 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
             revert InvalidTokens();
         }
         
+        uint256 _before = _toToken == ETH ? address(this).balance : IERC20(_toToken).balanceOf(address(this));
+
         if (_pool.coins(_from) == ETH) {
-            return _pool.exchange{ value: _amount }(_from, _to, _amount, 0);    
+            _pool.exchange{ value: _amount }(_from, _to, _amount, 0);    
         } else {
             _approve(_fromToken, _poolAddress, _amount);
-            return _pool.exchange(_from, _to, _amount, 0);
+            _pool.exchange(_from, _to, _amount, 0);
         }
+        return _toToken == ETH ? address(this).balance - _before : IERC20(_toToken).balanceOf(address(this)) - _before;
     }
 
     // ICurveBase3Pool
@@ -429,11 +455,13 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
     function _swapCurve3Asset(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
         ICurve3Pool _pool = ICurve3Pool(_poolAddress);
 
+        bool _toETH = false;
         if (_fromToken == ETH) {
             _wrapETH(_amount);
             _fromToken = WETH;
         } else if (_toToken == ETH) {
             _toToken = WETH;
+            _toETH = true;
         }
 
         uint256 _to = 0;
@@ -452,7 +480,7 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         _pool.exchange(_from, _to, _amount, 0);
         _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
         
-        if (_toToken == WETH) {
+        if (_toETH) {
             _unwrapETH(_amount);
         }
         return _amount;
@@ -527,7 +555,10 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
                 _to = i.toInt128() + 1;
             }
         }
-        return _pool.exchange_underlying(_from, _to, _amount, 0);
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        _pool.exchange_underlying(_from, _to, _amount, 0);
+
+        return IERC20(_toToken).balanceOf(address(this)) - _before;
     }
 
     // ICurveFraxMeta
@@ -554,7 +585,10 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
                 _to = i.toInt128() + 1;
             }
         }
-        return _pool.exchange_underlying(_from, _to, _amount, 0);
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        _pool.exchange_underlying(_from, _to, _amount, 0);
+
+        return IERC20(_toToken).balanceOf(address(this)) - _before;
     }
 
     // ICurveFraxCryptoMeta
@@ -600,11 +634,13 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
     function _swapCurveETHV2(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
         ICurveCryptoETHV2Pool _pool = ICurveCryptoETHV2Pool(_poolAddress);
         
+        bool _toETH = false;
         if (_fromToken == ETH) {
             _wrapETH(_amount);
             _fromToken = WETH;
         } else if (_toToken == ETH) {
             _toToken = WETH;
+            _toETH = true;
         }
 
         _approve(_fromToken, _poolAddress, _amount);
@@ -621,13 +657,14 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
             revert InvalidTokens();
         }
         
-        if (_toToken == WETH) {
-            _amount = _pool.exchange(_from, _to, _amount, 0, false);
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        _pool.exchange(_from, _to, _amount, 0, false);
+        _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
+
+        if (_toETH) {
             _unwrapETH(_amount);
-            return _amount;
-        } else {
-            return _pool.exchange(_from, _to, _amount, 0, false);
         }
+        return _amount;
     }
 
     function _wrapETH(uint256 _amount) internal {
