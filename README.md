@@ -55,12 +55,12 @@ slither .
 ```
 ## 📜 Contract Addresses
 
- - For [Ethereum Mainnet](./docs/deployments/ethereum.md).
- - For [Arbitrum One](./docs/deployments/rinkeby.md).
+ - For [Ethereum Mainnet](./docs/deployments/ethereum.md) - TODO.
+ - For [Arbitrum One](./docs/deployments/rinkeby.md) - TODO.
 
 ## 📖 Documentation
 
-[Documentation](https://linktodocumentation)
+[Documentation](https://linktodocumentation) - TODO
 
 
 ## 💗 Contributing
