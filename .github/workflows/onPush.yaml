@@ -23,6 +23,7 @@ jobs:
         run: |
           touch .env
           echo MAINNET_RPC_URL=${{ secrets.MAINNET_RPC_URL }} >> .env
+          echo ARBITRUM_RPC_URL=${{ secrets.ARBITRUM_RPC_URL }} >> .env
           
       - name: Run unit tests
         run: forge test
