@@ -127,9 +127,9 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** Internal Functions **********************************/
 
-    function _customDeposit(uint256 _assets) internal override {}
+    function _depositStrategy(uint256 _assets) internal override {}
 
-    function _customWithdraw(uint256 _assets) internal override {}
+    function _withdrawStrategy(uint256 _assets) internal override {}
 
     function _harvest(address _receiver, uint256 _minBounty) internal override returns (uint256 _rewards) {
         // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH.

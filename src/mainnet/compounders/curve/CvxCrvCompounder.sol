@@ -101,7 +101,7 @@ contract CvxCrvCompounder is TokenCompounderBase {
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        _customDeposit(_assets);
+        _depositStrategy(_assets);
         
         return _shares;
     }
@@ -113,7 +113,7 @@ contract CvxCrvCompounder is TokenCompounderBase {
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        _customWithdraw(_assets);
+        _withdrawStrategy(_assets);
 
         _underlyingAssets = IFortressSwap(swap).swap(CVXCRV, CRV, _assets);
         if (!(_underlyingAssets >= _minAmount)) revert InsufficientAmountOut();
@@ -125,11 +125,11 @@ contract CvxCrvCompounder is TokenCompounderBase {
 
     /********************************** Internal Functions **********************************/
 
-    function _customDeposit(uint256 _assets) internal override {
+    function _depositStrategy(uint256 _assets) internal override {
         IConvexBasicRewards(CVXCRV_STAKING).stake(_assets);
     }
 
-    function _customWithdraw(uint256 _assets) internal override {
+    function _withdrawStrategy(uint256 _assets) internal override {
         IConvexBasicRewards(CVXCRV_STAKING).withdraw(_assets, false);
     }
 

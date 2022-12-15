@@ -88,7 +88,7 @@ contract AuraBalCompounder is BalancerOperations, TokenCompounderBase {
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        _customDeposit(_assets);
+        _depositStrategy(_assets);
         
         return _shares;
     }
@@ -100,7 +100,7 @@ contract AuraBalCompounder is BalancerOperations, TokenCompounderBase {
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        _customWithdraw(_assets);
+        _withdrawStrategy(_assets);
 
         _underlyingAmount = _swapAuraBALToBAL(_assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
@@ -112,11 +112,11 @@ contract AuraBalCompounder is BalancerOperations, TokenCompounderBase {
 
     /********************************** Internal Functions **********************************/
 
-    function _customDeposit(uint256 _assets) internal override {
+    function _depositStrategy(uint256 _assets) internal override {
         IAuraBALRewards(auraBAL_STAKING).stake(_assets);
     }
 
-    function _customWithdraw(uint256 _assets) internal override {
+    function _withdrawStrategy(uint256 _assets) internal override {
         IAuraBALRewards(auraBAL_STAKING).withdraw(_assets, false);
     }
 

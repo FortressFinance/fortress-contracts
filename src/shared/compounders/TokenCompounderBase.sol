@@ -37,11 +37,11 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     bool public pauseDeposit = false;
     /// @notice Whether withdraw for the pool is paused.
     bool public pauseWithdraw = false;
-    /// @notice The percentage of token to take on withdraw.
+    /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to all holders.
     uint256 public withdrawFeePercentage;
-    /// @notice The percentage of rewards to take for platform on harvest.
+    /// @notice The performance fee percentage to take for platform on harvest.
     uint256 public platformFeePercentage;
-    /// @notice The percentage of rewards to take for caller on harvest.
+    /// @notice The fee percentage to take for caller on harvest.
     uint256 public harvestBountyPercentage;
     /// @notice The last block number that the harvest function was executed.
     uint256 public lastHarvestBlock;
@@ -89,8 +89,8 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @return - True if there's pending rewards, false if otherwise.
     function isPendingRewards() public view virtual returns (bool) {}
 
-    /// @dev Returns the total amount of the assets that are managed by the vault.
-    /// @return - The total amount of the managed assets.
+    /// @dev Returns the total amount of assets managed by the vault.
+    /// @return - The total amount of managed assets.
     function totalAssets() public view virtual override returns (uint256) {
         return totalAUM;
     }
@@ -136,7 +136,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _deposit(msg.sender, _receiver, _assets, _shares);
 
         IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        _customDeposit(_assets);
+        _depositStrategy(_assets);
         
         return _shares;
     }
@@ -152,7 +152,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _deposit(msg.sender, _receiver, _assets, _shares);
 
         IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        _customDeposit(_assets);
+        _depositStrategy(_assets);
         
         return _assets;
     }
@@ -168,7 +168,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _shares = previewWithdraw(_assets);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        _customWithdraw(_assets);
+        _withdrawStrategy(_assets);
         IERC20(address(asset)).safeTransfer(_receiver, _assets);
 
         return _shares;
@@ -185,7 +185,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        _customWithdraw(_assets);
+        _withdrawStrategy(_assets);
         IERC20(address(asset)).safeTransfer(_receiver, _assets);
 
         return _assets;
@@ -299,9 +299,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     function _harvest(address _receiver, uint256 _minimumOut) internal virtual returns (uint256) {}
 
-    function _customDeposit(uint256 _assets) internal virtual {}
+    function _depositStrategy(uint256 _assets) internal virtual {}
 
-    function _customWithdraw(uint256 _assets) internal virtual {}
+    function _withdrawStrategy(uint256 _assets) internal virtual {}
 
     /********************************** Events **********************************/
 
