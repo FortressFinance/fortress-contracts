@@ -33,4 +33,4 @@ jobs:
         with:
           solc-version: 0.8.8
           fail-on: medium
-          target: src/compounders
+          target: src/mainnet/compounders
