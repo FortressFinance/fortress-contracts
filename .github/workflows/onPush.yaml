@@ -31,27 +31,27 @@ jobs:
       - name: Run slither mainnet Compounders
         uses: crytic/slither-action@v0.2.0
         with:
-          solc-version: 0.8.8
+          solc-version: pragma solidity 0.8.17
           fail-on: medium
           target: src/mainnet/compounders
       
       - name: Run slither mainnet Concentrators
         uses: crytic/slither-action@v0.2.0
         with:
-          solc-version: 0.8.8
+          solc-version: pragma solidity 0.8.17
           fail-on: medium
           target: src/mainnet/concentrators
 
       - name: Run slither Arbitrum Compounders
         uses: crytic/slither-action@v0.2.0
         with:
-          solc-version: 0.8.8
+          solc-version: pragma solidity 0.8.17
           fail-on: medium
           target: src/arbitrum/compounders/gmx
 
       - name: Run slither Shared
         uses: crytic/slither-action@v0.2.0
         with:
-          solc-version: 0.8.8
+          solc-version: pragma solidity 0.8.17
           fail-on: medium
           target: src/shared/compounders

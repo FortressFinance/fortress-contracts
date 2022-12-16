@@ -10,8 +10,8 @@ RUN apt-get update \
  && sudo apt-get update \
  && sudo apt-get install solc -y \
  && pip3 install slither-analyzer solc-select \
- && solc-select install 0.8.8 \
- && solc-select use 0.8.8 \
+ && solc-select install 0.8.17 \
+ && solc-select use 0.8.17 \
  # install foundry
  && curl -L https://foundry.paradigm.xyz | bash \
  && foundryup \

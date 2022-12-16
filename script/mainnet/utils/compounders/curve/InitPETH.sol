@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.8;
+pragma solidity 0.8.17;
 
 import "src/mainnet/compounders/curve/CurveCompounder.sol";
 import "script/mainnet/utils/InitBase.sol";

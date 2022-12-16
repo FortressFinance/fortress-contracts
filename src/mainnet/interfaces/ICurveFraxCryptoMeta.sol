@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.8;
+pragma solidity 0.8.17;
 
 // https://curve.fi/factory-crypto/95 - CVX/crvFRAX
 // https://curve.fi/factory-crypto/94 - cvxFXS/crvFRAX

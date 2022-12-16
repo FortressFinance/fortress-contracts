@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.8;
+pragma solidity 0.8.17;
 
 interface IConvexBasicRewards {
   function stakeFor(address, uint256) external returns (bool);

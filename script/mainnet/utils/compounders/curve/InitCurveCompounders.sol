@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.8;
+pragma solidity 0.8.17;
 
 import "script/mainnet/utils/compounders/curve/InitPETH.sol";
 import "script/mainnet/utils/compounders/curve/InitFXScvxFXS.sol";

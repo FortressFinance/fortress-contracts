@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.8;
+pragma solidity 0.8.17;
 
 // https://curve.fi/factory-crypto/37 - USDC/STG
 // https://curve.fi/factory-crypto/23 - USDC/FIDU

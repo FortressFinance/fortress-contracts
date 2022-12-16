@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.8;
+pragma solidity 0.8.17;
 
 // https://curve.fi/factory/144 - tUSD/FRAXBP
 // https://curve.fi/factory/147 - alUSD/FRAXBP
