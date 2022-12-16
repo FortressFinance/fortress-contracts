@@ -186,8 +186,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
+        _depositStrategy(_assets, true);
 
         return _shares;
     }
@@ -202,8 +201,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
+        _depositStrategy(_assets, true);
 
         return _assets;
     }
@@ -220,8 +218,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
-        IERC20(address(asset)).safeTransfer(_receiver, _assets);
+        _withdrawStrategy(_assets, _receiver, true);
 
         return _shares;
     }
@@ -238,8 +235,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
-        IERC20(address(asset)).safeTransfer(_receiver, _assets);
+        _withdrawStrategy(_assets, _receiver, true);
 
         return _assets;
     }
@@ -351,6 +347,11 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         emit Deposit(_caller, _receiver, _assets, _shares);
     }
 
+    function _depositStrategy(uint256 _assets, bool _transfer) internal {
+        if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
+        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
+    }
+
     function _withdraw(address _caller, address _receiver, address _owner, uint256 _assets, uint256 _shares) internal override {
         if (pauseWithdraw) revert WithdrawPaused();
         if (_receiver == address(0)) revert ZeroAddress();
@@ -368,6 +369,11 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         totalAUM -= _assets;
 
         emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
+    }
+
+    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal virtual {
+        IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
+        if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minimumOut) internal virtual returns (uint256) {}

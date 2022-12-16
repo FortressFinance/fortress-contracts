@@ -45,7 +45,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 public harvestBountyPercentage;
     /// @notice The last block number that the harvest function was executed.
     uint256 public lastHarvestBlock;
-    /// @notice The internal accounting of AUM.
+    /// @notice The internal accounting of assets under management.
     uint256 public totalAUM;
 
     /// @notice The address of the owner.
@@ -135,8 +135,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        _depositStrategy(_assets);
+        _depositStrategy(_assets, true);
         
         return _shares;
     }
@@ -151,8 +150,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        _depositStrategy(_assets);
+        _depositStrategy(_assets, true);
         
         return _assets;
     }
@@ -168,8 +166,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _shares = previewWithdraw(_assets);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        _withdrawStrategy(_assets);
-        IERC20(address(asset)).safeTransfer(_receiver, _assets);
+        _withdrawStrategy(_assets, _receiver, true);
 
         return _shares;
     }
@@ -185,8 +182,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        _withdrawStrategy(_assets);
-        IERC20(address(asset)).safeTransfer(_receiver, _assets);
+        _withdrawStrategy(_assets, _receiver, true);
 
         return _assets;
     }
@@ -299,9 +295,13 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     function _harvest(address _receiver, uint256 _minimumOut) internal virtual returns (uint256) {}
 
-    function _depositStrategy(uint256 _assets) internal virtual {}
+    function _depositStrategy(uint256 _assets, bool _transfer) internal virtual {
+        if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
+    }
 
-    function _withdrawStrategy(uint256 _assets) internal virtual {}
+    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal virtual {
+        if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
+    }
 
     /********************************** Events **********************************/
 

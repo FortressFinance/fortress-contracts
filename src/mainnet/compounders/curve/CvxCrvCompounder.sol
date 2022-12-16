@@ -101,7 +101,7 @@ contract CvxCrvCompounder is TokenCompounderBase {
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        _depositStrategy(_assets);
+        _depositStrategy(_assets, false);
         
         return _shares;
     }
@@ -113,7 +113,7 @@ contract CvxCrvCompounder is TokenCompounderBase {
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        _withdrawStrategy(_assets);
+        _withdrawStrategy(_assets, _receiver, false);
 
         _underlyingAssets = IFortressSwap(swap).swap(CVXCRV, CRV, _assets);
         if (!(_underlyingAssets >= _minAmount)) revert InsufficientAmountOut();
@@ -125,12 +125,14 @@ contract CvxCrvCompounder is TokenCompounderBase {
 
     /********************************** Internal Functions **********************************/
 
-    function _depositStrategy(uint256 _assets) internal override {
+    function _depositStrategy(uint256 _assets, bool _transfer) internal override {
+        if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
         IConvexBasicRewards(CVXCRV_STAKING).stake(_assets);
     }
 
-    function _withdrawStrategy(uint256 _assets) internal override {
+    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal override {
         IConvexBasicRewards(CVXCRV_STAKING).withdraw(_assets, false);
+        if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
 
     function _harvest(address _receiver, uint256 _minBounty) internal override returns (uint256 _rewards) {

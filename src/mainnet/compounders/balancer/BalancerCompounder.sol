@@ -75,7 +75,7 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
+        _depositStrategy(_assets, false);
         
         return _shares;
     }
@@ -88,7 +88,7 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
+        _withdrawStrategy(_assets, _receiver, false);
         
         _underlyingAmount = _removeLiquidity(address(asset), _underlyingAsset, _assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();

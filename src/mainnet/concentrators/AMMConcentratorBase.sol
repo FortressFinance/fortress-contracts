@@ -201,7 +201,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        _afterDeposit(_assets, true);
+        _depositStrategy(_assets, true);
         
         return _shares;
     }
@@ -217,7 +217,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _assets = previewMint(_shares);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        _afterDeposit(_assets, true);
+        _depositStrategy(_assets, true);
         
         return _assets;
     }
@@ -235,7 +235,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _shares = previewWithdraw(_assets);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        _afterWithdraw(_assets, _receiver, true);
+        _withdrawStrategy(_assets, _receiver, true);
 
         return _shares;
     }
@@ -253,7 +253,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
-        _afterWithdraw(_assets, _receiver, true);
+        _withdrawStrategy(_assets, _receiver, true);
 
         return _assets;
     }
@@ -449,7 +449,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit Deposit(_caller, _receiver, _assets, _shares);
     }
 
-    function _afterDeposit(uint256 _assets, bool _transfer) internal {
+    function _depositStrategy(uint256 _assets, bool _transfer) internal {
         if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
         IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
     }
@@ -473,7 +473,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
     }
 
-    function _afterWithdraw(uint256 _assets, address _receiver, bool _transfer) internal {
+    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal {
         IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
         if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }

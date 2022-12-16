@@ -93,7 +93,7 @@ contract CvxCrvConcentrator is CurveOperations, AMMConcentratorBase {
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        _afterDeposit(_assets, false);
+        _depositStrategy(_assets, false);
 
         return _shares;
     }
@@ -108,7 +108,7 @@ contract CvxCrvConcentrator is CurveOperations, AMMConcentratorBase {
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        _afterWithdraw(_assets, _receiver, false);
+        _withdrawStrategy(_assets, _receiver, false);
 
         _underlyingAmount = _removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
