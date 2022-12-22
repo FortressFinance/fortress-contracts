@@ -229,34 +229,43 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
     }
 
     function _testWithdrawLP(uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
+        
+        uint256 _lowestShare = _sharesAlice < _sharesBob ? _sharesAlice : _sharesBob;
+        _lowestShare = _lowestShare < _sharesCharlie ? _lowestShare : _sharesCharlie;
+
+        uint256 _dirtyTotalSupply = balancerCompounder.totalSupply() - (_lowestShare * 3);
+        uint256 _dirtyTotalAssetsBefore = balancerCompounder.totalAssets();
+        
         vm.startPrank(alice);
-        uint256 _assets = balancerCompounder.previewRedeem(_sharesAlice);
-        uint256 _sharesBurnAlice = balancerCompounder.withdraw(_assets, address(alice), address(alice));
+        uint256 _assetsAlice = balancerCompounder.previewRedeem(_lowestShare);
+        uint256 _sharesBurnAlice = balancerCompounder.withdraw(_assetsAlice, address(alice), address(alice));
         vm.stopPrank();
-        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(alice)), _assets, "_testWithdrawLP: E1");
-        assertApproxEqAbs(_sharesBurnAlice, _sharesAlice, 1e17, "_testWithdrawLP: E2");
-        assertApproxEqAbs(balancerCompounder.balanceOf(address(alice)), 0, 1e17, "_testWithdrawLP: E3");
-
+        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(alice)), _assetsAlice, "_testWithdrawLP: E1");
+        assertApproxEqAbs(_sharesBurnAlice, _lowestShare, 1e16, "_testWithdrawLP: E2");
+        assertApproxEqAbs(balancerCompounder.balanceOf(address(alice)), _sharesAlice - _lowestShare, 1e16, "_testWithdrawLP: E3");
+        
         vm.startPrank(bob);
-        _assets = balancerCompounder.previewRedeem(_sharesBob);
-        uint256 _sharesBurnBob = balancerCompounder.withdraw(_assets, address(bob), address(bob));
+        uint256 _assetsBob = balancerCompounder.previewRedeem(_lowestShare);
+        uint256 _sharesBurnBob = balancerCompounder.withdraw(_assetsBob, address(bob), address(bob));
         vm.stopPrank();
-        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(bob)), _assets, "_testWithdrawLP: E4");
-        assertApproxEqAbs(_sharesBurnBob, _sharesBob, 1e17, "_testWithdrawLP: E5");
-        assertApproxEqAbs(balancerCompounder.balanceOf(address(bob)), 0, 1e17, "_testWithdrawLP: E6");
-
+        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(bob)), _assetsBob, "_testWithdrawLP: E4");
+        assertApproxEqAbs(_sharesBurnBob, _lowestShare, 1e16, "_testWithdrawLP: E5");
+        assertApproxEqAbs(balancerCompounder.balanceOf(address(bob)), _sharesBob - _lowestShare, 1e16, "_testWithdrawLP: E6");
+        
         vm.startPrank(charlie);
-        _assets = balancerCompounder.previewRedeem(_sharesCharlie);
-        uint256 _sharesBurnCharlie = balancerCompounder.withdraw(_assets, address(charlie), address(charlie));
+        uint256 _assetsCharlie = balancerCompounder.previewRedeem(_lowestShare);
+        uint256 _sharesBurnCharlie = balancerCompounder.withdraw(_assetsCharlie, address(charlie), address(charlie));
         vm.stopPrank();
-        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(charlie)), _assets, "_testWithdrawLP: E7");
-        assertApproxEqAbs(_sharesBurnCharlie, _sharesCharlie, 1e17, "_testWithdrawLP: E8");
-        assertApproxEqAbs(balancerCompounder.balanceOf(address(charlie)), 0, 1e17, "_testWithdrawLP: E9");
+        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(charlie)), _assetsCharlie, "_testWithdrawLP: E7");
+        assertApproxEqAbs(_sharesBurnCharlie, _lowestShare, 1e16, "_testWithdrawLP: E8");
+        assertApproxEqAbs(balancerCompounder.balanceOf(address(charlie)), _sharesCharlie - _lowestShare, 1e16, "_testWithdrawLP: E9");
+        
+        uint256 _dirtyTotalAssets = _dirtyTotalAssetsBefore - (_assetsAlice + _assetsBob + _assetsCharlie);
 
-        assertApproxEqAbs(balancerCompounder.totalAssets(), 0, 1e20, "_testWithdrawLP: E10");
-        assertApproxEqAbs(balancerCompounder.totalSupply(), 0, 1e17, "_testWithdrawLP: E11");
-        assertApproxEqAbs(_sharesBurnAlice, _sharesBurnBob, 1e20, "_testWithdrawLP: E12");
-        assertApproxEqAbs(_sharesBurnAlice, _sharesBurnCharlie, 1e20, "_testWithdrawLP: E13");
+        assertApproxEqAbs(balancerCompounder.totalAssets(), _dirtyTotalAssets, 1e16, "_testWithdrawLP: E10");
+        assertApproxEqAbs(balancerCompounder.totalSupply(), _dirtyTotalSupply, 1e16, "_testWithdrawLP: E11");
+        assertApproxEqAbs(_sharesBurnAlice, _sharesBurnBob, 1e16, "_testWithdrawLP: E12");
+        assertApproxEqAbs(_sharesBurnAlice, _sharesBurnCharlie, 1e16, "_testWithdrawLP: E13");
     }
 
     function _testNoAssetsDeposit(uint256 _assets) internal {
