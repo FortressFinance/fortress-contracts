@@ -789,8 +789,8 @@ contract testGLPCompounder is BaseTest, InitGlpCompounder {
         assertTrue(charlieAmount > 0, "testCorrectFlowLINK: E6");
         vm.stopPrank();
 
-        assertEq(charlieAmount, aliceAmount, "testCorrectFlowLINK: E7");
-        assertEq(charlieAmount, bobAmount, "testCorrectFlowLINK: E8");
+        assertApproxEqAbs(charlieAmount, aliceAmount, 1e18, "testCorrectFlowLINK: E7");
+        assertApproxEqAbs(charlieAmount, bobAmount, 1e18, "testCorrectFlowLINK: E8");
 
         // ---------------- deposit LINK ----------------
 
@@ -840,8 +840,8 @@ contract testGLPCompounder is BaseTest, InitGlpCompounder {
         vm.stopPrank();
 
         assertEq((aliceSharesOut + bobSharesOut + charlieSharesOut), accumulatedShares, "testCorrectFlowLINK: E61");
-        assertEq(aliceSharesOut, bobSharesOut, "testCorrectFlowLINK: E62");
-        assertEq(aliceSharesOut, charlieSharesOut, "testCorrectFlowLINK: E63");
+        assertApproxEqAbs(aliceSharesOut, bobSharesOut, 1e18, "testCorrectFlowLINK: E62");
+        assertApproxEqAbs(aliceSharesOut, charlieSharesOut, 1e18, "testCorrectFlowLINK: E63");
 
         // ---------------- harvest ----------------
 
@@ -871,8 +871,8 @@ contract testGLPCompounder is BaseTest, InitGlpCompounder {
         // ---------------- redeem ---------------
 
         assertEq(glpCompounder.balanceOf(address(alice)), aliceSharesOut, "testCorrectFlowLINK: E074");
-        assertEq(charlieSharesOut, aliceSharesOut, "testCorrectFlowLINK: E075");
-        assertEq(charlieSharesOut, bobSharesOut, "testCorrectFlowLINK: E076");
+        assertApproxEqAbs(charlieSharesOut, aliceSharesOut, 1e18, "testCorrectFlowLINK: E075");
+        assertApproxEqAbs(charlieSharesOut, bobSharesOut, 1e18, "testCorrectFlowLINK: E076");
         assertEq(glpCompounder.balanceOf(address(bob)), bobSharesOut, "testCorrectFlowLINK: E076");
         assertEq(glpCompounder.balanceOf(address(charlie)), charlieSharesOut, "testCorrectFlowLINK: E077");
 
