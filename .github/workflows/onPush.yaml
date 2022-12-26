@@ -28,12 +28,19 @@ jobs:
       - name: Run unit tests
         run: forge test
 
-      - name: Run slither mainnet Compounders
+      - name: Run slither mainnet Curve Compounders
         uses: crytic/slither-action@v0.2.0
         with:
           solc-version: 0.8.17
           fail-on: medium
-          target: src/mainnet/compounders
+          target: src/mainnet/compounders/curve
+
+      - name: Run slither mainnet Balancer Compounders
+        uses: crytic/slither-action@v0.2.0
+        with:
+          solc-version: 0.8.17
+          fail-on: medium
+          target: src/mainnet/compounders/balancer
       
       # - name: Run slither mainnet Concentrators
       #   uses: crytic/slither-action@v0.2.0
