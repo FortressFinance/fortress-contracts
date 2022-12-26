@@ -33,9 +33,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
-    /// @notice Whether deposit for the pool is paused.
+    /// @notice Whether deposits are paused.
     bool public pauseDeposit = false;
-    /// @notice Whether withdraw for the pool is paused.
+    /// @notice Whether withdrawals are paused.
     bool public pauseWithdraw = false;
     /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to all holders.
     uint256 public withdrawFeePercentage;
@@ -45,10 +45,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 public harvestBountyPercentage;
     /// @notice The last block number that the harvest function was executed.
     uint256 public lastHarvestBlock;
-    /// @notice The internal accounting of assets under management.
+    /// @notice The internal accounting of AUM.
     uint256 public totalAUM;
 
-    /// @notice The address of the owner.
+    /// @notice The address of owner.
     address public owner;
     /// @notice The address of recipient of platform fee.
     address public platform;
@@ -89,7 +89,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @return - True if there's pending rewards, false if otherwise.
     function isPendingRewards() public view virtual returns (bool) {}
 
-    /// @dev Returns the total amount of assets managed by the vault.
+    /// @dev Returns the total amount of assets that are managed by the vault.
     /// @return - The total amount of managed assets.
     function totalAssets() public view virtual override returns (uint256) {
         return totalAUM;
@@ -167,7 +167,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
         _withdrawStrategy(_assets, _receiver, true);
-
+        
         return _shares;
     }
 
@@ -183,7 +183,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
         _withdrawStrategy(_assets, _receiver, true);
-
+        
         return _assets;
     }
 

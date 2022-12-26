@@ -2,8 +2,9 @@
 pragma solidity 0.8.17;
 
 import "src/mainnet/compounders/curve/CvxCrvCompounder.sol";
-import "src/mainnet/interfaces/IBalancerVault.sol";
-import "src/mainnet/interfaces/IBalancerPool.sol";
+
+import "src/shared/interfaces/IBalancerVault.sol";
+import "src/shared/interfaces/IBalancerPool.sol";
 
 import "test/mainnet/compounder/token/TokenCompounderBaseTest.sol";
 

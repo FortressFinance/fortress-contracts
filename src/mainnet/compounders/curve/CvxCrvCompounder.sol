@@ -22,11 +22,12 @@ pragma solidity 0.8.17;
 
 import "src/shared/compounders/TokenCompounderBase.sol";
 
-import "src/mainnet/fortress-interfaces/IFortressSwap.sol";
-import "src/mainnet/interfaces/IConvexBasicRewards.sol";
+import "src/shared/fortress-interfaces/IFortressSwap.sol";
+import "src/shared/interfaces/IConvexBasicRewards.sol";
+import "src/shared/interfaces/ICurveBase3Pool.sol";
+
 import "src/mainnet/interfaces/IConvexVirtualBalanceRewardPool.sol";
 import "src/mainnet/interfaces/ICVXMining.sol";
-import "src/mainnet/interfaces/ICurveBase3Pool.sol";
 
 contract CvxCrvCompounder is TokenCompounderBase {
 
@@ -151,6 +152,7 @@ contract CvxCrvCompounder is TokenCompounderBase {
         _swap.swap(USDT, ETH, IERC20(USDT).balanceOf(address(this)));
 
         // 4. ETH => CRV
+        // slither-disable-next-line arbitrary-send-eth
         _swap.swap{ value: address(this).balance }(ETH, CRV, address(this).balance);
         
         // CRV --> cvxCRV

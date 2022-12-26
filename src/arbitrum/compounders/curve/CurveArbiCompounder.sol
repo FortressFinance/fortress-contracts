@@ -13,21 +13,29 @@ pragma solidity 0.8.17;
 // ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-                                                                             
-//  _____     _                     _____                             _         
-// | __  |___| |___ ___ ___ ___ ___|     |___ _____ ___ ___ _ _ ___ _| |___ ___ 
-// | __ -| .'| | .'|   |  _| -_|  _|   --| . |     | . | . | | |   | . | -_|  _|
-// |_____|__,|_|__,|_|_|___|___|_| |_____|___|_|_|_|  _|___|___|_|_|___|___|_|  
-//                                                 |_|                          
+                             
+//  _____                 _____     _   _ _____                             _         
+// |     |_ _ ___ _ _ ___|  _  |___| |_|_|     |___ _____ ___ ___ _ _ ___ _| |___ ___ 
+// |   --| | |  _| | | -_|     |  _| . | |   --| . |     | . | . | | |   | . | -_|  _|
+// |_____|___|_|  \_/|___|__|__|_| |___|_|_____|___|_|_|_|  _|___|___|_|_|___|___|_|  
+//                                                       |_|                          
 
 // Github - https://github.com/FortressFinance
 
 import "src/shared/compounders/AMMCompounderBase.sol";
-import "src/mainnet/utils/BalancerOperations.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
-contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
+import "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
+import "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
+
+contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
     
     using SafeERC20 for IERC20;
+
+    /// @notice The address of the vault's Curve pool.
+    address private immutable poolAddress;
+    /// @notice The internal type of pool, used in CurveOperations.
+    uint256 private immutable poolType;
 
     /********************************** Constructor **********************************/
 
@@ -40,7 +48,8 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
         address _swap,
         uint256 _boosterPoolId,
         address[] memory _rewardAssets,
-        address[] memory _underlyingAssets
+        address[] memory _underlyingAssets,
+        uint256 _poolType
         )
         AMMCompounderBase(
             _asset,
@@ -49,34 +58,38 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
             _owner,
             _platform,
             _swap,
-            address(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234), // Aura Booster
-            IConvexBooster(0xA57b8d98dAE62B26Ec3bcC4a365338157060B234).poolInfo(_boosterPoolId).crvRewards,
+            address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
+            IConvexBoosterArbi(0xF403C135812408BFbE8713b5A23a04b3D48AAE31).poolInfo(_boosterPoolId).rewards,
             _boosterPoolId,
             _rewardAssets,
             _underlyingAssets
-        ) {}
+        ) {
+            poolType = _poolType;
+            poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
+    }
 
     /********************************** Internal Functions **********************************/
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
-        _assets = _addLiquidity(address(asset), _underlyingAsset, _underlyingAmount);
+        _assets = _addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
     }
 
     function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
-        _underlyingAmount = _removeLiquidity(address(asset), _underlyingAsset, _assets);
+        _underlyingAmount = _removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
     }
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal override returns (uint256 _rewards) {
         
-        IConvexBasicRewards(crvRewards).getReward();
-
+        IConvexBasicRewardsArbi(crvRewards).getReward(address(this));
+        
         address _rewardAsset;
         address _swap = swap;
         address[] memory _rewardAssets = rewardAssets;
         for (uint256 i = 0; i < _rewardAssets.length; i++) {
             _rewardAsset = _rewardAssets[i];
+            
             if (_rewardAsset != _underlyingAsset) {
                 if (_rewardAsset == ETH) {
                     // slither-disable-next-line arbitrary-send-eth
@@ -97,11 +110,10 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
         }
 
         if (_rewards > 0) {
-            address _lpToken = address(asset);
-            _rewards = _addLiquidity(_lpToken, _underlyingAsset, _rewards);
-        
+            _rewards = _addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
             uint256 _platformFee = platformFeePercentage;
             uint256 _harvestBounty = harvestBountyPercentage;
+            address _lpToken = address(asset);
             if (_platformFee > 0) {
                 _platformFee = (_platformFee * _rewards) / FEE_DENOMINATOR;
                 _rewards = _rewards - _platformFee;
@@ -114,7 +126,7 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
                 IERC20(_lpToken).safeTransfer(_receiver, _harvestBounty);
             }
 
-            IConvexBooster(booster).deposit(boosterPoolId, _rewards, true);
+            IConvexBoosterArbi(booster).deposit(boosterPoolId, _rewards);
 
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
@@ -122,6 +134,16 @@ contract BalancerCompounder is BalancerOperations, AMMCompounderBase {
         } else {
             revert NoPendingRewards();
         }
+    }
+
+    function _depositStrategy(uint256 _assets, bool _transfer) internal override {
+        if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
+        IConvexBoosterArbi(booster).deposit(boosterPoolId, _assets);
+    }
+
+    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal override {
+        IConvexBasicRewards(crvRewards).withdraw(_assets, false);
+        if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
 
     receive() external payable {}

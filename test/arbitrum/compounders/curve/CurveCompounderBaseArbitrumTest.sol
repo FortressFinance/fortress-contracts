@@ -7,12 +7,16 @@ import "forge-std/console.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "src/mainnet/compounders/curve/CurveCompounder.sol";
-import "src/mainnet/utils/FortressRegistry.sol";
-import "script/mainnet/utils/AddRoutes.sol";
+import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
+import "src/arbitrum/utils/FortressArbiSwap.sol";
+import "src/arbitrum/utils/FortressArbiRegistry.sol";
+
+import "script/arbitrum/utils/AddressesArbi.sol";
+
 import "src/shared/interfaces/ERC20.sol";
 
-contract CurveCompounderBaseTest is Test, AddRoutes {
+contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
+
     using SafeERC20 for IERC20;
 
     address owner;
@@ -23,24 +27,25 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
     address harvester;
     address platform;
 
-    uint256 mainnetFork;
+    uint256 arbitrumFork;
     
-    FortressRegistry fortressRegistry;
-    CurveCompounder curveCompounder;
-    FortressSwap fortressSwap;
+    FortressArbiRegistry fortressArbiRegistry;
+    FortressArbiSwap fortressSwap;
+    CurveArbiCompounder curveCompounder;
 
     function _setUp() internal {
-        string memory MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-        mainnetFork = vm.createFork(MAINNET_RPC_URL);
-        vm.selectFork(mainnetFork);
 
-        owner = address(0x16cAD91E1928F994816EbC5e759d8562aAc65ab2);
+        string memory ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
+        arbitrumFork = vm.createFork(ARBITRUM_RPC_URL);
+        vm.selectFork(arbitrumFork);
+
         alice = address(0xFa0C696bC56AE0d256D34a307c447E80bf92Dd41);
         bob = address(0x864e4b0c28dF7E2f317FF339CebDB5224F47220e);
         charlie = address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc);
         yossi = address(0x77Ee01E3d0E05b4afF42105Fe004520421248261);
-        platform = address(0x9cbD8440E5b8f116082a0F4B46802DB711592fAD);
         harvester = address(0xBF93B898E8Eee7dd6915735eB1ea9BFc4b98BEc0);
+        owner = address(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266);
+        platform = address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
 
         vm.deal(owner, 100 ether);
         vm.deal(alice, 100 ether);
@@ -50,11 +55,10 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
         vm.deal(harvester, 100 ether);
 
         vm.startPrank(owner);
-        fortressSwap = new FortressSwap(address(owner));
-        fortressRegistry = new FortressRegistry();
-        
-        addRoutes(address(fortressSwap));
+        fortressSwap = new FortressArbiSwap(address(owner));
+        fortressArbiRegistry = new FortressArbiRegistry(address(owner));
         vm.stopPrank();
+
     }
 
     function _testSingleUnwrapped(address _asset, uint256 _amount) internal {
@@ -65,15 +69,14 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
         uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
         uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
 
-        // ------------ Deposit ------------
+        // // ------------ Deposit ------------
 
         (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositSingleUnwrapped(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
-
         // ------------ Harvest rewards ------------
 
         _testHarvest(_asset, (_sharesAlice + _sharesBob + _sharesCharlie));
 
-        // ------------ Withdraw ------------
+        // // ------------ Withdraw ------------
 
         _testRedeemSingleUnwrapped(_asset, _sharesAlice, _sharesBob, _sharesCharlie);
     }
@@ -217,6 +220,7 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
         if (_asset != ETH) {
             IERC20(_asset).safeApprove(address(curveCompounder), _underlyingAlice);
         }
+        
         vm.expectRevert();
         curveCompounder.depositSingleUnderlying(_underlyingAlice, _asset, address(alice), 0);
         vm.stopPrank();
@@ -265,10 +269,15 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
     }
 
     function _getAssetFromETH(address _owner, address _asset, uint256 _amount) internal returns (uint256 _assetOut) {
-        vm.prank(_owner);
-        _assetOut = fortressSwap.swap{ value: _amount }(ETH, _asset, _amount);
-        
-        assertApproxEqAbs(IERC20(_asset).balanceOf(_owner), _assetOut, 5, "_getAssetFromETH: E1");
+         if (_asset != WETH) {
+            vm.prank(_owner);
+            _assetOut = fortressSwap.swap{ value: _amount }(ETH, _asset, _amount);
+            
+            assertApproxEqAbs(IERC20(_asset).balanceOf(_owner), _assetOut, 5, "_getAssetFromETH: E1");
+        } else {
+            _wrapETH(_owner, _amount);
+            _assetOut = _amount;
+        }
     }
 
     function _depositSingleUnwrapped(address _owner, address _asset, uint256 _amount) internal returns (uint256 _share) {
@@ -303,19 +312,19 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
     }
 
     function _testHarvest(address _asset, uint256 _totalShare) internal {
-        // (,,,,,address crvRewards,,) = curveCompounder.poolInfo();
-        assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) == 0, "_testHarvest: E1");
+        // assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) == 0, "_testHarvest: E1");
+        assertTrue(IConvexBasicRewardsArbi(curveCompounder.crvRewards()).claimable_reward(CRV, address(curveCompounder)) == 0, "_testHarvest: E1");
 
         // Fast forward 1 month
         skip(216000);
 
-        assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) > 0, "_testHarvest: E2");
-        
+        // assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) > 0, "_testHarvest: E2");
+        // assertTrue(IConvexBasicRewardsArbi(curveCompounder.crvRewards()).claimable_reward(CRV, address(curveCompounder)) > 0, "_testHarvest: E2");
         uint256 _underlyingBefore = curveCompounder.totalAssets();
         vm.prank(harvester);
         uint256 _newUnderlying = curveCompounder.harvest(address(harvester), _asset, 0);
 
-        assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) == 0, "_testHarvest: E3");
+        // assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) == 0, "_testHarvest: E3");
         assertTrue(ERC20(curveCompounder.asset()).balanceOf(platform) > 0, "_testHarvest: E4");
         assertTrue(ERC20(curveCompounder.asset()).balanceOf(harvester) > 0, "_testHarvest: E5");
         assertTrue(curveCompounder.totalAssets() == (_underlyingBefore + _newUnderlying), "_testHarvest: E6");
@@ -532,8 +541,13 @@ contract CurveCompounderBaseTest is Test, AddRoutes {
     }
 
     function _testFortressRegistry() internal {
-        assertEq(fortressRegistry.getCurveCompounder(address(curveCompounder.asset())), address(curveCompounder), "_testFortressRegistry: E1");
-        assertEq(fortressRegistry.getCurveCompounderUnderlyingAssets(address(curveCompounder.asset())), curveCompounder.getUnderlyingAssets(), "_testFortressRegistry: E2");
+        assertEq(fortressArbiRegistry.getCurveCompounder(address(curveCompounder.asset())), address(curveCompounder), "_testFortressRegistry: E1");
+        assertEq(fortressArbiRegistry.getCurveCompounderUnderlyingAssets(address(curveCompounder.asset())), curveCompounder.getUnderlyingAssets(), "_testFortressRegistry: E2");
         // assertEq(fortressRegistry.getCurveCompoundersListLength(), 1, "_testFortressRegistry: E3");
+    }
+
+    function _wrapETH(address _owner, uint256 _amount) internal {
+        vm.prank(_owner);
+        IWETH(WETH).deposit{ value: _amount }();
     }
 }

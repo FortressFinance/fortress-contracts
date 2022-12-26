@@ -21,7 +21,7 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/mainnet/concentrators/AMMConcentratorBase.sol";
+import "src/shared/concentrators/AMMConcentratorBase.sol";
 import "src/mainnet/utils/BalancerOperations.sol";
 
 contract AuraBalConcentrator is BalancerOperations, AMMConcentratorBase {
@@ -132,6 +132,7 @@ contract AuraBalConcentrator is BalancerOperations, AMMConcentratorBase {
             _token = _rewardAssets[i];
             if (_token != _bal) {
                 if (_token == ETH && address(this).balance > 0) {
+                    // slither-disable-next-line arbitrary-send-eth
                     IFortressSwap(_swap).swap{ value: address(this).balance }(ETH, _bal, address(this).balance);
                 } else {
                     uint256 _balance = IERC20(_token).balanceOf(address(this));

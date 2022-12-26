@@ -2,6 +2,12 @@
 pragma solidity 0.8.17;
 
 interface IConvexBasicRewards {
+
+  struct EarnedData {
+        address token;
+        uint256 amount;
+  }
+
   function stakeFor(address, uint256) external returns (bool);
 
   function balanceOf(address) external view returns (uint256);

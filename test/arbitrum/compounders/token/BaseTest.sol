@@ -7,19 +7,14 @@ import "forge-std/console.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "src/shared/interfaces/IWETH.sol";
+import "src/arbitrum/utils/FortressArbiSwap.sol";
+import "src/arbitrum/utils/FortressArbiRegistry.sol";
 
-// import "script/utils/AddRoutes.sol";
-// import "src/utils/FortressRegistry.sol";
-// import "src/interfaces/ERC20.sol";
+import "src/shared/interfaces/IWETH.sol";
 
 contract BaseTest is Test {
 
-    address fsGLP = address(0x1aDDD80E6039594eE970E5872D247bf0414C8903);
-    address sGLP = address(0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf);
-    address WETH = address(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
-    address USDC = address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
-    address FRAX = address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F);
+    address BASE_WETH = address(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
 
     address owner;
     address alice;
@@ -40,8 +35,8 @@ contract BaseTest is Test {
 
     uint256 arbiFork;
     
-    // FortressRegistry fortressRegistry;
-    // FortressSwap fortressSwap;
+    FortressArbiRegistry fortressRegistry;
+    FortressArbiSwap fortressSwap;
 
     function _setUp() internal {
         
@@ -66,21 +61,19 @@ contract BaseTest is Test {
         vm.deal(harvester, 100 ether);
         vm.deal(johnnyGlpOwner, 100 ether);
 
-        // vm.startPrank(owner);
-        // fortressSwap = new FortressSwap(address(owner));
-        // fortressRegistry = new FortressRegistry();
-        
-        // addRoutes(address(fortressSwap));
-        // vm.stopPrank();
+        vm.startPrank(owner);
+        fortressSwap = new FortressArbiSwap(address(owner));
+        fortressRegistry = new FortressArbiRegistry(address(owner));
+        vm.stopPrank();
     }
 
     function _wrapETH(address _owner, uint256 _amount) internal {
         vm.prank(_owner);
-        IWETH(WETH).deposit{ value: _amount }();
+        IWETH(BASE_WETH).deposit{ value: _amount }();
     }
 
     function _unwrapETH(uint256 _amount) internal {
-        IWETH(WETH).withdraw(_amount);
+        IWETH(BASE_WETH).withdraw(_amount);
     }
 
     // function _getAssetFromETH(address _owner, address _asset, uint256 _amount) internal returns (uint256 _assetOut) {

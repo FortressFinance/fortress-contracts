@@ -23,7 +23,7 @@ pragma solidity 0.8.17;
 import "src/shared/compounders/TokenCompounderBase.sol";
 import "src/mainnet/utils/BalancerOperations.sol";
 
-import "src/mainnet/fortress-interfaces/IFortressSwap.sol";
+import "src/shared/fortress-interfaces/IFortressSwap.sol";
 import "src/mainnet/interfaces/IAuraBALRewards.sol";
 import "src/mainnet/interfaces/IAsset.sol";
 

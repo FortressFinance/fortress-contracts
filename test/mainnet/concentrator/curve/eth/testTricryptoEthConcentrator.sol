@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "src/mainnet/interfaces/IConvexBasicRewards.sol";
+import "src/shared/interfaces/IConvexBasicRewards.sol";
 import "src/mainnet/compounders/curve/CurveCompounder.sol";
 import "src/mainnet/concentrators/curve/CurveEthConcentrator.sol";
 

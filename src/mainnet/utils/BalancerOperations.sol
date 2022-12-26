@@ -25,10 +25,11 @@ pragma solidity 0.8.17;
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "src/shared/fortress-interfaces/IFortressSwap.sol";
 import "src/shared/interfaces/IWETH.sol";
-import "src/mainnet/fortress-interfaces/IFortressSwap.sol";
-import "src/mainnet/interfaces/IBalancerVault.sol";
-import "src/mainnet/interfaces/IBalancerPool.sol";
+
+import "src/shared/interfaces/IBalancerVault.sol";
+import "src/shared/interfaces/IBalancerPool.sol";
 
 contract BalancerOperations {
 
@@ -37,7 +38,7 @@ contract BalancerOperations {
     /// @notice The address of Balancer vault.
     address internal constant BALANCER_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
     /// @notice The address representing ETH.
-    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address private constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     /// @notice The address of WETH.
     address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     

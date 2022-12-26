@@ -21,7 +21,7 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/mainnet/concentrators/AMMConcentratorBase.sol";
+import "src/shared/concentrators/AMMConcentratorBase.sol";
 import "src/mainnet/utils/CurveOperations.sol";
 
 contract CvxCrvConcentrator is CurveOperations, AMMConcentratorBase {

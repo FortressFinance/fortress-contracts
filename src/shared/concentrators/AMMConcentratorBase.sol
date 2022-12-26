@@ -25,10 +25,10 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
+import "src/shared/fortress-interfaces/IFortressSwap.sol";
 import "src/shared/interfaces/ERC4626.sol";
-import "src/mainnet/interfaces/IConvexBasicRewards.sol";
-import "src/mainnet/interfaces/IConvexBooster.sol";
-import "src/mainnet/fortress-interfaces/IFortressSwap.sol";
+import "src/shared/interfaces/IConvexBasicRewards.sol";
+import "src/shared/interfaces/IConvexBooster.sol";
 
 abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
   
@@ -92,6 +92,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     uint256 internal constant MAX_PLATFORM_FEE = 2e8; // 20%
     /// @notice The maximum harvest fee.
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
+    /// @notice The address representing ETH.
+    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     
     /********************************** Constructor **********************************/
 

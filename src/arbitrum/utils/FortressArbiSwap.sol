@@ -13,12 +13,12 @@ pragma solidity 0.8.17;
 // ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-
-//  _____         _                   _____               
-// |   __|___ ___| |_ ___ ___ ___ ___|   __|_ _ _ ___ ___ 
-// |   __| . |  _|  _|  _| -_|_ -|_ -|__   | | | | .'| . |
-// |__|  |___|_| |_| |_| |___|___|___|_____|_____|__,|  _|
-//                                                   |_|  
+     
+//  _____         _                   _____     _   _ _____               
+// |   __|___ ___| |_ ___ ___ ___ ___|  _  |___| |_|_|   __|_ _ _ ___ ___ 
+// |   __| . |  _|  _|  _| -_|_ -|_ -|     |  _| . | |__   | | | | .'| . |
+// |__|  |___|_| |_| |_| |___|___|___|__|__|_| |___|_|_____|_____|__,|  _|
+//                                                                   |_|  
 
 // Github - https://github.com/FortressFinance
 
@@ -29,6 +29,8 @@ import "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
 
 import "src/shared/fortress-interfaces/IFortressSwap.sol";
 
+import "src/arbitrum/interfaces/IUniswapV3RouterArbi.sol";
+import "src/arbitrum/interfaces/IGMXRouter.sol";
 import "src/shared/interfaces/IWETH.sol";
 import "src/shared/interfaces/ICurvePool.sol";
 import "src/shared/interfaces/ICurveCryptoETHV2Pool.sol";
@@ -41,33 +43,30 @@ import "src/shared/interfaces/ICurvePlainPool.sol";
 import "src/shared/interfaces/ICurveCRVMeta.sol";
 import "src/shared/interfaces/ICurveFraxMeta.sol";
 import "src/shared/interfaces/ICurveFraxCryptoMeta.sol";
-import "src/shared/interfaces/IUniswapV3Router.sol";
 import "src/shared/interfaces/IUniswapV3Pool.sol";
 import "src/shared/interfaces/IUniswapV2Router.sol";
 import "src/shared/interfaces/IBalancerVault.sol";
 import "src/shared/interfaces/IBalancerPool.sol";
 
-contract FortressSwap is ReentrancyGuard, IFortressSwap {
+contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
 
     using SafeERC20 for IERC20;
     using SafeCast for int256;
 
-    /// @notice The address of WETH token.
-    address private constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    /// @notice The address of WETH token (Arbitrum)
+    address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     /// @notice The address representing native ETH.
     address private constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    /// @notice The address of Uniswap V3 Router.
-    address private constant UNIV3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    /// @notice The address of Fraxswap Uniswap V2 Router (https://docs.frax.finance/smart-contracts/fraxswap#ethereum).
-    address private constant FRAXSWAP_UNIV2_ROUTER = 0x1C6cA5DEe97C8C368Ca559892CCce2454c8C35C7;
-    /// @notice The address of Curve Base Pool (https://curve.fi/3pool).
-    address private constant CURVE_BP = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-    /// @notice The address of Curve Frax Base Pool (https://curve.fi/fraxusdc).
-    address private constant FRAX_BP = 0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2;
-    /// @notice The address of Curve Frax Base Pool LP tokens (https://etherscan.io/address/0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC).
-    address constant crvFRAX = 0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC;
-    /// @notice The address of Balancer vault.
+    /// @notice The address of Uniswap V3 Router (Arbitrum).
+    address private constant UNIV3_ROUTER = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45;
+    /// @notice The address of Balancer vault (Arbitrum).
     address constant BALANCER_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
+    // The address of Sushi Swap Router (Arbitrum).
+    address constant SUSHI_ARB_ROUTER = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
+    /// @notice The address of Fraxswap Uniswap V2 Router Arbitrum (https://docs.frax.finance/smart-contracts/fraxswap#arbitrum-1).
+    address private constant FRAXSWAP_UNIV2_ROUTER = 0xc2544A32872A91F4A553b404C6950e89De901fdb;
+    /// @notice The address of GMX Swap Router.
+    address constant GMX_ROUTER = 0xaBBc5F99639c9B6bCb58544ddf04EFA6802F4064;
 
     struct Route {
         // pool type -->
@@ -77,13 +76,15 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         // 3: _swapCurveCryptoV2
         // 4: Curve3AssetPool
         // 5: CurveETHV2Pool
-        // 6: CurveCRVMeta
-        // 7: CurveFraxMeta
+        // 6: CurveCRVMeta - N/A
+        // 7: CurveFraxMeta - N/A
         // 8: CurveBase3Pool
         // 9: CurveSBTCPool
         // 10: Curve4Pool
-        // 11: FraxCryptoMeta
+        // 11: FraxCryptoMeta - N/A
         // 12: BalancerSingleSwap
+        // 13: SushiSwap
+        
         /// @notice The internal pool type.
         uint256[] poolType;
         /// @notice The pool addresses.
@@ -159,20 +160,24 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
                 _amount = _swapCurve3Asset(_tokenIn, _tokenOut, _amount, _poolAddress);
             } else if (_poolType == 5) {
                 _amount = _swapCurveETHV2(_tokenIn, _tokenOut, _amount, _poolAddress);
-            } else if (_poolType == 6) {
-                _amount = _swapCurveCRVMeta(_tokenIn, _tokenOut, _amount, _poolAddress);
-            } else if (_poolType == 7) {
-                _amount = _swapCurveFraxMeta(_tokenIn, _tokenOut, _amount, _poolAddress);
+            // } else if (_poolType == 6) {
+            //     _amount = _swapCurveCRVMeta(_tokenIn, _tokenOut, _amount, _poolAddress);
+            // } else if (_poolType == 7) {
+            //     _amount = _swapCurveFraxMeta(_tokenIn, _tokenOut, _amount, _poolAddress);
             } else if (_poolType == 8) {
                 _amount = _swapCurveBase3Pool(_tokenIn, _tokenOut, _amount, _poolAddress);
             } else if (_poolType == 9) {
                 _amount = _swapCurveSBTCPool(_tokenIn, _tokenOut, _amount, _poolAddress);
             } else if (_poolType == 10) {
                 _amount = _swapCurve4Pool(_tokenIn, _tokenOut, _amount, _poolAddress);
-            } else if (_poolType == 11) {
-                _amount = _swapFraxCryptoMeta(_tokenIn, _tokenOut, _amount, _poolAddress);
+            // } else if (_poolType == 11) {
+            //     _amount = _swapFraxCryptoMeta(_tokenIn, _tokenOut, _amount, _poolAddress);
             } else if (_poolType == 12) {
                 _amount = _swapBalancerPoolSingle(_tokenIn, _tokenOut, _amount, _poolAddress);
+            } else if (_poolType == 13) {
+                _amount = _swapSushiPool(_tokenIn, _tokenOut, _amount);
+            } else if (_poolType == 14) {
+                _amount = _swapGMX(_tokenIn, _tokenOut, _amount);
             } else {
                 revert UnsupportedPoolType();
             }
@@ -264,6 +269,35 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
 
     /********************************** Internal Functions **********************************/
 
+    function _swapGMX(address _fromToken, address _toToken, uint256 _amount) internal returns (uint256) {
+
+        bool _toETH = false;
+        if (_fromToken == ETH) {
+            _wrapETH(_amount);
+            _fromToken = WETH;
+        } else if (_toToken == ETH) {
+            _toToken = WETH;
+            _toETH = true;
+        }
+
+        address _router = GMX_ROUTER;
+        _approve(_fromToken, _router, _amount);
+
+        address[] memory _path = new address[](2);
+        _path[0] = _fromToken;
+        _path[1] = _toToken; 
+
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        IGMXRouter(_router).swap(_path, _amount, 0, address(this));
+        _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
+
+        if (_toETH) {
+            _unwrapETH(_amount);
+        }
+
+        return _amount;
+    }
+
     function _swapUniV3(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
         
         bool _toETH = false;
@@ -275,23 +309,23 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
             _toETH = true;
         }
         
-        _approve(_fromToken, UNIV3_ROUTER, _amount);
+        address _router = UNIV3_ROUTER;
+        _approve(_fromToken, _router, _amount);
 
         uint24 _fee = IUniswapV3Pool(_poolAddress).fee();
         
         uint256 _before = IERC20(_toToken).balanceOf(address(this));
-        IUniswapV3Router.ExactInputSingleParams memory _params = IUniswapV3Router.ExactInputSingleParams(
+        IUniswapV3RouterArbi.ExactInputSingleParams memory _params = IUniswapV3RouterArbi.ExactInputSingleParams(
             _fromToken,
             _toToken,
             _fee, 
             address(this), 
-            block.timestamp,
             _amount,
             0,
             0
         );
 
-        IUniswapV3Router(UNIV3_ROUTER).exactInputSingle(_params);
+        IUniswapV3RouterArbi(_router).exactInputSingle(_params);
         _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
 
         if (_toETH) {
@@ -531,104 +565,104 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         return _amount;
     }
 
-    // ICurveCRVMeta
-    function _swapCurveCRVMeta(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
-        ICurveCRVMeta _pool = ICurveCRVMeta(_poolAddress);
+    // // ICurveCRVMeta
+    // function _swapCurveCRVMeta(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
+    //     ICurveCRVMeta _pool = ICurveCRVMeta(_poolAddress);
 
-        int128 _to = 0;
-        int128 _from = 0;
-        if (_fromToken == _pool.coins(0)) {
-            _approve(_fromToken, _poolAddress, _amount);
-            _from = 0;
-        } else if (_toToken == _pool.coins(0)) {
-            _to = 0;
-        } else {
-            revert InvalidTokens();
-        }
+    //     int128 _to = 0;
+    //     int128 _from = 0;
+    //     if (_fromToken == _pool.coins(0)) {
+    //         _approve(_fromToken, _poolAddress, _amount);
+    //         _from = 0;
+    //     } else if (_toToken == _pool.coins(0)) {
+    //         _to = 0;
+    //     } else {
+    //         revert InvalidTokens();
+    //     }
         
-        ICurveBase3Pool _curveBP = ICurveBase3Pool(CURVE_BP);
-        for (int256 i = 0; i < 3; i++) {
-            if (_curveBP.coins(i.toUint256()) == _fromToken) {
-                _approve(_fromToken, _poolAddress, _amount);
-                _from = i.toInt128() + 1;
-            } else if (_curveBP.coins(i.toUint256()) == _toToken) {
-                _to = i.toInt128() + 1;
-            }
-        }
-        uint256 _before = IERC20(_toToken).balanceOf(address(this));
-        _pool.exchange_underlying(_from, _to, _amount, 0);
+    //     ICurveBase3Pool _curveBP = ICurveBase3Pool(CURVE_BP);
+    //     for (int256 i = 0; i < 3; i++) {
+    //         if (_curveBP.coins(i.toUint256()) == _fromToken) {
+    //             _approve(_fromToken, _poolAddress, _amount);
+    //             _from = i.toInt128() + 1;
+    //         } else if (_curveBP.coins(i.toUint256()) == _toToken) {
+    //             _to = i.toInt128() + 1;
+    //         }
+    //     }
+    //     uint256 _before = IERC20(_toToken).balanceOf(address(this));
+    //     _pool.exchange_underlying(_from, _to, _amount, 0);
 
-        return IERC20(_toToken).balanceOf(address(this)) - _before;
-    }
+    //     return IERC20(_toToken).balanceOf(address(this)) - _before;
+    // }
 
-    // ICurveFraxMeta
-    function _swapCurveFraxMeta(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
-        ICurveFraxMeta _pool = ICurveFraxMeta(_poolAddress);
+    // // ICurveFraxMeta
+    // function _swapCurveFraxMeta(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
+    //     ICurveFraxMeta _pool = ICurveFraxMeta(_poolAddress);
 
-        int128 _to = 0;
-        int128 _from = 0;
-        if (_fromToken == _pool.coins(0)) {
-            _approve(_fromToken, _poolAddress, _amount);
-            _from = 0;
-        } else if (_toToken == _pool.coins(0)) {
-            _to = 0;
-        } else {
-            revert InvalidTokens();
-        }
+    //     int128 _to = 0;
+    //     int128 _from = 0;
+    //     if (_fromToken == _pool.coins(0)) {
+    //         _approve(_fromToken, _poolAddress, _amount);
+    //         _from = 0;
+    //     } else if (_toToken == _pool.coins(0)) {
+    //         _to = 0;
+    //     } else {
+    //         revert InvalidTokens();
+    //     }
 
-        ICurveFraxMeta _fraxBP = ICurveFraxMeta(FRAX_BP);
-        for (int256 i = 0; i < 2; i++) {
-            if (_fromToken == _fraxBP.coins(i.toUint256())) {
-                _approve(_fromToken, _poolAddress, _amount);
-                _from = i.toInt128() + 1;
-            } else if (_toToken == _fraxBP.coins(i.toUint256())) {
-                _to = i.toInt128() + 1;
-            }
-        }
-        uint256 _before = IERC20(_toToken).balanceOf(address(this));
-        _pool.exchange_underlying(_from, _to, _amount, 0);
+    //     ICurveFraxMeta _fraxBP = ICurveFraxMeta(FRAX_BP);
+    //     for (int256 i = 0; i < 2; i++) {
+    //         if (_fromToken == _fraxBP.coins(i.toUint256())) {
+    //             _approve(_fromToken, _poolAddress, _amount);
+    //             _from = i.toInt128() + 1;
+    //         } else if (_toToken == _fraxBP.coins(i.toUint256())) {
+    //             _to = i.toInt128() + 1;
+    //         }
+    //     }
+    //     uint256 _before = IERC20(_toToken).balanceOf(address(this));
+    //     _pool.exchange_underlying(_from, _to, _amount, 0);
 
-        return IERC20(_toToken).balanceOf(address(this)) - _before;
-    }
+    //     return IERC20(_toToken).balanceOf(address(this)) - _before;
+    // }
 
-    // ICurveFraxCryptoMeta
-    function _swapFraxCryptoMeta(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
-        ICurveFraxCryptoMeta _pool = ICurveFraxCryptoMeta(_poolAddress);
+    // // ICurveFraxCryptoMeta
+    // function _swapFraxCryptoMeta(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
+    //     ICurveFraxCryptoMeta _pool = ICurveFraxCryptoMeta(_poolAddress);
 
-        if (_fromToken == ETH) {
-            _wrapETH(_amount);
-            _fromToken = WETH;
-        } else if (_toToken == ETH) {
-            _toToken = WETH;
-        }
+    //     if (_fromToken == ETH) {
+    //         _wrapETH(_amount);
+    //         _fromToken = WETH;
+    //     } else if (_toToken == ETH) {
+    //         _toToken = WETH;
+    //     }
 
-        ICurvePlainPool _fraxBP = ICurvePlainPool(FRAX_BP);
-        uint256 _lpTokens = 0;
-        int128 _to = 0;
-        if (_fromToken == _pool.coins(0)) {
-            _approve(_fromToken, _poolAddress, _amount);
-            _lpTokens = _pool.exchange(0, 1, _amount, 0);
-            if (_toToken == _fraxBP.coins(0)) {
-                _to = 0;
-            } else if (_toToken == _fraxBP.coins(1)) {
-                _to = 1;
-            }
-            _approve(crvFRAX, FRAX_BP, _lpTokens);
-            return _fraxBP.remove_liquidity_one_coin(_lpTokens, _to, 0);
+    //     ICurvePlainPool _fraxBP = ICurvePlainPool(FRAX_BP);
+    //     uint256 _lpTokens = 0;
+    //     int128 _to = 0;
+    //     if (_fromToken == _pool.coins(0)) {
+    //         _approve(_fromToken, _poolAddress, _amount);
+    //         _lpTokens = _pool.exchange(0, 1, _amount, 0);
+    //         if (_toToken == _fraxBP.coins(0)) {
+    //             _to = 0;
+    //         } else if (_toToken == _fraxBP.coins(1)) {
+    //             _to = 1;
+    //         }
+    //         _approve(crvFRAX, FRAX_BP, _lpTokens);
+    //         return _fraxBP.remove_liquidity_one_coin(_lpTokens, _to, 0);
         
-        } else if (_toToken == _pool.coins(0)) {
-            _approve(_fromToken, FRAX_BP, _amount);
-            if (_fromToken == _fraxBP.coins(0)) {
-                _lpTokens = _fraxBP.add_liquidity([_amount, 0], 0);
-            } else if (_fromToken == _fraxBP.coins(1)) {
-                _lpTokens = _fraxBP.add_liquidity([0, _amount], 0);
-            }
-            _approve(crvFRAX, _poolAddress, _lpTokens);
-            return _pool.exchange(1, 0, _lpTokens, 0);
-        } else {
-            revert InvalidTokens();
-        }
-    }
+    //     } else if (_toToken == _pool.coins(0)) {
+    //         _approve(_fromToken, FRAX_BP, _amount);
+    //         if (_fromToken == _fraxBP.coins(0)) {
+    //             _lpTokens = _fraxBP.add_liquidity([_amount, 0], 0);
+    //         } else if (_fromToken == _fraxBP.coins(1)) {
+    //             _lpTokens = _fraxBP.add_liquidity([0, _amount], 0);
+    //         }
+    //         _approve(crvFRAX, _poolAddress, _lpTokens);
+    //         return _pool.exchange(1, 0, _lpTokens, 0);
+    //     } else {
+    //         revert InvalidTokens();
+    //     }
+    // }
 
     // ICurveCryptoETHV2Pool
     function _swapCurveETHV2(address _fromToken, address _toToken, uint256 _amount, address _poolAddress) internal returns (uint256) {
@@ -664,6 +698,36 @@ contract FortressSwap is ReentrancyGuard, IFortressSwap {
         if (_toETH) {
             _unwrapETH(_amount);
         }
+        return _amount;
+    }
+
+    // SushiPool
+    function _swapSushiPool(address _fromToken, address _toToken, uint256 _amount) internal returns (uint256) {
+        
+        bool _toETH = false;
+        if (_fromToken == ETH) {
+            _wrapETH(_amount);
+            _fromToken = WETH;
+        } else if (_toToken == ETH) {
+            _toToken = WETH;
+            _toETH = true;
+        }
+        
+        address _router = SUSHI_ARB_ROUTER;
+        _approve(_fromToken, _router, _amount);
+
+        address[] memory path = new address[](2);
+        path[0] = _fromToken;
+        path[1] = _toToken;
+
+        uint256 _before = IERC20(_toToken).balanceOf(address(this));
+        IUniswapV2Router(_router).swapExactTokensForTokens(_amount, 0, path, address(this), block.timestamp);
+        _amount = IERC20(_toToken).balanceOf(address(this)) - _before;
+
+        if (_toETH) {
+            _unwrapETH(_amount);
+        }
+
         return _amount;
     }
 

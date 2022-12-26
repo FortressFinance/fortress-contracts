@@ -21,7 +21,7 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/mainnet/concentrators/AMMConcentratorBase.sol";
+import "src/shared/concentrators/AMMConcentratorBase.sol";
 import "src/mainnet/utils/BalancerOperations.sol";
 
 contract BalancerEthConcentrator is BalancerOperations, AMMConcentratorBase {
@@ -141,8 +141,8 @@ contract BalancerEthConcentrator is BalancerOperations, AMMConcentratorBase {
             address _wstETH = WSTETH;
             address _lpToken = BALANCER_3ETH;
 
+            // slither-disable-next-line arbitrary-send-eth
             _rewards = IFortressSwap(_swap).swap{value: _rewards}(_eth, _wstETH, _rewards);
-
             _rewards = _addLiquidity(_lpToken, _wstETH, _rewards);
             
             uint256 _platformFee = platformFeePercentage;

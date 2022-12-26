@@ -23,6 +23,8 @@ pragma solidity 0.8.17;
 // Github - https://github.com/FortressFinance
 
 import "src/shared/compounders/TokenCompounderBase.sol";
+
+import "src/shared/fortress-interfaces/IFortressSwap.sol";
 import "src/arbitrum/interfaces/IGlpRewardHandler.sol";
 import "src/arbitrum/interfaces/IGlpMinter.sol";
 import "src/arbitrum/interfaces/IGlpRewardTracker.sol";
@@ -48,6 +50,8 @@ contract GlpCompounder is TokenCompounderBase {
     /********************************** Constructor **********************************/
     
     constructor(address _owner, address _platform, address _swap) TokenCompounderBase(ERC20(sGLP), "Fortress GLP", "fortGLP", _owner, _platform, _swap) {
+        IERC20(WETH).safeApprove(_swap, type(uint256).max);
+
         rewardHandler = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
         rewardTracker = 0x4e971a87900b931fF39d1Aad67697F49835400b6;
         glpHandler = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
@@ -114,6 +118,20 @@ contract GlpCompounder is TokenCompounderBase {
         return redeemUnderlying(WETH, _shares, _receiver, _owner, _minAmount);
     }
 
+    /// @dev Adds the ability to choose the underlying asset to deposit to the base function.
+    /// @dev Harvest the pending rewards and convert to underlying token, then stake.
+    /// @param _receiver - The address of account to receive harvest bounty.
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    function harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
+        if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
+        lastHarvestBlock = block.number;
+
+        _rewards = _harvest(_receiver, _underlyingAsset, _minBounty);
+        totalAUM += _rewards;
+
+        return _rewards;
+    }
+
     /********************************** Restricted Functions **********************************/
 
     function updateGlpContracts(address _rewardHandler, address _rewardsTracker, address _glpHandler, address _glpManager) external {
@@ -128,16 +146,25 @@ contract GlpCompounder is TokenCompounderBase {
     /********************************** Internal Functions **********************************/
 
     function _harvest(address _receiver, uint256 _minBounty) internal override returns (uint256 _rewards) {
+        return _harvest(_receiver, WETH, _minBounty);
+    }
+
+    function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal returns (uint256 _rewards) {
+        address _sGLP = sGLP;
+        uint256 _startBalance = IERC20(_sGLP).balanceOf(address(this));
+        
         // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH.
         IGlpRewardHandler(rewardHandler).handleRewards(true, true, true, true, true, true, false);
-
-        address _sGLP = sGLP;
+        
         address _weth = WETH;
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
-        uint256 _before = IERC20(_sGLP).balanceOf(address(this));
-        _approve(_weth, glpManager, _balance);
-        IGlpMinter(glpHandler).mintAndStakeGlp(_weth, _balance, 0, 0);
-        _rewards = IERC20(_sGLP).balanceOf(address(this)) - _before;
+        if (_underlyingAsset != _weth) {
+            _balance = IFortressSwap(swap).swap(_weth, _underlyingAsset, _balance);
+        }
+
+        _approve(_underlyingAsset, glpManager, _balance);
+        IGlpMinter(glpHandler).mintAndStakeGlp(_underlyingAsset, _balance, 0, 0);
+        _rewards = IERC20(_sGLP).balanceOf(address(this)) - _startBalance;
         
         if (_rewards > 0) {
             uint256 _platformFee = platformFeePercentage;

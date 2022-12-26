@@ -192,40 +192,48 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
     }
 
     function _testMintLP(uint256 _assetsAlice, uint256 _assetsBob, uint256 _assetsCharlie) internal {
-        uint256 _sharesAlice = balancerCompounder.previewDeposit(_assetsAlice);
+        
+        uint256 _lowestAsset = _assetsAlice < _assetsBob ? _assetsAlice : _assetsBob;
+        _lowestAsset = _lowestAsset < _assetsCharlie ? _lowestAsset : _assetsCharlie;
+
+        uint256 _dirtyTotalSupplyBefore = balancerCompounder.totalSupply();
+        uint256 _dirtyTotalAssetsBefore = balancerCompounder.totalAssets();
+
+        uint256 _sharesAlice = balancerCompounder.previewDeposit(_lowestAsset);
         vm.startPrank(alice);
-        uint256 _before = IERC20(address(balancerCompounder.asset())).balanceOf(address(alice));
-        IERC20(address(balancerCompounder.asset())).safeApprove(address(balancerCompounder), _assetsAlice);
-        _assetsAlice = balancerCompounder.mint(_sharesAlice, address(alice));
+        IERC20(address(balancerCompounder.asset())).safeApprove(address(balancerCompounder), _lowestAsset);
+        uint256 _assetsAliceSent = balancerCompounder.mint(_sharesAlice, address(alice));
         vm.stopPrank();
-        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(alice)), 0, "_testMintLP: E2");
+        
         assertEq(IERC20(address(balancerCompounder)).balanceOf(address(alice)), _sharesAlice, "_testMintLP: E3");
-        assertEq(_before - _assetsAlice, 0, "_testMintLP: E4");
+        assertEq(_assetsAliceSent, _lowestAsset, "_testMintLP: E04");
 
-        uint256 _sharesBob = balancerCompounder.previewDeposit(_assetsBob);
+        uint256 _sharesBob = balancerCompounder.previewDeposit(_lowestAsset);
         vm.startPrank(bob);
-        _before = IERC20(address(balancerCompounder.asset())).balanceOf(address(bob));
-        IERC20(address(balancerCompounder.asset())).safeApprove(address(balancerCompounder), _assetsBob);
-        _assetsBob = balancerCompounder.mint(_sharesBob, address(bob));
+        IERC20(address(balancerCompounder.asset())).safeApprove(address(balancerCompounder), _lowestAsset);
+        uint256 _assetsBobSent = balancerCompounder.mint(_sharesBob, address(bob));
         vm.stopPrank();
-        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(bob)), 0, "_testMintLP: E5");
+        
         assertEq(IERC20(address(balancerCompounder)).balanceOf(address(bob)), _sharesBob, "_testMintLP: E6");
-        assertEq(_before - _assetsBob, 0, "_testMintLP: E7");
+        assertEq(_assetsBobSent, _lowestAsset, "_testMintLP: E07");
 
-        uint256 _sharesCharlie = balancerCompounder.previewDeposit(_assetsCharlie);
+        uint256 _sharesCharlie = balancerCompounder.previewDeposit(_lowestAsset);
         vm.startPrank(charlie);
-        _before = IERC20(address(balancerCompounder.asset())).balanceOf(address(charlie));
-        IERC20(address(balancerCompounder.asset())).safeApprove(address(balancerCompounder), _assetsCharlie);
-        _assetsCharlie = balancerCompounder.mint(_sharesCharlie, address(charlie));
+        IERC20(address(balancerCompounder.asset())).safeApprove(address(balancerCompounder), _lowestAsset);
+        uint256 _assetsCharlieSent = balancerCompounder.mint(_sharesCharlie, address(charlie));
         vm.stopPrank();
-        assertEq(IERC20(address(balancerCompounder.asset())).balanceOf(address(charlie)), 0, "_testMintLP: E8");
-        assertEq(IERC20(address(balancerCompounder)).balanceOf(address(charlie)), _sharesCharlie, "_testMintLP: E9");
-        assertEq(_before - _assetsCharlie, 0, "_testMintLP: E10");
 
-        assertEq(balancerCompounder.totalAssets(), _assetsAlice + _assetsBob + _assetsCharlie, "_testMintLP: E11");
-        assertEq(balancerCompounder.totalSupply(), _sharesAlice + _sharesBob + _sharesCharlie, "_testMintLP: E12");
-        assertApproxEqAbs(_sharesAlice, _sharesBob, 1e21, "_testMintLP: E13");
-        assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e21, "_testMintLP: E14");
+        assertEq(IERC20(address(balancerCompounder)).balanceOf(address(charlie)), _sharesCharlie, "_testMintLP: E9");
+        assertEq(_assetsCharlieSent, _lowestAsset, "_testMintLP: E010");
+
+        uint256 _dirtyTotalSupply = (_sharesCharlie + _sharesBob + _sharesAlice) - _dirtyTotalSupplyBefore;
+        uint256 _dirtyTotalAssets = (_assetsCharlieSent + _assetsBobSent + _assetsAliceSent) - _dirtyTotalAssetsBefore;
+
+        assertEq(balancerCompounder.totalAssets(), _dirtyTotalAssets, "_testMintLP: E11");
+        assertEq(balancerCompounder.totalSupply(), _dirtyTotalSupply, "_testMintLP: E12");
+        assertEq(_sharesAlice, _sharesBob, "_testMintLP: E13");
+        assertEq(_assetsAliceSent, _assetsBobSent, "_testMintLP: E14");
+        assertEq(_assetsBobSent, _assetsCharlieSent, "_testMintLP: E15");
     }
 
     function _testWithdrawLP(uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {

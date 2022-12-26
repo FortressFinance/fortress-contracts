@@ -56,8 +56,9 @@ contract testFraxUSDC is Test, AddRoutes, CurveCompounderBaseTest {
         _testDeposit(_amount);
     }
 
-    function testRedeem(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function testRedeem() public {
+        // vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        uint256 _amount = 1 ether;
 
         _testRedeem(FRAX, _amount);
     }
@@ -68,9 +69,10 @@ contract testFraxUSDC is Test, AddRoutes, CurveCompounderBaseTest {
         _testWithdraw(FRAX, _amount);
     }
 
-    function testMint(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
- 
+    function testMint() public {
+        // vm.assume(_amount > 0.1 ether && _amount < 5 ether);
+        uint256 _amount = 1 ether;
+
         _testMint(FRAX, _amount);
     }
 

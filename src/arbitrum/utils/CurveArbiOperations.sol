@@ -13,19 +13,18 @@ pragma solidity 0.8.17;
 // ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-              
-//  _____                 _____                 _   _             
-// |     |_ _ ___ _ _ ___|     |___ ___ ___ ___| |_|_|___ ___ ___ 
-// |   --| | |  _| | | -_|  |  | . | -_|  _| .'|  _| | . |   |_ -|
-// |_____|___|_|  \_/|___|_____|  _|___|_| |__,|_| |_|___|_|_|___|
-//                             |_|                                
+
+//  _____                 _____     _   _ _____                 _   _             
+// |     |_ _ ___ _ _ ___|  _  |___| |_|_|     |___ ___ ___ ___| |_|_|___ ___ ___ 
+// |   --| | |  _| | | -_|     |  _| . | |  |  | . | -_|  _| .'|  _| | . |   |_ -|
+// |_____|___|_|  \_/|___|__|__|_| |___|_|_____|  _|___|_| |__,|_| |_|___|_|_|___|
+//                                             |_|                                
 
 // Github - https://github.com/FortressFinance
 
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "src/shared/interfaces/IWETH.sol";
 import "src/shared/interfaces/ICurvePool.sol";
 import "src/shared/interfaces/ICurve3Pool.sol";
 import "src/shared/interfaces/ICurvesUSD4Pool.sol";
@@ -37,16 +36,19 @@ import "src/shared/interfaces/ICurveBase3Pool.sol";
 import "src/shared/interfaces/ICurveFraxCryptoMeta.sol";
 import "src/shared/interfaces/ICurveCryptoV2Pool.sol";
 import "src/shared/interfaces/ICurveMetaRegistry.sol";
+import "src/shared/interfaces/IWETH.sol";
 
-contract CurveOperations {
+contract CurveArbiOperations {
 
     using SafeERC20 for IERC20;
     
-    /// @notice The address of WETH token.
-    address internal constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    /// @notice The address of WETH token (Arbitrum).
+    address internal constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     /// @notice The address representing ETH in Curve V1.
     address private constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    /// @notice The address of Curve Base Pool (https://curve.fi/3pool).
+    /// @notice The address of CRV_3_CRYPTO LP token (Curve BP Arbitrum).
+    // address internal constant CRV_3_CRYPTO = 0x8e0B8c8BB9db49a46697F3a5Bb8A308e744821D2
+     /// @notice The address of Curve Base Pool (https://curve.fi/3pool).
     address internal constant CURVE_BP = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
     /// @notice The address of Curve's Frax Base Pool (https://curve.fi/fraxusdc).
     address internal constant FRAX_BP = 0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2;
@@ -54,10 +56,9 @@ contract CurveOperations {
     address internal constant CRV_FRAX = 0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC;
     /// @notice The address of 3CRV LP token (Curve BP).
     address internal constant TRI_CRV = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
-    
     /// @notice The address of Curve MetaRegistry.
-    ICurveMetaRegistry internal immutable metaRegistry = ICurveMetaRegistry(0xF98B45FA17DE75FB1aD0e7aFD971b0ca00e379fC);
-    
+    ICurveMetaRegistry internal immutable metaRegistry = ICurveMetaRegistry(0x445FE580eF8d70FF569aB36e80c647af338db351);
+
     // The type of the pool:
     // 0 - 3Pool
     // 1 - PlainPool

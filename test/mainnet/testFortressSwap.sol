@@ -10,7 +10,6 @@ import "script/mainnet/utils/AddRoutes.sol";
 
 import "src/shared/interfaces/IWETH.sol";
 
-// TODO - add tests for 12: BalancerSingleSwap
 contract testFortressSwap is Test, AddRoutes {
     
     address owner;
@@ -27,10 +26,8 @@ contract testFortressSwap is Test, AddRoutes {
         // --------------------------------- set env ---------------------------------
         
         string memory MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-        // string memory ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
-
+        
         mainnetFork = vm.createFork(MAINNET_RPC_URL);
-        // arbitrumFork = vm.createFork(ARBITRUM_RPC_URL);
         
         vm.selectFork(mainnetFork);
         

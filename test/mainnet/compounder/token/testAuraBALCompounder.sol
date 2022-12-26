@@ -2,13 +2,15 @@
 pragma solidity 0.8.17;
 
 // import "src/mainnet/compounders/balancer/AuraBalCompounder.sol";
-// import "src/mainnet/interfaces/IBalancerVault.sol";
-// import "src/mainnet/interfaces/IBalancerPool.sol";
+
+// import "src/shared/interfaces/IBalancerVault.sol";
+// import "src/shared/interfaces/IBalancerPool.sol";
 
 // import "test/mainnet/compounder/token/TokenCompounderBaseTest.sol";
 
 // contract testAuraBALCompounder is TokenCompounderBaseTest {
 contract testAuraBALCompounder {}
+    
 //     using SafeERC20 for IERC20;
 
 //     address BALANCER_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
@@ -196,6 +198,7 @@ contract testAuraBALCompounder {}
 
 //         vm.startPrank(charlie);
 //         amount = IERC20(BAL).balanceOf(address(charlie));
+//         assertTrue(amount > 0, "sanity check");
 //         _approve(BAL, address(auraBALCompounder), amount);
 //         charlieAmountOut = auraBALCompounder.depositUnderlying(amount, address(charlie), 0);
 //         accumulatedShares += charlieAmountOut;
