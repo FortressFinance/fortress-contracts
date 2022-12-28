@@ -15,6 +15,7 @@ contract InitGlpCompounder is InitBaseArbi {
         address sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
 
         GlpCompounder _glpCompounder = new GlpCompounder(_owner, _platform, _swap);
+        // address _glpCompounder = 0x9363e5e4a7aDfB346BEA0fe87a8BD02fddA48855;
 
         FortressArbiRegistry(_registry).registerTokenCompounder(address(_glpCompounder), sGLP, "fortGLP", "Fortress GLP");
         
@@ -88,6 +89,32 @@ contract InitGlpCompounder is InitBaseArbi {
             _toList1[0] = WBTC;
 
             _swap.updateRoute(WETH, WBTC, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+
+        // WETH --> wstETH
+        if (!(_swap.routeExists(WETH, WSTETH))) {
+            _poolType1[0] = 12;
+            
+            _poolAddress1[0] = BALANCER_WSTETHWETH;
+            
+            _fromList1[0] = WETH;
+            
+            _toList1[0] = WSTETH;
+
+            _swap.updateRoute(WETH, WSTETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+
+        // wstETH --> WETH
+        if (!(_swap.routeExists(WSTETH, WETH))) {
+            _poolType1[0] = 12;
+            
+            _poolAddress1[0] = BALANCER_WSTETHWETH;
+            
+            _fromList1[0] = WSTETH;
+            
+            _toList1[0] = WETH;
+
+            _swap.updateRoute(WSTETH, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
     }
 }

@@ -1254,4 +1254,28 @@ contract testGLPCompounder is BaseTest, InitGlpCompounder {
         aliceAmountOut = glpCompounder.harvest(address(alice), _amount);
         vm.stopPrank();
     }
+
+    // ---------------- swap ----------------
+
+    function testBalancerSwap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _wrapETH(alice, _amount);
+        assertEq(IERC20(WETH).balanceOf(alice), _amount);
+
+        vm.startPrank(alice);
+        IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max); 
+        uint256 _amountOut = fortressSwap.swap(WETH, WSTETH, _amount);
+        uint256 aliceAmount = IERC20(WSTETH).balanceOf(alice);
+        assertEq(aliceAmount, _amountOut, "testBaltest: E1");
+        assertTrue(aliceAmount > 0, "testBaltest: E2");
+        
+        IERC20(WSTETH).safeApprove(address(fortressSwap), type(uint256).max); 
+        _amountOut = fortressSwap.swap(WSTETH, WETH, aliceAmount);
+        uint256 aliceAmountWETH = IERC20(WETH).balanceOf(alice);
+        assertEq(aliceAmountWETH, _amountOut, "testBaltest: E3");
+        assertTrue(aliceAmountWETH > 0, "testBaltest: E4");
+        
+        vm.stopPrank();
+    }
 }

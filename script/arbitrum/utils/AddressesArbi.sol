@@ -29,6 +29,8 @@ contract AddressesArbi {
     address constant fsGLP = 0x1aDDD80E6039594eE970E5872D247bf0414C8903;
     // The address of sGLP token.
     address constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
+    // The address of wstETH token.
+    address constant WSTETH = 0x5979D7b546E38E414F7E9822514be443A4800529;
     
     // ------------------------------------- Curve LP Tokens -------------------------------------
 
@@ -58,6 +60,11 @@ contract AddressesArbi {
     address constant SUSHI_CRVWETH = 0xbe3B9c3700171183b2B3F827D8833212d0197a96;
     // The address of Sushi WBTC/WETH pool
     address constant SUSHI_WBTCWETH = 0x515e252b2b5c22b4b2b6Df66c2eBeeA871AA4d69;
+
+    // ------------------------------------- Balancer Pools -------------------------------------
+
+    // The address of Sushi wstETH/WETH pool
+    address constant BALANCER_WSTETHWETH = 0xFB5e6d0c1DfeD2BA000fBC040Ab8DF3615AC329c;
 
     // ------------------------------------- UniV3 Pools -------------------------------------
 
