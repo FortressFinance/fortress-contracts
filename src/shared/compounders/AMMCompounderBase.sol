@@ -36,8 +36,6 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
-    /// @notice The internal accounting of AUM.
-    uint256 public totalAUM;
     /// @notice The pool ID in LP Booster contract.
     uint256 public boosterPoolId;
     /// @notice The percentage of fee to pay for platform on harvest.
@@ -60,7 +58,9 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     address[] public rewardAssets;
     /// @notice The underlying assets.
     address[] public underlyingAssets;
-
+    /// @notice The internal accounting of AUM.
+    uint256 internal totalAUM;
+    
     /// @notice The owner.
     address public owner;
     /// @notice The recipient of platform fee.

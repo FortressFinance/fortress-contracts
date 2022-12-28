@@ -46,7 +46,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @notice The last block number that the harvest function was executed.
     uint256 public lastHarvestBlock;
     /// @notice The internal accounting of AUM.
-    uint256 public totalAUM;
+    uint256 internal totalAUM;
 
     /// @notice The address of owner.
     address public owner;

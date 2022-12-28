@@ -60,6 +60,7 @@ contract CvxCrvConcentrator is CurveOperations, AMMConcentratorBase {
             _platform,
             _swap,
             address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
+            IConvexBooster(0xF403C135812408BFbE8713b5A23a04b3D48AAE31).poolInfo(_boosterPoolId).crvRewards,
             _boosterPoolId,
             _rewardAssets,
             _underlyingAssets,
@@ -71,59 +72,17 @@ contract CvxCrvConcentrator is CurveOperations, AMMConcentratorBase {
             poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
         }
 
-    /********************************** Mutated Functions **********************************/
+    /********************************** Internal Functions **********************************/
 
-    /// @notice See {AMMConcentratorBase - depositSingleUnderlying}
-    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable override nonReentrant returns (uint256 _shares) {
-        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
-        if (!(_underlyingAmount > 0)) revert ZeroAmount();
-
-        _updateRewards(msg.sender);
-
-        if (msg.value > 0) {
-            if (msg.value != _underlyingAmount) revert InvalidAmount();
-            if (_underlyingAsset != ETH) revert InvalidAsset();
-        } else {
-            IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
-        }
-
-        uint256 _assets = _addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+    function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
+        _assets = _addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
-
-        _shares = previewDeposit(_assets);
-        _deposit(msg.sender, _receiver, _assets, _shares);
-
-        _depositStrategy(_assets, false);
-
-        return _shares;
     }
 
-    /// @notice See {AMMConcentratorBase - redeemSingleUnderlying}
-    function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAmount) {
-        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
-        if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
-        
-        _updateRewards(_owner);
-
-        uint256 _assets = previewRedeem(_shares);
-        _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
-
-        _withdrawStrategy(_assets, _receiver, false);
-
+    function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
         _underlyingAmount = _removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
-
-        if (_underlyingAsset == ETH) {
-            (bool sent,) = msg.sender.call{value: _underlyingAmount}("");
-            if (!sent) revert FailedToSendETH();
-        } else {
-            IERC20(_underlyingAsset).safeTransfer(msg.sender, _underlyingAmount);
-        }
-
-        return _underlyingAmount;
     }
-
-    /********************************** Internal Functions **********************************/
 
     function _harvest(address _receiver, uint256 _minBounty) internal override returns (uint256 _rewards) {
         

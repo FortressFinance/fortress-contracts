@@ -17,15 +17,17 @@ contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders {
         
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address owner = vm.envAddress("OWNER");
-        address deployer = vm.envAddress("DEPLOYER");
+        // address deployer = vm.envAddress("DEPLOYER");
         // address platform = vm.envAddress("PLATFORM");
         address platform = owner;
 
         vm.startBroadcast(deployerPrivateKey);
 
         // FortressArbiSwap _fortressSwap = new FortressArbiSwap(address(deployer));
-        address _fortressSwap = 0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F;
-        address _fortressArbiRegistry = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
+        // address _fortressSwap = 0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F;
+        address _fortressSwap = FortressSwapV1;
+        // address _fortressArbiRegistry = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
+        address _fortressArbiRegistry = FortressRegistryV1;
         
         console.log("FortressArbiSwap address: ", address(_fortressSwap));
         console.log("FortressArbiRegistry address: ", address(_fortressArbiRegistry));

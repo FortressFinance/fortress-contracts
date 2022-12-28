@@ -79,4 +79,12 @@ contract AddressesArbi {
     
     // The address of LINK/WETH pool
     address constant GMX_ROUTER = 0xaBBc5F99639c9B6bCb58544ddf04EFA6802F4064;
+
+    // ------------------------------------- Fortress -------------------------------------
+
+    // The address of first FortressSwap contract.
+    address constant FortressSwapV1 = 0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F;
+
+    // The address of first FortressRegistry contract.
+    address constant FortressRegistryV1 = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
 }

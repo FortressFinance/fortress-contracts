@@ -105,6 +105,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
             address _platform,
             address _swap,
             address _booster,
+            address _rewardsDistributor,
             uint256 _boosterPoolId,
             address[] memory _rewardAssets,
             address[] memory _underlyingAssets,
@@ -113,12 +114,12 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         ERC4626(_asset, _name, _symbol) {
         
         accRewardPerShare = 0;
-        boosterPoolId = _boosterPoolId; // TODO - remove this, booster pid not used in concentrator
+        boosterPoolId = _boosterPoolId;
         platformFeePercentage = 50000000; // 5%,
         harvestBountyPercentage = 25000000; // 2.5%,
         withdrawFeePercentage = 2000000; // 0.2%,
         booster = _booster;
-        crvRewards = IConvexBooster(_booster).poolInfo(_boosterPoolId).crvRewards;
+        crvRewards = _rewardsDistributor;
         pauseDeposit = false;
         pauseWithdraw = false;
         pauseClaim = false;
@@ -266,7 +267,26 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The receiver of minted shares.
     /// @param _minAmount - The minimum amount of assets (LP tokens) to receive.
     /// @return _shares - The amount of shares minted.
-    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable virtual nonReentrant returns (uint256 _shares) {}
+    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
+        if (!(_underlyingAmount > 0)) revert ZeroAmount();
+        
+        if (msg.value > 0) {
+            if (msg.value != _underlyingAmount) revert InvalidAmount();
+            if (_underlyingAsset != ETH) revert InvalidAsset();
+        } else {
+            IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
+        }
+
+        uint256 _assets = _swapFromUnderlying(_underlyingAsset, _underlyingAmount, _minAmount);
+        
+        _shares = previewDeposit(_assets);
+        _deposit(msg.sender, _receiver, _assets, _shares);
+        
+        _depositStrategy(_assets, false);
+        
+        return _shares;
+    }
 
     /// @dev Burns exact amount of shares from the owner and sends underlying assets to _receiver.
     /// @param _shares - The amount of shares to burn.
@@ -275,7 +295,26 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _owner - The owner of _shares.
     /// @param _minAmount - The minimum amount of underlying assets to receive.
     /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver.
-    function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public virtual nonReentrant returns (uint256 _underlyingAmount) {}
+    function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
+        if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
+
+        uint256 _assets = previewRedeem(_shares);
+        _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
+
+        _withdrawStrategy(_assets, _receiver, false);
+        
+        _underlyingAmount = _swapToUnderlying(_underlyingAsset, _assets, _minAmount);
+        
+        if (_underlyingAsset == ETH) {
+            (bool sent,) = msg.sender.call{value: _underlyingAmount}("");
+            if (!sent) revert FailedToSendETH();
+        } else {
+            IERC20(_underlyingAsset).safeTransfer(msg.sender, _underlyingAmount);
+        }
+
+        return _underlyingAmount;
+    }
 
     /// @dev Claims all rewards for msg.sender and sends them to receiver.
     /// @param _receiver - The recipient of rewards.
@@ -451,11 +490,6 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit Deposit(_caller, _receiver, _assets, _shares);
     }
 
-    function _depositStrategy(uint256 _assets, bool _transfer) internal {
-        if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
-    }
-
     function _withdraw(address _caller, address _receiver, address _owner, uint256 _assets, uint256 _shares) internal override {
         if (pauseWithdraw) revert WithdrawPaused();
         if (_receiver == address(0)) revert ZeroAddress();
@@ -475,7 +509,12 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
     }
 
-    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal {
+    function _depositStrategy(uint256 _assets, bool _transfer) internal virtual {
+        if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
+        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
+    }
+
+    function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal virtual {
         IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
         if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
@@ -498,6 +537,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         }
         return false;
     }
+
+    function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal virtual returns (uint256 _assets) {}
+
+    function _swapToUnderlying(address _underlyingAsset, uint256 _amount, uint256 _minAmount) internal virtual returns (uint256) {}
 
     function _harvest(address _receiver, uint256 _minBounty) internal virtual returns (uint256) {}
 

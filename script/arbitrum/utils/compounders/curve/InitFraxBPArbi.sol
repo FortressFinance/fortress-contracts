@@ -15,7 +15,6 @@ contract InitFraxBPArbi is InitBaseArbi {
         // ------------------------- init TriCrypto compounder -------------------------
         
         // vst/frax - 0
-        // usdc/usdt - 1
         // crvEURSUSD - 4
         uint256 _convexPid = 5;
         uint256 _poolType = 1; 
