@@ -271,6 +271,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         
+        _updateRewards(msg.sender);
+
         if (msg.value > 0) {
             if (msg.value != _underlyingAmount) revert InvalidAmount();
             if (_underlyingAsset != ETH) revert InvalidAsset();
@@ -298,6 +300,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
+        
+        _updateRewards(msg.sender);
 
         uint256 _assets = previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
