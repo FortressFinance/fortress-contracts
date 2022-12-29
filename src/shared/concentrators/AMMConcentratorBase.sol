@@ -152,7 +152,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
 
     /// @dev Indicates whether there are pending rewards to harvest.
     /// @return - True if there are pending rewards, false if otherwise.
-    function isPendingRewards() public view returns (bool) {
+    function isPendingRewards() external virtual view returns (bool) {
         return IConvexBasicRewards(crvRewards).earned(address(this)) > 0;
     }
 

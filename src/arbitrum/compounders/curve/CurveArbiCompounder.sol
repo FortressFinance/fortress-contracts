@@ -36,6 +36,8 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
     address private immutable poolAddress;
     /// @notice The internal type of pool, used in CurveOperations.
     uint256 private immutable poolType;
+    /// @notice The address of CRV token.
+    address private constant CRV = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
 
     /********************************** Constructor **********************************/
 
@@ -66,6 +68,13 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
         ) {
             poolType = _poolType;
             poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
+    }
+
+    /********************************** View Functions **********************************/
+
+    /// @notice See {AMMConcentratorBase - isPendingRewards}
+    function isPendingRewards() external override view returns (bool) {
+        return IConvexBasicRewardsArbi(crvRewards).claimable_reward(CRV, address(this)) > 0;
     }
 
     /********************************** Internal Functions **********************************/

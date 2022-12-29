@@ -45,6 +45,8 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
 
     /// @notice The address of sGLP token.
     address public constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
+    /// @notice The address of CRV token.
+    address public constant CRV = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
     
     /********************************** Constructor **********************************/
 
@@ -80,6 +82,13 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
             poolType = _poolType;
             poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
         }
+    
+    /********************************** View Functions **********************************/
+
+    /// @notice See {AMMConcentratorBase - isPendingRewards}
+    function isPendingRewards() external override view returns (bool) {
+        return IConvexBasicRewardsArbi(crvRewards).claimable_reward(CRV, address(this)) > 0;
+    }
     
     /********************************** Mutated Functions **********************************/
 
