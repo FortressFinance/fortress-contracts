@@ -31,10 +31,23 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
         vm.stopPrank();
     }
 
-    function testTesty(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
-
-        assertTrue(true);
+    function testCorrectFlowUSDT(uint256 _amount) public {
         _testCorrectFlow(USDT, _amount, address(glpConcentrator));
+    }
+
+    function testCorrectFlowHarvestSingleUSDT(uint256 _amount) public {
+        _testCorrectFlowHarvestWithUnderlying(USDT, _amount, address(payable(glpConcentrator)), WETH);
+    }
+
+    function testMint(uint256 _amount) public {
+        _testMint(USDT, _amount, address(glpConcentrator), WETH);
+    }
+
+    function testWithdraw(uint256 _amount) public {
+        _testWithdraw(USDT, _amount, address(payable(glpConcentrator)));
+    }
+
+    function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
+        _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(glpConcentrator)), USDT);
     }
 }

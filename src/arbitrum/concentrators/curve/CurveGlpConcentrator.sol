@@ -81,7 +81,7 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
 
             glpHandler = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
             glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
-            
+
             poolType = _poolType;
             poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
         }
@@ -103,10 +103,7 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
-        _rewards = _harvest(_receiver, _underlyingAsset, _minBounty);
-        totalAUM += _rewards;
-
-        return _rewards;
+        return _harvest(_receiver, _underlyingAsset, _minBounty);
     }
 
     /********************************** Restricted Functions **********************************/

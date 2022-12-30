@@ -357,7 +357,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _minAmount - The minimum amount of underlying assets to receive.
     /// @return _underlyingAmount - The amount of underlying assets sent to _receiver.
     /// @return _rewards - The amount of rewards sent to _receiver.
-    function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external nonReentrant returns (uint256 _underlyingAmount, uint256 _rewards) {
+    function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
         _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
         _rewards = claim(_receiver);
 
