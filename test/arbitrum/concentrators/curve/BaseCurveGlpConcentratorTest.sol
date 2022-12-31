@@ -612,10 +612,10 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertEq(IERC20(_compounder).balanceOf(address(charlie)), _rewards3, "_testRedeemUnderlyingAndClaimInt: E16");
         assertEq(_localConcentrator.pendingReward(address(charlie)), 0, "_testRedeemUnderlyingAndClaimInt: E17");
 
-        assertApproxEqAbs(_underlyingAmount, _underlyingAmount2, 1e16, "_testRedeemUnderlyingAndClaimInt: E18");
-        assertApproxEqAbs(_underlyingAmount, _underlyingAmount3, 1e16, "_testRedeemUnderlyingAndClaimInt: E19");
-        assertApproxEqAbs(_rewards, _rewards2, 1e16, "_testRedeemUnderlyingAndClaimInt: E20");
-        assertApproxEqAbs(_rewards, _rewards3, 1e16, "_testRedeemUnderlyingAndClaimInt: E21");
+        assertApproxEqAbs(_underlyingAmount, _underlyingAmount2, 1e20, "_testRedeemUnderlyingAndClaimInt: E18");
+        assertApproxEqAbs(_underlyingAmount, _underlyingAmount3, 1e20, "_testRedeemUnderlyingAndClaimInt: E19");
+        assertApproxEqAbs(_rewards, _rewards2, 1e18, "_testRedeemUnderlyingAndClaimInt: E20");
+        assertApproxEqAbs(_rewards, _rewards3, 1e18, "_testRedeemUnderlyingAndClaimInt: E21");
     }
 
     function _testHarvest(uint256 _totalShare, address _concentrator) internal {
