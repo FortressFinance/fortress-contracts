@@ -123,7 +123,7 @@ contract InitTriCryptoGlp is InitBaseArbi {
             _toList2[0] = WETH;
             _toList2[1] = USDC;
 
-            _swap.updateRoute(CRV, USDC, _poolType1, _poolAddress1, _fromList1, _toList1);
+            _swap.updateRoute(CRV, USDC, _poolType2, _poolAddress2, _fromList2, _toList2);
         }
 
         // CRV --> USDT
@@ -158,6 +158,27 @@ contract InitTriCryptoGlp is InitBaseArbi {
             _toList2[1] = LINK;
 
             _swap.updateRoute(CRV, LINK, _poolType2, _poolAddress2, _fromList2, _toList2);
+        }
+
+        // CRV --> FRAX
+        if (!(_swap.routeExists(CRV, FRAX))) {
+            _poolType3[0] = 0;
+            _poolType3[1] = 0;
+            _poolType3[2] = 2;
+            
+            _poolAddress3[0] = UNIV3_CRVWETH;
+            _poolAddress3[1] = UNIV3_USDCWETH;
+            _poolAddress3[2] = CURVE_FRAXBP;
+            
+            _fromList3[0] = CRV;
+            _fromList3[1] = WETH;
+            _fromList3[2] = USDC;
+            
+            _toList3[0] = WETH;
+            _toList3[1] = USDC;
+            _toList3[2] = FRAX;
+
+            _swap.updateRoute(CRV, FRAX, _poolType3, _poolAddress3, _fromList3, _toList3);
         }
      }
 }

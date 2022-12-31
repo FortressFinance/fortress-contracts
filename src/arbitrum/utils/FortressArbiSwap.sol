@@ -289,7 +289,7 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
         if (_toETH) {
             _unwrapETH(_amount);
         }
-
+        
         return _amount;
     }
 
@@ -326,7 +326,7 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
         if (_toETH) {
             _unwrapETH(_amount);
         }
-
+        
         return _amount;
     }
 

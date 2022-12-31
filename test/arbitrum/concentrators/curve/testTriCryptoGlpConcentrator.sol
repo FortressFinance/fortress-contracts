@@ -35,8 +35,36 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
         _testCorrectFlow(USDT, _amount, address(glpConcentrator));
     }
 
+    function testCorrectFlowWBTC(uint256 _amount) public {
+        _testCorrectFlow(WBTC, _amount, address(glpConcentrator));
+    }
+
+    function testCorrectFlowWETH(uint256 _amount) public {
+        _testCorrectFlow(WETH, _amount, address(glpConcentrator));
+    }
+
     function testCorrectFlowHarvestSingleUSDT(uint256 _amount) public {
         _testCorrectFlowHarvestWithUnderlying(USDT, _amount, address(payable(glpConcentrator)), WETH);
+    }
+    
+    function testCorrectFlowHarvestSingleWBTC(uint256 _amount) public {
+        _testCorrectFlowHarvestWithUnderlying(WBTC, _amount, address(payable(glpConcentrator)), WBTC);
+    }
+
+    function testCorrectFlowHarvestSingleWETH(uint256 _amount) public {
+        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDT);
+    }
+
+    function testCorrectFlowHarvestSingleWETHUSDC(uint256 _amount) public {
+        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDC);
+    }
+
+    function testCorrectFlowHarvestSingleWETHFRAX(uint256 _amount) public {
+        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), FRAX);
+    }
+
+    function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
+        _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(glpConcentrator)), USDT);
     }
 
     function testMint(uint256 _amount) public {
@@ -47,7 +75,23 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
         _testWithdraw(USDT, _amount, address(payable(glpConcentrator)));
     }
 
-    function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
-        _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(glpConcentrator)), USDT);
+    function testRedeemAndClaim(uint256 _amount) public {
+        _testRedeemAndClaim(USDT, _amount, address(payable(glpConcentrator)));
+    }
+
+    function testTransfer(uint256 _amount) public {
+        _testCorrectFlowTransfer(USDT, _amount, address(payable(glpConcentrator)));
+    }
+
+    function testDepositNoAsset(uint256 _amount) public {
+        _testDepositNoAsset(_amount, USDT, address(payable(glpConcentrator)));
+    }
+
+    function testDepositWrongAsset(uint256 _amount) public {
+        _testDepositWrongAsset(_amount, USDT, address(payable(glpConcentrator)));
+    }
+
+    function testWithdrawNoShare(uint256 _amount) public {
+        _testWithdrawNoShare(_amount, USDT, address(payable(glpConcentrator)));
     }
 }

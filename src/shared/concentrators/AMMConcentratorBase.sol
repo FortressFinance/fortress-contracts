@@ -343,7 +343,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @return _assets - The amount of assets sent to _receiver.
     /// @return _rewards - The amount of rewards sent to _receiver.
     // slither-disable-next-line reentrancy-eth
-    function redeemAndClaim(uint256 _shares, address _receiver) external nonReentrant returns (uint256 _assets, uint256 _rewards) {
+    function redeemAndClaim(uint256 _shares, address _receiver) external returns (uint256 _assets, uint256 _rewards) {
         _assets = redeem(_shares, _receiver, msg.sender);
         _rewards = claim(_receiver);
 
