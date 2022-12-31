@@ -197,7 +197,6 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _assets - The amount of assets to deposit.
     /// @param _receiver - The receiver of minted shares.
     /// @return _shares - The amount of shares minted.
-    // slither-disable-next-line reentrancy-no-eth
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         _updateRewards(_receiver);
 
@@ -213,7 +212,6 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _shares - The amount of shares to mint.
     /// @param _receiver - The address of the receiver of shares.
     /// @return _assets - The amount of assets deposited.
-    // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         _updateRewards(_receiver);
 
@@ -267,6 +265,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The receiver of minted shares.
     /// @param _minAmount - The minimum amount of assets (LP tokens) to receive.
     /// @return _shares - The amount of shares minted.
+    // slither-disable-next-line reentrancy-no-eth
     function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
@@ -297,6 +296,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _owner - The owner of _shares.
     /// @param _minAmount - The minimum amount of underlying assets to receive.
     /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver.
+    // slither-disable-next-line reentrancy-no-eth
     function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
@@ -357,6 +357,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _minAmount - The minimum amount of underlying assets to receive.
     /// @return _underlyingAmount - The amount of underlying assets sent to _receiver.
     /// @return _rewards - The amount of rewards sent to _receiver.
+    // slither-disable-next-line reentrancy-eth
     function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
         _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
         _rewards = claim(_receiver);
