@@ -124,8 +124,6 @@ contract AuraBalConcentrator is BalancerOperations, AMMConcentratorBase {
 
             _rewards = ERC4626(compounder).deposit(_rewards, address(this));
 
-            accRewardPerShare = accRewardPerShare + ((_rewards * PRECISION) / totalSupply);
-            
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
             return _rewards;

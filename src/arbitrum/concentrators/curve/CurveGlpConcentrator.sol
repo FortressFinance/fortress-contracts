@@ -103,7 +103,10 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
-        return _harvest(_receiver, _underlyingAsset, _minBounty);
+        _rewards = _harvest(_receiver, _underlyingAsset, _minBounty);
+        accRewardPerShare = accRewardPerShare + ((_rewards * PRECISION) / totalSupply);
+
+        return _rewards;
     }
 
     /********************************** Restricted Functions **********************************/
@@ -123,7 +126,7 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
     }
 
     function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal override {
-        IConvexBasicRewards(crvRewards).withdraw(_assets, false);
+        IConvexBasicRewardsArbi(crvRewards).withdraw(_assets, false);
         if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
 
@@ -183,8 +186,6 @@ contract CurveGlpConcentrator is CurveArbiOperations, AMMConcentratorBase {
             }
 
             _rewards = ERC4626(compounder).deposit(_rewards, address(this));
-
-            accRewardPerShare = accRewardPerShare + ((_rewards * PRECISION) / totalSupply);
             
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 

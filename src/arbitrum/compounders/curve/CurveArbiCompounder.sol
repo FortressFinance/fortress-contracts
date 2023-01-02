@@ -85,7 +85,7 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
     }
 
     function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal override {
-        IConvexBasicRewards(crvRewards).withdraw(_assets, false);
+        IConvexBasicRewardsArbi(crvRewards).withdraw(_assets, false);
         if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
 

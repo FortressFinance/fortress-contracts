@@ -373,7 +373,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
-        return _harvest(_receiver, _minBounty);
+        _rewards = _harvest(_receiver, _minBounty);
+        accRewardPerShare = accRewardPerShare + ((_rewards * PRECISION) / totalSupply);
+        
+        return _rewards;
     }
 
     /// @dev Adds updating of rewards to the original function.

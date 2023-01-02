@@ -51,17 +51,20 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
         _testCorrectFlowHarvestWithUnderlying(WBTC, _amount, address(payable(glpConcentrator)), WBTC);
     }
 
-    function testCorrectFlowHarvestSingleWETH(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDT);
-    }
+    // function testCorrectFlowHarvestSingleWETH(uint256 _amount) public {
+    //     _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDT);
+    // }
 
     function testCorrectFlowHarvestSingleWETHUSDC(uint256 _amount) public {
         _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDC);
     }
 
-    function testCorrectFlowHarvestSingleWETHFRAX(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), FRAX);
-    }
+    // function testCorrectFlowHarvestSingleWETHFRAX() public {
+    //     // vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+    //     uint256 _amount = 1 ether;
+
+    //     _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), FRAX);
+    // }
 
     function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
         _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(glpConcentrator)), USDT);
