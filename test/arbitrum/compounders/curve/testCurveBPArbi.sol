@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import "test/arbitrum/compounders/curve/CurveCompounderBaseArbitrumTest.sol";
 import "script/arbitrum/utils/compounders/curve/InitCurveBPArbi.sol";
 
-contract testFraxBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
+contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
 
     using SafeERC20 for IERC20;
     

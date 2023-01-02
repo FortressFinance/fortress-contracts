@@ -32,8 +32,9 @@ contract InitBaseArbi is AddressesArbi {
     string _symbol;
     string _name;
 
+    address[] _rewardAssets1 = new address[](1);
     address[] _rewardAssets2 = new address[](2);
-    address[] _rewardAssets3 = new address[](2);
+    address[] _rewardAssets3 = new address[](3);
 
     address[] _underlyingAssets2 = new address[](2);
     address[] _underlyingAssets3 = new address[](3);

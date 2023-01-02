@@ -10,22 +10,23 @@ import "src/arbitrum/utils/FortressArbiRegistry.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "script/arbitrum/utils/compounders/gmx/InitGlpCompounder.sol";
 import "script/arbitrum/utils/compounders/curve/InitCurveCompounders.sol";
+import "script/arbitrum/utils/concentrators/curve/InitCurveGlpConcentrators.sol";
 
-contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders {
+contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders, InitCurveGlpConcentrators {
 
     function run() public {
         
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address owner = vm.envAddress("OWNER");
-        address deployer = vm.envAddress("DEPLOYER");
+        // address deployer = vm.envAddress("DEPLOYER");
         // address platform = vm.envAddress("PLATFORM");
         address platform = owner;
 
         vm.startBroadcast(deployerPrivateKey);
 
         // FortressArbiSwap _fortressSwap = new FortressArbiSwap(address(deployer));
-        address _fortressSwap = 0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F;
-        address _fortressArbiRegistry = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
+        address _fortressSwap = FortressSwapV1;
+        address _fortressArbiRegistry = FortressRegistryV1;
         
         console.log("FortressArbiSwap address: ", address(_fortressSwap));
         console.log("FortressArbiRegistry address: ", address(_fortressArbiRegistry));
@@ -36,6 +37,9 @@ contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders {
 
         // initialize Curve AMM Compounders Arbitrum
         _initializeCurveCompounders(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform));
+
+        // initialize Curve GLP AMM Concentrators Arbitrum
+        _initializeCurveConcentrators(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform), address(_GlpCompounder));
         
         string memory path = "script/arbitrum/utils/arbi-registry.txt";
         string memory data = string(abi.encodePacked(string(vm.toString(address(_fortressArbiRegistry)))));

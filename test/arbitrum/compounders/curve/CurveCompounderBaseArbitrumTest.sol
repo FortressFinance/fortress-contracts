@@ -324,6 +324,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         vm.prank(harvester);
         uint256 _newUnderlying = curveCompounder.harvest(address(harvester), _asset, 0);
 
+        // From Curve dev discord "Arbitrum is probably a bit funkier -- I haven't dove into it, but I think it requires making a cross-chain call to trigger rewards that may be tough to reproduce"
         // assertTrue(IConvexBasicRewards(curveCompounder.crvRewards()).earned(address(curveCompounder)) == 0, "_testHarvest: E3");
         assertTrue(ERC20(curveCompounder.asset()).balanceOf(platform) > 0, "_testHarvest: E4");
         assertTrue(ERC20(curveCompounder.asset()).balanceOf(harvester) > 0, "_testHarvest: E5");

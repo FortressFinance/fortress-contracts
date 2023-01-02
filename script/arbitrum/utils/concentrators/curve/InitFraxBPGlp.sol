@@ -1,46 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
+import "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
 
-contract InitFraxBPArbi is InitBaseArbi {
-
-    function _initializeFraxBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) public returns (address) {
-
-        _initSwapFraxBP(_fortressSwap);
+contract InitFraxBPGlp is InitBaseArbi {
+    
+    function _initializeFraxBPGlp(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder) public returns (address) {
+       
+        _initSwapFraxBPGlp(_fortressSwap);
         
         // ------------------------- init TriCrypto compounder -------------------------
-        
-        // vst/frax - 0
-        // crvEURSUSD - 4
+
         uint256 _convexPid = 5;
         uint256 _poolType = 1; 
-        address _asset = FRAXBP_LP;
-        string memory _symbol = "fortFraxBP";
-        string memory _name = "Fortress Curve FraxBP";
 
-        address[] memory _rewardAssets = new address[](1);
-        _rewardAssets[0] = CRV;
-        // _rewardAssets[1] = CVX;
+        _asset = FRAXBP_LP;
+        _symbol = "fortGLP-FraxBP";
+        _name = "Fortress GLP Curve FraxBP";
 
-        // NOTE - make sure the order of underlying assets is the same as in Curve contract (Backend requirment) 
-        address[] memory _underlyingAssets = new address[](2);
-        _underlyingAssets[0] = FRAX;
-        _underlyingAssets[1] = USDC;
+        _underlyingAssets2[0] = FRAX;
+        _underlyingAssets2[1] = USDC;
+        
+        _rewardAssets1[0] = CRV;
 
-        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), _name, _symbol, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+        CurveGlpConcentrator curveGlpConcentrator = new CurveGlpConcentrator(ERC20(_asset), _name, _symbol, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets1, _underlyingAssets2, _compounder, _poolType);
         
         // ------------------------- init registry -------------------------
 
-        FortressArbiRegistry(_fortressArbiRegistry).registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
+        FortressArbiRegistry(_fortressArbiRegistry).registerCurveGlpConcentrator(address(curveGlpConcentrator), _asset, _symbol, _name, _underlyingAssets2, _compounder);
         
-        return address(curveCompounder);
+        return address(curveGlpConcentrator);
     }
 
-    function _initSwapFraxBP(address _fortressSwap) internal {
+    function _initSwapFraxBPGlp(address _fortressSwap) internal {
 
         FortressArbiSwap _swap = FortressArbiSwap(payable(_fortressSwap));
 
@@ -80,6 +75,19 @@ contract InitFraxBPArbi is InitBaseArbi {
             _toList3[2] = FRAX;
 
             _swap.updateRoute(CRV, FRAX, _poolType3, _poolAddress3, _fromList3, _toList3);
+        }
+
+        // CRV --> WETH
+        if (!(_swap.routeExists(CRV, WETH))) {
+            _poolType1[0] = 0;
+
+            _poolAddress1[0] = UNIV3_CRVWETH;
+
+            _fromList1[0] = CRV;
+            
+            _toList1[0] = WETH;
+
+            _swap.updateRoute(CRV, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
 
         // ETH --> USDC
