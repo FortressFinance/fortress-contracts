@@ -82,6 +82,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     address public swap;
     /// @notice The address of the vault we concentrate the rewards into.
     address public compounder;
+    /// @notice The internal accounting of the deposit limit.
+    uint256 internal depositCap;
     /// @notice The precision.
     uint256 internal constant PRECISION = 1e18;
     /// @notice The fee denominator.
@@ -136,6 +138,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         platform = _platform;
         swap = _swap;
         compounder = _compounder;
+        depositCap = 0;
     }
 
     /********************************** View Functions **********************************/
@@ -191,6 +194,17 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return totalAUM;
     }
 
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    function maxDeposit(address) public view override returns (uint256) {
+        return depositCap == 0 ? type(uint256).max : depositCap - totalAUM;
+    }
+
+    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
+    function maxMint(address) public view override returns (uint256) {
+        uint256 _shareCap = convertToShares(depositCap);
+        return _shareCap == 0 ? type(uint256).max : _shareCap - totalSupply;
+    }
+
     /********************************** Mutated Functions **********************************/
 
     /// @dev Mints vault shares to _receiver by depositing exact amount of assets.
@@ -198,6 +212,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The receiver of minted shares.
     /// @return _shares - The amount of shares minted.
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
+
         _updateRewards(_receiver);
 
         _shares = previewDeposit(_assets);
@@ -213,6 +229,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The address of the receiver of shares.
     /// @return _assets - The amount of assets deposited.
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
+        if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
+
         _updateRewards(_receiver);
 
         _assets = previewMint(_shares);
@@ -280,6 +298,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         }
 
         uint256 _assets = _swapFromUnderlying(_underlyingAsset, _underlyingAmount, _minAmount);
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
         
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
@@ -574,6 +593,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     error ZeroAddress();
     error InsufficientBalance();
     error InsufficientAllowance();
+    error InsufficientDepositCap();
     error NoPendingRewards();
     error InvalidAmount();
     error InvalidAsset();

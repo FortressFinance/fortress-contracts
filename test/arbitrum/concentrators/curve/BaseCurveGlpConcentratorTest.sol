@@ -224,9 +224,9 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
         
         vm.startPrank(alice);
-        IERC20(_asset).safeApprove(address(_concentrator), _amount);
+        IERC20(_asset).safeApprove(address(_concentrator), _underlyingAlice);
         vm.expectRevert();
-        _localConcentrator.depositSingleUnderlying(_amount, _asset, address(alice), 0);
+        _localConcentrator.depositSingleUnderlying(_underlyingAlice, _asset, address(alice), 0);
 
         vm.stopPrank();
     }
@@ -381,7 +381,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
 
     function _testMintInt(uint256 _assetsAlice, uint256 _assetsBob, uint256 _assetsCharlie, address _concentrator) internal returns (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) {
         AMMConcentratorBase _localConcentrator = AMMConcentratorBase(_concentrator);
-        address _compounder = _localConcentrator.compounder();
+        // address _compounder = _localConcentrator.compounder();
         
         uint256 _lowestAsset = _assetsAlice < _assetsBob ? _assetsAlice : _assetsBob;
         _lowestAsset = _lowestAsset < _assetsCharlie ? _lowestAsset : _assetsCharlie;
@@ -431,7 +431,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
 
     function _testRedeemInt(uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie, address _concentrator) internal returns (uint256 _underlyingAlice, uint256 _underlyingBob, uint256 _underlyingCharlie) {
         AMMConcentratorBase _localConcentrator = AMMConcentratorBase(_concentrator);
-        address _compounder = _localConcentrator.compounder();
+        // address _compounder = _localConcentrator.compounder();
         
         uint256 _totalSupplyBefore = _localConcentrator.totalSupply();
         uint256 _totalAssetsBefore = _localConcentrator.totalAssets();
@@ -482,7 +482,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
 
     function _testWithdrawInt(uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie, address _concentrator) internal {
         AMMConcentratorBase _localConcentrator = AMMConcentratorBase(_concentrator);
-        address _compounder = _localConcentrator.compounder();
+        // address _compounder = _localConcentrator.compounder();
 
         uint256 _lowestShare = _sharesAlice < _sharesBob ? _sharesAlice : _sharesBob;
         _lowestShare = _lowestShare < _sharesCharlie ? _lowestShare : _sharesCharlie;
