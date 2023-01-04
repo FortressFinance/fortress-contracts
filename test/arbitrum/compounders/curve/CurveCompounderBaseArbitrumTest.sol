@@ -541,6 +541,11 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         assertEq(curveCompounder.totalAssets(), (_assetsAlice + _assetsBob + _assetsCharlie), "_testDepositLP: E11");
     }
 
+    // call after a successful correctFlow
+    // TODO
+    // function _testDepositCap() internal {
+    // }
+
     function _testFortressRegistry() internal {
         assertEq(fortressArbiRegistry.getCurveCompounder(address(curveCompounder.asset())), address(curveCompounder), "_testFortressRegistry: E1");
         assertEq(fortressArbiRegistry.getCurveCompounderUnderlyingAssets(address(curveCompounder.asset())), curveCompounder.getUnderlyingAssets(), "_testFortressRegistry: E2");

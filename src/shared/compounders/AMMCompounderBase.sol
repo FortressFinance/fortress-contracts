@@ -36,6 +36,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
+    /// @notice The internal accounting of the deposit limit.
+    uint256 public depositCap;
     /// @notice The pool ID in LP Booster contract.
     uint256 public boosterPoolId;
     /// @notice The percentage of fee to pay for platform on harvest.
@@ -60,8 +62,6 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     address[] public underlyingAssets;
     /// @notice The internal accounting of AUM.
     uint256 internal totalAUM;
-    /// @notice The internal accounting of the deposit limit.
-    uint256 internal depositCap;
     
     /// @notice The owner.
     address public owner;
@@ -371,14 +371,15 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _platform - The new platform address.
     /// @param _swap - The new swap address.
     /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _platform, address _swap, address _owner) external {
+    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
         swap = _swap;
         owner = _owner;
+        depositCap = _depositCap;
 
-        emit UpdateInternalUtils(_platform, _swap, _owner);
+        emit UpdateInternalUtils(_platform, _swap, _owner, _depositCap);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -449,7 +450,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     event Harvest(address indexed _harvester, address indexed _receiver, uint256 _rewards, uint256 _platformFee);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
     event UpdateExternalUtils(address[] _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId);
-    event UpdateInternalUtils(address _platform, address _swap, address _owner);
+    event UpdateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
     
     /********************************** Errors **********************************/

@@ -73,6 +73,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     address[] public rewardAssets;
     /// @notice The list the pool's underlying assets.
     address[] public underlyingAssets;
+    /// @notice The internal accounting of the deposit limit.
+    uint256 public depositCap;
 
     /// @notice The address of the owner.
     address public owner;
@@ -82,8 +84,6 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     address public swap;
     /// @notice The address of the vault we concentrate the rewards into.
     address public compounder;
-    /// @notice The internal accounting of the deposit limit.
-    uint256 internal depositCap;
     /// @notice The precision.
     uint256 internal constant PRECISION = 1e18;
     /// @notice The fee denominator.
@@ -470,15 +470,16 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _platform - The new platform address.
     /// @param _swap - The new swap address.
     /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _compounder, address _platform, address _swap, address _owner) external {
+    function updateInternalUtils(address _compounder, address _platform, address _swap, address _owner, uint256 _depositCap) external {
         if (msg.sender != owner) revert Unauthorized();
 
         compounder = _compounder;
         platform = _platform;
         swap = _swap;
         owner = _owner;
+        depositCap = _depositCap;
 
-        emit UpdateInternalUtils(_compounder, _platform, _swap, _owner);
+        emit UpdateInternalUtils(_compounder, _platform, _swap, _owner, _depositCap);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -579,7 +580,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     event Claim(address indexed _receiver, uint256 _rewards);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
     event UpdateExternalUtils(address[] _rewardAssets, address _booster, address _crvRewards);
-    event UpdateInternalUtils(address compounder, address _platform, address _swap, address _owner);
+    event UpdateInternalUtils(address compounder, address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw, bool _pauseClaim);
     
     /********************************** Errors **********************************/

@@ -32,7 +32,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
-
+    
     /// @notice Whether deposits are paused.
     bool public pauseDeposit = false;
     /// @notice Whether withdrawals are paused.
@@ -48,7 +48,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @notice The internal accounting of AUM.
     uint256 internal totalAUM;
     /// @notice The internal accounting of the deposit limit.
-    uint256 internal depositCap;
+    uint256 public depositCap;
 
     /// @notice The address of owner.
     address public owner;
@@ -256,14 +256,15 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _platform - The new platform address.
     /// @param _swap - The new swap address.
     /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _platform, address _swap, address _owner) external {
+    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
         swap = _swap;
         owner = _owner;
+        depositCap = _depositCap;
 
-        emit UpdateInternalUtils(_platform, _swap, _owner);
+        emit UpdateInternalUtils(_platform, _swap, _owner, _depositCap);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -327,7 +328,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     event Withdraw(address indexed _caller, address indexed _receiver, address indexed _owner, uint256 _assets, uint256 _shares);
     event Harvest(address indexed _harvester, uint256 _amount);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
-    event UpdateInternalUtils(address indexed _platform, address indexed _swap, address indexed _owner);
+    event UpdateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
     
     /********************************** Errors **********************************/
