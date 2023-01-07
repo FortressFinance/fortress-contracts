@@ -72,6 +72,12 @@ contract testWETHwstETH is Test, AddRoutes, BalancerCompounderBaseTest {
  
         _testMint(wstETH, _amount);
     }
+
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+
+        _testDepositCap(wstETH, _amount);
+    }
     
     function testFortressRegistry() public {
         _testFortressRegistry();

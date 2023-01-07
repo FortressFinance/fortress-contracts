@@ -72,6 +72,12 @@ contract testWETHrETH is Test, AddRoutes, BalancerCompounderBaseTest {
  
         _testMint(rETH, _amount);
     }
+
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+
+        _testDepositCap(rETH, _amount);
+    }
     
     function testFortressRegistry() public {
         _testFortressRegistry();

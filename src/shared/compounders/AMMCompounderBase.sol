@@ -36,7 +36,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
-    /// @notice The internal accounting of the deposit limit.
+    /// @notice The internal accounting of the deposit limit. Denominated in shares.
     uint256 public depositCap;
     /// @notice The pool ID in LP Booster contract.
     uint256 public boosterPoolId;
@@ -169,13 +169,13 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
     function maxDeposit(address) public view override returns (uint256) {
-        return depositCap == 0 ? type(uint256).max : depositCap - totalAUM;
+        uint256 _assetCap = convertToAssets(depositCap);
+        return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
     function maxMint(address) public view override returns (uint256) {
-        uint256 _shareCap = convertToShares(depositCap);
-        return _shareCap == 0 ? type(uint256).max : _shareCap - totalSupply;
+        return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
     }
 
     /// @dev Checks if a specific asset is an underlying asset.

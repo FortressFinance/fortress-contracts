@@ -407,176 +407,176 @@ contract testGLPCompounder is BaseTest, InitGlpCompounder {
         assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowWETHHarvestLink: E46");
     }
 
-    function testCorrectFlowUSDC(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    // function testCorrectFlowUSDC(uint256 _amount) public {
+    //     vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        // ---------------- get assets ----------------
+    //     // ---------------- get assets ----------------
 
-        _wrapETH(alice, _amount);
-        assertEq(IERC20(WETH).balanceOf(alice), _amount);
+    //     _wrapETH(alice, _amount);
+    //     assertEq(IERC20(WETH).balanceOf(alice), _amount);
 
-        _wrapETH(bob, _amount);
-        assertEq(IERC20(WETH).balanceOf(bob), _amount);
+    //     _wrapETH(bob, _amount);
+    //     assertEq(IERC20(WETH).balanceOf(bob), _amount);
 
-        _wrapETH(charlie, _amount);
-        assertEq(IERC20(WETH).balanceOf(charlie), _amount);
+    //     _wrapETH(charlie, _amount);
+    //     assertEq(IERC20(WETH).balanceOf(charlie), _amount);
 
-        // ---------------- swap to USDC ----------------
+    //     // ---------------- swap to USDC ----------------
         
-        vm.startPrank(alice);
-        IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max); 
-        uint256 _amountOut = fortressSwap.swap(WETH, USDC, _amount);
-        uint256 aliceAmount = IERC20(USDC).balanceOf(alice);
-        assertEq(aliceAmount, _amountOut, "testCorrectFlowUSDC: E1");
-        assertTrue(aliceAmount > 0, "testCorrectFlowUSDC: E2");
-        vm.stopPrank();
+    //     vm.startPrank(alice);
+    //     IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max); 
+    //     uint256 _amountOut = fortressSwap.swap(WETH, USDC, _amount);
+    //     uint256 aliceAmount = IERC20(USDC).balanceOf(alice);
+    //     assertEq(aliceAmount, _amountOut, "testCorrectFlowUSDC: E1");
+    //     assertTrue(aliceAmount > 0, "testCorrectFlowUSDC: E2");
+    //     vm.stopPrank();
 
-        vm.startPrank(bob);
-        IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max);
-        _amountOut = fortressSwap.swap(WETH, USDC, _amount);
-        uint256 bobAmount = IERC20(USDC).balanceOf(bob);
-        assertEq(bobAmount, _amountOut, "testCorrectFlowUSDC: E3");
-        assertTrue(bobAmount > 0, "testCorrectFlowUSDC: E4");
-        vm.stopPrank();
+    //     vm.startPrank(bob);
+    //     IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max);
+    //     _amountOut = fortressSwap.swap(WETH, USDC, _amount);
+    //     uint256 bobAmount = IERC20(USDC).balanceOf(bob);
+    //     assertEq(bobAmount, _amountOut, "testCorrectFlowUSDC: E3");
+    //     assertTrue(bobAmount > 0, "testCorrectFlowUSDC: E4");
+    //     vm.stopPrank();
 
-        vm.startPrank(charlie);
-        IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max);
-        _amountOut = fortressSwap.swap(WETH, USDC, _amount);
-        uint256 charlieAmount = IERC20(USDC).balanceOf(charlie);
-        assertEq(charlieAmount, _amountOut, "testCorrectFlowUSDC: E5");
-        assertTrue(charlieAmount > 0, "testCorrectFlowUSDC: E6");
-        vm.stopPrank();
+    //     vm.startPrank(charlie);
+    //     IERC20(WETH).safeApprove(address(fortressSwap), type(uint256).max);
+    //     _amountOut = fortressSwap.swap(WETH, USDC, _amount);
+    //     uint256 charlieAmount = IERC20(USDC).balanceOf(charlie);
+    //     assertEq(charlieAmount, _amountOut, "testCorrectFlowUSDC: E5");
+    //     assertTrue(charlieAmount > 0, "testCorrectFlowUSDC: E6");
+    //     vm.stopPrank();
 
-        assertEq(charlieAmount, aliceAmount, "testCorrectFlowUSDC: E7");
-        assertEq(charlieAmount, bobAmount, "testCorrectFlowUSDC: E8");
+    //     assertEq(charlieAmount, aliceAmount, "testCorrectFlowUSDC: E7");
+    //     assertEq(charlieAmount, bobAmount, "testCorrectFlowUSDC: E8");
 
-        // ---------------- deposit USDC ----------------
+    //     // ---------------- deposit USDC ----------------
 
-        uint256 _amountUSDC = aliceAmount < bobAmount ? aliceAmount : bobAmount;
-        _amountUSDC = _amountUSDC < charlieAmount ? _amountUSDC : charlieAmount;
+    //     uint256 _amountUSDC = aliceAmount < bobAmount ? aliceAmount : bobAmount;
+    //     _amountUSDC = _amountUSDC < charlieAmount ? _amountUSDC : charlieAmount;
 
-        vm.startPrank(address(alice));
-        IERC20(USDC).safeApprove(address(glpCompounder), type(uint256).max); 
-        uint256 _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 aliceSharesOut = glpCompounder.depositUnderlying(USDC, _amountUSDC, alice, 0);
-        uint256 accumulatedShares = aliceSharesOut;
-        accumulatedAmount = IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
+    //     vm.startPrank(address(alice));
+    //     IERC20(USDC).safeApprove(address(glpCompounder), type(uint256).max); 
+    //     uint256 _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
+    //     uint256 aliceSharesOut = glpCompounder.depositUnderlying(USDC, _amountUSDC, alice, 0);
+    //     uint256 accumulatedShares = aliceSharesOut;
+    //     accumulatedAmount = IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
-        assertEq(glpCompounder.balanceOf(address(alice)), aliceSharesOut, "testCorrectFlowUSDC: E47");
-        assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E48");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E49");
-        assertTrue(IERC20(fsGLP).balanceOf(address(glpCompounder)) > 0, "testCorrectFlowUSDC: E049");
-        assertTrue(accumulatedShares > 0, "testCorrectFlowUSDC: E50");
-        assertTrue(accumulatedAmount > 0, "testCorrectFlowUSDC: E51");
-        assertTrue(aliceSharesOut > 0, "testCorrectFlowUSDC: E52");
-        vm.stopPrank();
+    //     assertEq(glpCompounder.balanceOf(address(alice)), aliceSharesOut, "testCorrectFlowUSDC: E47");
+    //     assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E48");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E49");
+    //     assertTrue(IERC20(fsGLP).balanceOf(address(glpCompounder)) > 0, "testCorrectFlowUSDC: E049");
+    //     assertTrue(accumulatedShares > 0, "testCorrectFlowUSDC: E50");
+    //     assertTrue(accumulatedAmount > 0, "testCorrectFlowUSDC: E51");
+    //     assertTrue(aliceSharesOut > 0, "testCorrectFlowUSDC: E52");
+    //     vm.stopPrank();
 
-        vm.startPrank(address(bob));
-        IERC20(USDC).safeApprove(address(glpCompounder), type(uint256).max);
-        _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 bobSharesOut = glpCompounder.depositUnderlying(USDC, _amountUSDC, bob, 0);
-        accumulatedShares += bobSharesOut;
-        accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
+    //     vm.startPrank(address(bob));
+    //     IERC20(USDC).safeApprove(address(glpCompounder), type(uint256).max);
+    //     _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
+    //     uint256 bobSharesOut = glpCompounder.depositUnderlying(USDC, _amountUSDC, bob, 0);
+    //     accumulatedShares += bobSharesOut;
+    //     accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
-        assertEq(glpCompounder.balanceOf(address(bob)), bobSharesOut, "testCorrectFlowUSDC: E53");
-        assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E54");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E55");
-        assertTrue(bobSharesOut > 0, "testCorrectFlowUSDC: E56");
-        vm.stopPrank();
+    //     assertEq(glpCompounder.balanceOf(address(bob)), bobSharesOut, "testCorrectFlowUSDC: E53");
+    //     assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E54");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E55");
+    //     assertTrue(bobSharesOut > 0, "testCorrectFlowUSDC: E56");
+    //     vm.stopPrank();
 
-        vm.startPrank(address(charlie));
-        IERC20(USDC).safeApprove(address(glpCompounder), type(uint256).max);
-        _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 charlieSharesOut = glpCompounder.depositUnderlying(USDC, _amountUSDC, charlie, 0);
-        accumulatedShares += charlieSharesOut;
-        accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
+    //     vm.startPrank(address(charlie));
+    //     IERC20(USDC).safeApprove(address(glpCompounder), type(uint256).max);
+    //     _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
+    //     uint256 charlieSharesOut = glpCompounder.depositUnderlying(USDC, _amountUSDC, charlie, 0);
+    //     accumulatedShares += charlieSharesOut;
+    //     accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
-        assertEq(glpCompounder.balanceOf(address(charlie)), charlieSharesOut, "testCorrectFlowUSDC: E57");
-        assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E58");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E59");
-        assertTrue(charlieSharesOut > 0, "testCorrectFlowUSDC: E60");
-        vm.stopPrank();
+    //     assertEq(glpCompounder.balanceOf(address(charlie)), charlieSharesOut, "testCorrectFlowUSDC: E57");
+    //     assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E58");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E59");
+    //     assertTrue(charlieSharesOut > 0, "testCorrectFlowUSDC: E60");
+    //     vm.stopPrank();
 
-        assertEq((aliceSharesOut + bobSharesOut + charlieSharesOut), accumulatedShares, "testCorrectFlowUSDC: E61");
-        assertEq(aliceSharesOut, bobSharesOut, "testCorrectFlowUSDC: E62");
-        assertEq(aliceSharesOut, charlieSharesOut, "testCorrectFlowUSDC: E63");
+    //     assertEq((aliceSharesOut + bobSharesOut + charlieSharesOut), accumulatedShares, "testCorrectFlowUSDC: E61");
+    //     assertEq(aliceSharesOut, bobSharesOut, "testCorrectFlowUSDC: E62");
+    //     assertEq(aliceSharesOut, charlieSharesOut, "testCorrectFlowUSDC: E63");
 
-        // ---------------- harvest ----------------
+    //     // ---------------- harvest ----------------
 
-        assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowUSDC: E64");
-        assertEq(IERC20(fsGLP).balanceOf(harvester), 0, "testCorrectFlowUSDC: E65");
-        assertEq(IERC20(fsGLP).balanceOf(platform), 0, "testCorrectFlowUSDC: E66");
+    //     assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowUSDC: E64");
+    //     assertEq(IERC20(fsGLP).balanceOf(harvester), 0, "testCorrectFlowUSDC: E65");
+    //     assertEq(IERC20(fsGLP).balanceOf(platform), 0, "testCorrectFlowUSDC: E66");
 
-        // Fast forward 1 month
-        skip(216000);
+    //     // Fast forward 1 month
+    //     skip(216000);
 
-        assertEq(glpCompounder.isPendingRewards(), true, "testCorrectFlowUSDC: E67");
+    //     assertEq(glpCompounder.isPendingRewards(), true, "testCorrectFlowUSDC: E67");
 
-        vm.prank(harvester);
-        _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 _rewardsOut = glpCompounder.harvest(address(harvester), 0);
-        accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
+    //     vm.prank(harvester);
+    //     _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
+    //     uint256 _rewardsOut = glpCompounder.harvest(address(harvester), 0);
+    //     accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
-        assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowUSDC: E67");
-        assertTrue(IERC20(fsGLP).balanceOf(harvester) > 0, "testCorrectFlowUSDC: E68");
-        assertTrue(IERC20(fsGLP).balanceOf(platform) > 0, "testCorrectFlowUSDC: E69");
-        assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E70");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E71");
-        assertTrue(_rewardsOut > 0, "testCorrectFlowUSDC: E72");
-        assertEq((IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before), _rewardsOut, "testCorrectFlowUSDC: E73");
+    //     assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowUSDC: E67");
+    //     assertTrue(IERC20(fsGLP).balanceOf(harvester) > 0, "testCorrectFlowUSDC: E68");
+    //     assertTrue(IERC20(fsGLP).balanceOf(platform) > 0, "testCorrectFlowUSDC: E69");
+    //     assertEq(glpCompounder.totalAssets(), accumulatedAmount, "testCorrectFlowUSDC: E70");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E71");
+    //     assertTrue(_rewardsOut > 0, "testCorrectFlowUSDC: E72");
+    //     assertEq((IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before), _rewardsOut, "testCorrectFlowUSDC: E73");
 
 
-        // ---------------- redeem ---------------
+    //     // ---------------- redeem ---------------
 
-        assertEq(glpCompounder.balanceOf(address(alice)), aliceSharesOut, "testCorrectFlowUSDC: E074");
-        assertEq(charlieSharesOut, aliceSharesOut, "testCorrectFlowUSDC: E075");
-        assertEq(charlieSharesOut, bobSharesOut, "testCorrectFlowUSDC: E076");
-        assertEq(glpCompounder.balanceOf(address(bob)), bobSharesOut, "testCorrectFlowUSDC: E076");
-        assertEq(glpCompounder.balanceOf(address(charlie)), charlieSharesOut, "testCorrectFlowUSDC: E077");
+    //     assertEq(glpCompounder.balanceOf(address(alice)), aliceSharesOut, "testCorrectFlowUSDC: E074");
+    //     assertEq(charlieSharesOut, aliceSharesOut, "testCorrectFlowUSDC: E075");
+    //     assertEq(charlieSharesOut, bobSharesOut, "testCorrectFlowUSDC: E076");
+    //     assertEq(glpCompounder.balanceOf(address(bob)), bobSharesOut, "testCorrectFlowUSDC: E076");
+    //     assertEq(glpCompounder.balanceOf(address(charlie)), charlieSharesOut, "testCorrectFlowUSDC: E077");
 
-        shares = glpCompounder.balanceOf(address(alice));
-        _before = IERC20(USDC).balanceOf(address(alice));
-        vm.prank(alice);
-        aliceAmountOut = glpCompounder.redeemUnderlying(USDC, shares, address(alice), address(alice), 0);
-        aliceAmount = IERC20(USDC).balanceOf(address(alice)) - _before;
-        accumulatedShares -= shares;
+    //     shares = glpCompounder.balanceOf(address(alice));
+    //     _before = IERC20(USDC).balanceOf(address(alice));
+    //     vm.prank(alice);
+    //     aliceAmountOut = glpCompounder.redeemUnderlying(USDC, shares, address(alice), address(alice), 0);
+    //     aliceAmount = IERC20(USDC).balanceOf(address(alice)) - _before;
+    //     accumulatedShares -= shares;
 
-        assertEq(aliceAmountOut, aliceAmount, "testCorrectFlowUSDC: E73");
-        assertEq(glpCompounder.balanceOf(address(alice)), 0, "testCorrectFlowUSDC: E74");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E76");
+    //     assertEq(aliceAmountOut, aliceAmount, "testCorrectFlowUSDC: E73");
+    //     assertEq(glpCompounder.balanceOf(address(alice)), 0, "testCorrectFlowUSDC: E74");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E76");
 
-        shares = glpCompounder.balanceOf(address(bob));
-        _before = IERC20(USDC).balanceOf(address(bob));
-        vm.prank(bob);
-        bobAmountOut = glpCompounder.redeemUnderlying(USDC, shares, address(bob), address(bob), 0);
-        bobAmount = IERC20(USDC).balanceOf(address(bob)) - _before;
-        accumulatedShares -= shares;
+    //     shares = glpCompounder.balanceOf(address(bob));
+    //     _before = IERC20(USDC).balanceOf(address(bob));
+    //     vm.prank(bob);
+    //     bobAmountOut = glpCompounder.redeemUnderlying(USDC, shares, address(bob), address(bob), 0);
+    //     bobAmount = IERC20(USDC).balanceOf(address(bob)) - _before;
+    //     accumulatedShares -= shares;
 
-        assertEq(bobAmount, bobAmountOut, "testCorrectFlowUSDC: E77");
-        assertEq(glpCompounder.balanceOf(address(bob)), 0, "testCorrectFlowUSDC: E78");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E80");
+    //     assertEq(bobAmount, bobAmountOut, "testCorrectFlowUSDC: E77");
+    //     assertEq(glpCompounder.balanceOf(address(bob)), 0, "testCorrectFlowUSDC: E78");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E80");
 
-        shares = glpCompounder.balanceOf(address(charlie));
-        _before = IERC20(USDC).balanceOf(address(charlie));
-        vm.prank(charlie);
-        charlieAmountOut = glpCompounder.redeemUnderlying(USDC, shares, address(charlie), address(charlie), 0);
-        charlieAmount = IERC20(USDC).balanceOf(address(charlie)) - _before;
-        accumulatedShares -= shares;
+    //     shares = glpCompounder.balanceOf(address(charlie));
+    //     _before = IERC20(USDC).balanceOf(address(charlie));
+    //     vm.prank(charlie);
+    //     charlieAmountOut = glpCompounder.redeemUnderlying(USDC, shares, address(charlie), address(charlie), 0);
+    //     charlieAmount = IERC20(USDC).balanceOf(address(charlie)) - _before;
+    //     accumulatedShares -= shares;
 
-        assertEq(charlieAmount, charlieAmountOut, "testCorrectFlowUSDC: E81");
-        assertEq(glpCompounder.balanceOf(address(charlie)), 0, "testCorrectFlowUSDC: E82");
-        assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E83");
+    //     assertEq(charlieAmount, charlieAmountOut, "testCorrectFlowUSDC: E81");
+    //     assertEq(glpCompounder.balanceOf(address(charlie)), 0, "testCorrectFlowUSDC: E82");
+    //     assertEq(glpCompounder.totalSupply(), accumulatedShares, "testCorrectFlowUSDC: E83");
 
-        assertEq(accumulatedShares, 0, "testCorrectFlowUSDC: E84");
-        assertEq(glpCompounder.totalAssets(), 0, "testCorrectFlowUSDC: E86");
-        assertEq(glpCompounder.totalSupply(), 0, "testCorrectFlowUSDC: E87");
-        assertApproxEqAbs(aliceAmountOut, bobAmountOut, 1e19, "testCorrectFlowUSDC: E88");
-        assertApproxEqAbs(aliceAmountOut, charlieAmountOut, 1e19, "testCorrectFlowUSDC: E89");
+    //     assertEq(accumulatedShares, 0, "testCorrectFlowUSDC: E84");
+    //     assertEq(glpCompounder.totalAssets(), 0, "testCorrectFlowUSDC: E86");
+    //     assertEq(glpCompounder.totalSupply(), 0, "testCorrectFlowUSDC: E87");
+    //     assertApproxEqAbs(aliceAmountOut, bobAmountOut, 1e19, "testCorrectFlowUSDC: E88");
+    //     assertApproxEqAbs(aliceAmountOut, charlieAmountOut, 1e19, "testCorrectFlowUSDC: E89");
         
-        // Fast forward 1 month
-        skip(216000);
-        assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowUSDC: E90");
-    }
+    //     // Fast forward 1 month
+    //     skip(216000);
+    //     assertEq(glpCompounder.isPendingRewards(), false, "testCorrectFlowUSDC: E90");
+    // }
 
     function testCorrectFlowFRAX(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);

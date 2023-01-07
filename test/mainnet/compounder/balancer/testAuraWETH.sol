@@ -71,6 +71,12 @@ contract testAuraWETH is Test, AddRoutes, BalancerCompounderBaseTest {
  
         _testMint(AURA, _amount);
     }
+
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+
+        _testDepositCap(AURA, _amount);
+    }
     
     function testFortressRegistry() public {
         _testFortressRegistry();

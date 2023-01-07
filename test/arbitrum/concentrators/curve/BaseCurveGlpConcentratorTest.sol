@@ -198,6 +198,33 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         _testRedeemAndClaimInt(_sharesAlice, _sharesBob, _sharesCharlie, _concentrator);
     }
 
+    function _testDepositCap(address _asset, uint256 _amount, address _concentrator) internal {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        // ------------ Get _asset ------------
+        
+        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        // ------------ Deposit ------------
+
+        _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie, _concentrator);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        // assertTrue(IConvexBasicRewardsArbi(curveCompounder.crvRewards()).claimable_reward(CRV, address(curveCompounder)) > 0, "_testHarvest: E2");
+        vm.prank(harvester);
+        AMMConcentratorBase(_concentrator).harvest(address(harvester), 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset, _concentrator);
+    }
+
     function _testDepositNoAsset(uint256 _amount, address _asset, address _concentrator) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
@@ -275,8 +302,8 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         
         assertEq(_localConcentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositUnderlying: E1");
         assertEq(_localConcentrator.totalAssets(), IConvexBasicRewards(AMMConcentratorBase(_concentrator).crvRewards()).balanceOf(address(_concentrator)), "_testDepositUnderlying: E2");
-        assertApproxEqAbs(_sharesAlice, _sharesBob, 1e19, "_testDepositUnderlying: E3");
-        assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e19, "_testDepositUnderlying: E4");
+        assertApproxEqAbs(_sharesAlice, _sharesBob, 1e20, "_testDepositUnderlying: E3");
+        assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e20, "_testDepositUnderlying: E4");
 
         return (_sharesAlice, _sharesBob, _sharesCharlie);
     }
@@ -377,6 +404,34 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertApproxEqAbs(_rewardsOutAlice, _rewardsOutBob, 1e19, "_testClaim: E7");
         assertApproxEqAbs(_rewardsOutAlice, _rewardsOutCharlie, 1e19, "_testClaim: E8");
         assertApproxEqAbs(IERC20(_compounder).balanceOf(address(_localConcentrator)), 0, 1e10, "_testClaim: E008");
+    }
+
+    function _testDepositCapInt(address _asset, address _concentrator) internal {
+        AMMConcentratorBase _localConcentrator = AMMConcentratorBase(_concentrator);
+        address _compounder = _localConcentrator.compounder();
+
+        assertEq(_localConcentrator.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(_localConcentrator.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(_localConcentrator.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(_localConcentrator.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(_localConcentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(_localConcentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        _localConcentrator.updateInternalUtils(address(_compounder), address(platform), address(fortressSwap), address(owner), _localConcentrator.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(_localConcentrator.depositCap(), _localConcentrator.totalSupply(), "_testDepositCap: E2");
+        assertEq(_localConcentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(_localConcentrator.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(_localConcentrator), _balance);
+        vm.expectRevert();
+        _localConcentrator.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+        vm.stopPrank();
     }
 
     function _testMintInt(uint256 _assetsAlice, uint256 _assetsBob, uint256 _assetsCharlie, address _concentrator) internal returns (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) {

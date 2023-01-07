@@ -47,7 +47,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 public lastHarvestBlock;
     /// @notice The internal accounting of AUM.
     uint256 internal totalAUM;
-    /// @notice The internal accounting of the deposit limit.
+    /// @notice The internal accounting of the deposit limit. Denominated in shares.
     uint256 public depositCap;
 
     /// @notice The address of owner.
@@ -129,13 +129,13 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
     function maxDeposit(address) public view override returns (uint256) {
-        return depositCap == 0 ? type(uint256).max : depositCap - totalAUM;
+        uint256 _assetCap = convertToAssets(depositCap);
+        return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
     function maxMint(address) public view override returns (uint256) {
-        uint256 _shareCap = convertToShares(depositCap);
-        return _shareCap == 0 ? type(uint256).max : _shareCap - totalSupply;
+        return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
     }
 
     /********************************** Mutated Functions **********************************/

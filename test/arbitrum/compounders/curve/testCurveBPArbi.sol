@@ -59,6 +59,12 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
         _testMint(USDC, _amount);
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _testDepositCap(USDC, _amount);
+    }
+
     function testFortressRegistry() public {
         _testFortressRegistry();
     }

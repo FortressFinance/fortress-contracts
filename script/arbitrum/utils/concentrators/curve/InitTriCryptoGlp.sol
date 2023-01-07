@@ -96,6 +96,19 @@ contract InitTriCryptoGlp is InitBaseArbi {
             _swap.updateRoute(CRV, WBTC, _poolType2, _poolAddress2, _fromList2, _toList2);
         }
 
+        // ETH --> CRV
+        if (!(_swap.routeExists(ETH, CRV))) {
+            _poolType1[0] = 0;
+
+            _poolAddress1[0] = UNIV3_CRVWETH;
+
+            _fromList1[0] = ETH;
+            
+            _toList1[0] = CRV;
+
+            _swap.updateRoute(ETH, CRV, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+
         // CRV --> WETH
         if (!(_swap.routeExists(CRV, WETH))) {
             _poolType1[0] = 0;

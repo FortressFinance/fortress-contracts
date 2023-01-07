@@ -76,6 +76,13 @@ contract testFraxUSDC is Test, AddRoutes, CurveCompounderBaseTest {
         _testMint(FRAX, _amount);
     }
 
+    function testDepositCap() public {
+        // vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        uint256 _amount = 1 ether;
+
+        _testDepositCap(FRAX, _amount);
+    }
+
     function testFortressRegistry() public {
         _testFortressRegistry();
     }

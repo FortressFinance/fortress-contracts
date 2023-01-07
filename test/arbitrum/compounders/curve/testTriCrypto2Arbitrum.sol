@@ -67,6 +67,12 @@ contract testTriCrypto2Arbitrum is CurveCompounderBaseArbitrumTest, InitTriCrypt
         _testMint(WBTC, _amount);
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _testDepositCap(WBTC, _amount);
+    }
+
     function testFortressRegistry() public {
         _testFortressRegistry();
     }

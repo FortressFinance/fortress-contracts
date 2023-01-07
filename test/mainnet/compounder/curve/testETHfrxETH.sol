@@ -73,6 +73,12 @@ contract testETHfrxETH is Test, AddRoutes, CurveCompounderBaseTest {
         _testMint(frxETH, _amount);
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _testDepositCap(frxETH, _amount);
+    }
+
     function testFortressRegistry() public {
         _testFortressRegistry();
     }
