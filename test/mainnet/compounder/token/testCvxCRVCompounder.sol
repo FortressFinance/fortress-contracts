@@ -146,6 +146,87 @@ contract testCvxCRVCompounder is TokenCompounderBaseTest {
         assertEq(cvxCRVCompounder.isPendingRewards(), false, "testDeposit: E42");
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        // ---------------- get assets ----------------
+
+        _getAssetFromETH(alice, cvxCRV, _amount);
+        _getAssetFromETH(bob, cvxCRV, _amount);
+        _getAssetFromETH(charlie, cvxCRV, _amount);
+
+        // ---------------- deposit ----------------
+
+        vm.startPrank(alice);
+        amount = IERC20(cvxCRV).balanceOf(address(alice));
+        accumulatedAmount += amount;
+        _approve(cvxCRV, address(cvxCRVCompounder), amount);
+        aliceAmountOut = cvxCRVCompounder.deposit(amount, address(alice));
+        accumulatedShares += aliceAmountOut;
+        vm.stopPrank();
+
+        assertEq(IERC20(cvxCRV).balanceOf(address(alice)), 0, "_testDepositCap: E1");
+        assertEq(cvxCRVCompounder.balanceOf(address(alice)), aliceAmountOut, "_testDepositCap: E2");
+        assertEq(cvxCRVCompounder.totalAssets(), accumulatedAmount, "_testDepositCap: E3");
+        assertEq(cvxCRVCompounder.totalSupply(), accumulatedShares, "_testDepositCap: E4");
+        assertTrue(cvxCRVCompounder.totalAssets() > 0, "_testDepositCap: E04");
+
+        vm.startPrank(bob);
+        amount = IERC20(cvxCRV).balanceOf(address(bob));
+        accumulatedAmount += amount;
+        _approve(cvxCRV, address(cvxCRVCompounder), amount);
+        bobAmountOut = cvxCRVCompounder.deposit(amount, address(bob));
+        accumulatedShares += bobAmountOut;
+        vm.stopPrank();
+
+        assertEq(IERC20(cvxCRV).balanceOf(address(bob)), 0, "_testDepositCap: E5");
+        assertEq(cvxCRVCompounder.balanceOf(address(bob)), bobAmountOut, "_testDepositCap: E6");
+        assertEq(cvxCRVCompounder.totalAssets(), accumulatedAmount, "_testDepositCap: E7");
+        assertEq(cvxCRVCompounder.totalSupply(), accumulatedShares, "_testDepositCap: E8");
+
+        vm.startPrank(charlie);
+        amount = IERC20(cvxCRV).balanceOf(address(charlie));
+        accumulatedAmount += amount;
+        _approve(cvxCRV, address(cvxCRVCompounder), amount);
+        charlieAmountOut = cvxCRVCompounder.deposit(amount, address(charlie));
+        accumulatedShares += charlieAmountOut;
+        vm.stopPrank();
+
+        assertEq(IERC20(cvxCRV).balanceOf(address(charlie)), 0, "_testDepositCap: E9");
+        assertEq(cvxCRVCompounder.balanceOf(address(charlie)), charlieAmountOut, "_testDepositCap: E10");
+        assertEq(cvxCRVCompounder.totalAssets(), accumulatedAmount, "_testDepositCap: E11");
+        assertEq(cvxCRVCompounder.totalSupply(), accumulatedShares, "_testDepositCap: E12");
+
+        assertEq((aliceAmountOut + bobAmountOut + charlieAmountOut), accumulatedShares, "_testDepositCap: E13");
+        assertApproxEqAbs(aliceAmountOut, bobAmountOut, 1e20, "_testDepositCap: E14");
+        assertApproxEqAbs(aliceAmountOut, charlieAmountOut, 1e20, "_testDepositCap: E15");
+        
+        // ---------------- harvest ----------------
+
+        assertEq(cvxCRVCompounder.isPendingRewards(), false, "_testDepositCap: E16");
+
+        // Fast forward 1 month
+        skip(216000);
+
+        assertEq(cvxCRVCompounder.isPendingRewards(), true, "_testDepositCap: E17");
+
+        vm.prank(harvester);
+        accumulatedAmount += cvxCRVCompounder.harvest(address(harvester), 0);
+
+        assertEq(cvxCRVCompounder.isPendingRewards(), false, "_testDepositCap: E18");
+        assertTrue(IERC20(cvxCRV).balanceOf(harvester) > 0, "_testDepositCap: E19");
+        assertEq(cvxCRVCompounder.totalAssets(), accumulatedAmount, "_testDepositCap: E20");
+        assertEq(cvxCRVCompounder.totalSupply(), accumulatedShares, "_testDepositCap: E21");
+
+        assertTrue(IERC20(cvxCRV).balanceOf(platform) > 0, "_testDepositCap: E22");
+        assertEq(cvxCRVCompounder.totalAssets(), accumulatedAmount, "_testDepositCap: E23");
+        assertEq(cvxCRVCompounder.totalSupply(), accumulatedShares, "_testDepositCap: E24");
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(CRV);
+    }
+
     function testDepositUnwrapped(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
@@ -542,5 +623,30 @@ contract testCvxCRVCompounder is TokenCompounderBaseTest {
     function _approve(address _token, address _spender, uint256 _amount) internal {
         IERC20(_token).safeApprove(_spender, 0);
         IERC20(_token).safeApprove(_spender, _amount);
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        assertEq(cvxCRVCompounder.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(cvxCRVCompounder.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(cvxCRVCompounder.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(cvxCRVCompounder.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(cvxCRVCompounder.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(cvxCRVCompounder.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        cvxCRVCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), cvxCRVCompounder.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(cvxCRVCompounder.depositCap(), cvxCRVCompounder.totalSupply(), "_testDepositCap: E2");
+        assertEq(cvxCRVCompounder.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(cvxCRVCompounder.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(cvxCRVCompounder), _balance);
+        vm.expectRevert();
+        cvxCRVCompounder.depositUnderlying(_balance, address(alice), 0);
+        vm.stopPrank();
     }
 }

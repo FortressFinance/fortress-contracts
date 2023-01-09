@@ -149,6 +149,31 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
         _testDepositLP(_assetsAlice, _assetsBob, _assetsCharlie);
     }
 
+    function _testDepositCap(address _asset, uint256 _amount) internal {
+        
+        // ------------ Get _asset ------------
+        
+        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        // ------------ Deposit ------------
+
+        _testDepositSingleUnwrapped(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        vm.prank(harvester);
+        balancerCompounder.harvest(address(harvester), _asset, 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset);
+    }
+
     function _testWithdraw(address _asset, uint256 _amount) internal {
         
         // ------------ Get _asset ------------
@@ -535,6 +560,31 @@ contract BalancerCompounderBaseTest is Test, AddRoutes {
         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e20, "_testDepositLP: E9");
         assertEq(balancerCompounder.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositLP: E10");
         assertEq(balancerCompounder.totalAssets(), (_assetsAlice + _assetsBob + _assetsCharlie), "_testDepositLP: E11");
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        assertEq(balancerCompounder.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(balancerCompounder.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(balancerCompounder.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(balancerCompounder.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(balancerCompounder.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(balancerCompounder.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        balancerCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), balancerCompounder.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(balancerCompounder.depositCap(), balancerCompounder.totalSupply(), "_testDepositCap: E2");
+        assertEq(balancerCompounder.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(balancerCompounder.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(balancerCompounder), _balance);
+        vm.expectRevert();
+        balancerCompounder.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+        vm.stopPrank();
     }
 
     function _testFortressRegistry() internal {

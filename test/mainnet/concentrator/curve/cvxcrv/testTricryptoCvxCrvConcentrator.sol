@@ -82,6 +82,59 @@ contract testTricryptoCvxCrvConcentrator is InitTricryptoConcentrator, BaseTest 
         _testClaim();
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        address _asset = wBTC; 
+        
+        // ------------ Get _asset ------------
+        
+        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        // ------------ Deposit ------------
+
+        _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        vm.prank(harvester);
+        tricryptoCvxCrvConcentrator.harvest(address(harvester), 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset);
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        assertEq(tricryptoCvxCrvConcentrator.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(tricryptoCvxCrvConcentrator.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(tricryptoCvxCrvConcentrator.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(tricryptoCvxCrvConcentrator.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(tricryptoCvxCrvConcentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(tricryptoCvxCrvConcentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        tricryptoCvxCrvConcentrator.updateInternalUtils(address(cvxCrvCompounder), address(platform), address(fortressSwap), address(owner), tricryptoCvxCrvConcentrator.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(tricryptoCvxCrvConcentrator.depositCap(), tricryptoCvxCrvConcentrator.totalSupply(), "_testDepositCap: E2");
+        assertEq(tricryptoCvxCrvConcentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(tricryptoCvxCrvConcentrator.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(tricryptoCvxCrvConcentrator), _balance);
+        vm.expectRevert();
+        tricryptoCvxCrvConcentrator.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+        vm.stopPrank();
+    }
+
     function testDepositNoAsset(uint256 _amount) public {
         vm.startPrank(alice);
         

@@ -36,6 +36,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
+    /// @notice The internal accounting of the deposit limit. Denominated in shares.
+    uint256 public depositCap;
     /// @notice The pool ID in LP Booster contract.
     uint256 public boosterPoolId;
     /// @notice The percentage of fee to pay for platform on harvest.
@@ -115,6 +117,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         owner = _owner;
         platform = _platform;
         swap = _swap;
+        depositCap = 0;
     }
 
     /********************************** View Functions **********************************/
@@ -164,6 +167,17 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return totalAUM;
     }
 
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    function maxDeposit(address) public view override returns (uint256) {
+        uint256 _assetCap = convertToAssets(depositCap);
+        return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
+    }
+
+    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
+    function maxMint(address) public view override returns (uint256) {
+        return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
+    }
+
     /// @dev Checks if a specific asset is an underlying asset.
     /// @param _asset - The address of the asset to check.
     /// @return - Whether the assets is an underlying asset.
@@ -185,6 +199,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The receiver of minted shares.
     /// @return _shares - The amount of shares minted.
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
+
         _shares = previewDeposit(_assets);
 
         _deposit(msg.sender, _receiver, _assets, _shares);
@@ -200,6 +216,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @return _assets - The amount of assets deposited.
     // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
+        if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
+
         _assets = previewMint(_shares);
         
         _deposit(msg.sender, _receiver, _assets, _shares);
@@ -261,6 +279,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         }
 
         uint256 _assets = _swapFromUnderlying(_underlyingAsset, _underlyingAmount, _minAmount);
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
         
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
@@ -352,14 +371,15 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _platform - The new platform address.
     /// @param _swap - The new swap address.
     /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _platform, address _swap, address _owner) external {
+    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
         swap = _swap;
         owner = _owner;
+        depositCap = _depositCap;
 
-        emit UpdateInternalUtils(_platform, _swap, _owner);
+        emit UpdateInternalUtils(_platform, _swap, _owner, _depositCap);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -430,7 +450,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     event Harvest(address indexed _harvester, address indexed _receiver, uint256 _rewards, uint256 _platformFee);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
     event UpdateExternalUtils(address[] _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId);
-    event UpdateInternalUtils(address _platform, address _swap, address _owner);
+    event UpdateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
     
     /********************************** Errors **********************************/
@@ -439,6 +459,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     error NotUnderlyingAsset();
     error DepositPaused();
     error WithdrawPaused();
+    error InsufficientDepositCap();
     error HarvestAlreadyCalled();
     error ZeroAmount();
     error ZeroAddress();

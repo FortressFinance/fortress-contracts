@@ -84,6 +84,7 @@ contract AuraBalCompounder is BalancerOperations, TokenCompounderBase {
         
         uint256 _assets = _swapBALToAuraBAL(_underlyingAmount);
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
 
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);

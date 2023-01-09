@@ -32,7 +32,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
-
+    
     /// @notice Whether deposits are paused.
     bool public pauseDeposit = false;
     /// @notice Whether withdrawals are paused.
@@ -47,6 +47,8 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 public lastHarvestBlock;
     /// @notice The internal accounting of AUM.
     uint256 internal totalAUM;
+    /// @notice The internal accounting of the deposit limit. Denominated in shares.
+    uint256 public depositCap;
 
     /// @notice The address of owner.
     address public owner;
@@ -81,6 +83,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         owner = _owner;
         platform = _platform;
         swap = _swap;
+        depositCap = 0;
     }
 
     /********************************** View Functions **********************************/
@@ -88,12 +91,6 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @dev Indicates whether there are pending rewards to harvest.
     /// @return - True if there's pending rewards, false if otherwise.
     function isPendingRewards() public view virtual returns (bool) {}
-
-    /// @dev Returns the total amount of assets that are managed by the vault.
-    /// @return - The total amount of managed assets.
-    function totalAssets() public view virtual override returns (uint256) {
-        return totalAUM;
-    }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.
     /// @param _shares - The amount of _shares to redeem.
@@ -124,6 +121,23 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - withdrawFeePercentage);
     }
 
+    /// @dev Returns the total amount of assets that are managed by the vault.
+    /// @return - The total amount of managed assets.
+    function totalAssets() public view virtual override returns (uint256) {
+        return totalAUM;
+    }
+
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    function maxDeposit(address) public view override returns (uint256) {
+        uint256 _assetCap = convertToAssets(depositCap);
+        return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
+    }
+
+    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
+    function maxMint(address) public view override returns (uint256) {
+        return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
+    }
+
     /********************************** Mutated Functions **********************************/
 
     /// @dev Mints Vault shares to _receiver by depositing exact amount of underlying assets.
@@ -131,6 +145,8 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The receiver of minted shares.
     /// @return _shares - The amount of shares minted.
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
+
         _shares = previewDeposit(_assets);
         
         _deposit(msg.sender, _receiver, _assets, _shares);
@@ -146,6 +162,8 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @return _assets - The amount of underlying assets received.
     // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
+        if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
+
         _assets = previewMint(_shares);
 
         _deposit(msg.sender, _receiver, _assets, _shares);
@@ -238,14 +256,15 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _platform - The new platform address.
     /// @param _swap - The new swap address.
     /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _platform, address _swap, address _owner) external {
+    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
         swap = _swap;
         owner = _owner;
+        depositCap = _depositCap;
 
-        emit UpdateInternalUtils(_platform, _swap, _owner);
+        emit UpdateInternalUtils(_platform, _swap, _owner, _depositCap);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -309,7 +328,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     event Withdraw(address indexed _caller, address indexed _receiver, address indexed _owner, uint256 _assets, uint256 _shares);
     event Harvest(address indexed _harvester, uint256 _amount);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
-    event UpdateInternalUtils(address indexed _platform, address indexed _swap, address indexed _owner);
+    event UpdateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
     
     /********************************** Errors **********************************/
@@ -318,6 +337,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     error InsufficientBalance();
     error InsufficientAllowance();
     error InvalidAmount();
+    error InsufficientDepositCap();
     error HarvestAlreadyCalled();
     error ZeroAddress();
     error ZeroAmount();

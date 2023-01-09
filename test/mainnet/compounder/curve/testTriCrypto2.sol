@@ -81,6 +81,12 @@ contract testTriCrypto2 is Test, AddRoutes, CurveCompounderBaseTest {
         _testMint(wBTC, _amount);
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _testDepositCap(wBTC, _amount);
+    }
+
     function testFortressRegistry() public {
         _testFortressRegistry();
     }

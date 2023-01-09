@@ -96,6 +96,34 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         _testRedeemSingleUnwrappedETH(_sharesAlice, _sharesBob, _sharesCharlie);
     }
 
+    function _testDepositCap(address _asset, uint256 _amount) internal {
+        
+        // ------------ Get _asset ------------
+        
+        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        // ------------ Deposit ------------
+
+        _testDepositSingleUnwrapped(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        // assertTrue(IConvexBasicRewardsArbi(curveCompounder.crvRewards()).claimable_reward(CRV, address(curveCompounder)) > 0, "_testHarvest: E2");
+        vm.prank(harvester);
+        curveCompounder.harvest(address(harvester), _asset, 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset);
+
+        assertTrue(IConvexBasicRewardsArbi(curveCompounder.crvRewards()).claimable_reward(CRV, address(curveCompounder)) == 0, "_testHarvest: E1");
+    }
+
     function _testRedeem(address _asset, uint256 _amount) internal {
         
         // ------------ Get _asset ------------
@@ -539,6 +567,31 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e20, "_testDepositLP: E9");
         assertEq(curveCompounder.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositLP: E10");
         assertEq(curveCompounder.totalAssets(), (_assetsAlice + _assetsBob + _assetsCharlie), "_testDepositLP: E11");
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        assertEq(curveCompounder.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(curveCompounder.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(curveCompounder.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(curveCompounder.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(curveCompounder.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(curveCompounder.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        curveCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), curveCompounder.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(curveCompounder.depositCap(), curveCompounder.totalSupply(), "_testDepositCap: E2");
+        assertEq(curveCompounder.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(curveCompounder.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(curveCompounder), _balance);
+        vm.expectRevert();
+        curveCompounder.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+        vm.stopPrank();
     }
 
     function _testFortressRegistry() internal {

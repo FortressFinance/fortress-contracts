@@ -190,6 +190,59 @@ contract testTricryptoEthConcentrator is InitTricryptoEthConcentrator, InitETHfr
         assertApproxEqAbs(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvest: E13");
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        address _asset = wBTC; 
+        
+        // ------------ Get _asset ------------
+        
+        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        // ------------ Deposit ------------
+
+        _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        vm.prank(harvester);
+        ethConcentrator.harvest(address(harvester), 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset);
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        assertEq(ethConcentrator.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(ethConcentrator.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(ethConcentrator.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(ethConcentrator.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(ethConcentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(ethConcentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        ethConcentrator.updateInternalUtils(address(curveCompounder), address(platform), address(fortressSwap), address(owner), ethConcentrator.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(ethConcentrator.depositCap(), ethConcentrator.totalSupply(), "_testDepositCap: E2");
+        assertEq(ethConcentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(ethConcentrator.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(ethConcentrator), _balance);
+        vm.expectRevert();
+        ethConcentrator.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+        vm.stopPrank();
+    }
+
     function _testWithdrawUnderlying(address _asset, uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
         vm.prank(alice);
         uint256 _tokenOutAlice = ethConcentrator.redeemSingleUnderlying(_sharesAlice, _asset, address(alice), address(alice), 0);

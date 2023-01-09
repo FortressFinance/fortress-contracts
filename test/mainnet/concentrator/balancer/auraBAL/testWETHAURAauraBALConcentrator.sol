@@ -83,6 +83,59 @@ contract testWETHAURAauraBALConcentrator is InitWETHAURAConcentrator, BaseTest {
         _testClaim();
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        address _asset = AURA; 
+        
+        // ------------ Get _asset ------------
+        
+        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        // ------------ Deposit ------------
+
+        _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        vm.prank(harvester);
+        WethAuraauraBalConcentrator.harvest(address(harvester), 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset);
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        assertEq(WethAuraauraBalConcentrator.depositCap(), 0, "_testDepositCap: E1");
+        assertEq(WethAuraauraBalConcentrator.platform(), address(platform), "_testDepositCap: E2");
+        assertEq(WethAuraauraBalConcentrator.swap(), address(fortressSwap), "_testDepositCap: E3");
+        assertEq(WethAuraauraBalConcentrator.owner(), address(owner), "_testDepositCap: E4");
+        assertEq(WethAuraauraBalConcentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+        assertEq(WethAuraauraBalConcentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+
+        vm.startPrank(owner);
+        WethAuraauraBalConcentrator.updateInternalUtils(address(auraBALCompounder), address(platform), address(fortressSwap), address(owner), WethAuraauraBalConcentrator.totalSupply());
+        vm.stopPrank();
+        
+        assertEq(WethAuraauraBalConcentrator.depositCap(), WethAuraauraBalConcentrator.totalSupply(), "_testDepositCap: E2");
+        assertEq(WethAuraauraBalConcentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+        assertEq(WethAuraauraBalConcentrator.maxMint(address(alice)), 0, "_testDepositCap: E4");
+
+        uint256 _amount = 1 ether;
+        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(WethAuraauraBalConcentrator), _balance);
+        vm.expectRevert();
+        WethAuraauraBalConcentrator.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+        vm.stopPrank();
+    }
+
     function testDepositNoAsset(uint256 _amount) public {
         vm.startPrank(alice);
         

@@ -102,13 +102,13 @@ abstract contract ERC4626 is ERC20 {
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions.
-    function previewDeposit(uint256 assets) public view virtual returns (uint256) {
-        return convertToShares(assets);
+    function previewDeposit(uint256 _assets) public view virtual returns (uint256) {
+        return convertToShares(_assets);
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their mint at the current block, given current on-chain conditions.
-    function previewMint(uint256 shares) public view virtual returns (uint256) {
-        return convertToAssets(shares);
+    function previewMint(uint256 _shares) public view virtual returns (uint256) {
+        return convertToAssets(_shares);
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.
@@ -125,15 +125,15 @@ abstract contract ERC4626 is ERC20 {
                      DEPOSIT/WITHDRAWAL LIMIT LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
-    // function maxDeposit(address) public view virtual returns (uint256) {
-    //     return type(uint256).max;
-    // }
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    function maxDeposit(address) public view virtual returns (uint256) {
+        return type(uint256).max;
+    }
 
-    // /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
-    // function maxMint(address) public view virtual returns (uint256) {
-    //     return type(uint256).max;
-    // }
+    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
+    function maxMint(address) public view virtual returns (uint256) {
+        return type(uint256).max;
+    }
 
     /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call.
     function maxWithdraw(address owner) public view virtual returns (uint256) {

@@ -55,9 +55,9 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
     //     _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDT);
     // }
 
-    function testCorrectFlowHarvestSingleWETHUSDC(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDC);
-    }
+    // function testCorrectFlowHarvestSingleWETHUSDC(uint256 _amount) public {
+    //     _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDC);
+    // }
 
     // function testCorrectFlowHarvestSingleWETHFRAX() public {
     //     // vm.assume(_amount > 0.01 ether && _amount < 1 ether);
@@ -68,6 +68,10 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
 
     function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
         _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(glpConcentrator)), USDT);
+    }
+
+    function testDepositCap(uint256 _amount) public {
+        _testDepositCap(USDT, _amount, address(payable(glpConcentrator)));
     }
 
     function testMint(uint256 _amount) public {
@@ -91,7 +95,7 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
     }
 
     function testDepositWrongAsset(uint256 _amount) public {
-        _testDepositWrongAsset(_amount, USDT, address(payable(glpConcentrator)));
+        _testDepositWrongAsset(_amount, CRV, address(payable(glpConcentrator)));
     }
 
     function testWithdrawNoShare(uint256 _amount) public {

@@ -74,6 +74,12 @@ contract testCRVETH is Test, AddRoutes, CurveCompounderBaseTest {
         _testMint(CRV, _amount);
     }
 
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _testDepositCap(CRV, _amount);
+    }
+
     function testFortressRegistry() public {
         _testFortressRegistry();
     }
