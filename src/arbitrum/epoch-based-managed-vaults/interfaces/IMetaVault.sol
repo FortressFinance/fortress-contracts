@@ -60,6 +60,12 @@ interface IMetaVault {
     /// @dev Returns "0" if the Vault is in an "MANAGED" state
     function maxRedeem(address owner) public view returns (uint256);
 
+    /// @dev Returns the address of the FortressSwap contract
+    function getSwap() public view returns (address);
+
+    /// @dev Returns the current vault state
+    function getState() public view returns (State);
+
     /********************************** Investor Functions **********************************/
 
     /// @dev Mints vault shares to _receiver by depositing exact amount of assets. Can only be called by anyone while "state" is "UNMANAGED"
@@ -208,6 +214,11 @@ interface IMetaVault {
     /// @param _timestamp - The timestamp at call time
     event LatenessPunished(uint256 indexed _timestamp);
 
+    /// @notice emitted when "setPauseInteraction" function is called
+    /// @param _pauseDeposit - The new pauseDeposit status
+    /// @param _pauseWithdraw - The new pauseWithdraw status
+    event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
+
     /// @notice emitted when "requestStartEpoch" function is called
     /// @param _timestamp - The timestamp at call time
     /// @param _epochEnd - The timestamp of the end of the epoch
@@ -269,4 +280,5 @@ interface IMetaVault {
     error NotTimelocked();
     error TimelockNotExpired();
     error Unauthorized();
+    error AssetsNotBack();
 }

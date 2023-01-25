@@ -2,10 +2,10 @@
 pragma solidity 0.8.17;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {IAssetVault} from "../interfaces/IAssetVault.sol";
-import {IFortressSwap} from "../interfaces/IFortressSwap.sol";
 import {IMetaVault} from "../interfaces/IMetaVault.sol";
 import {IStrategy} from "../interfaces/IStrategy.sol";
 
@@ -30,13 +30,12 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /********************************** Constructor **********************************/
     
-    constructor(address[] _assets, address _assetVault, address _platform, address _manager, address _swap) {
+    constructor(address[] memory _assets, address _assetVault, address _platform, address _manager) {
         assets = _assets;
         assetVault = _assetVault;
         platform = _platform;
         manager = _manager;
-        swap = _swap;
-        assetVaultAsset = address(IAssetVault(_assetVault).asset());
+        assetVaultAsset = address(IAssetVault(_assetVault).getAsset());
         isStrategiesActiveOverride = false;
     }
 
@@ -82,9 +81,9 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @inheritdoc IStrategy
     function deposit(uint256 _amount) external virtual onlyAssetVault nonReentrant {
         address _assetVaultAsset = assetVaultAsset;
-        uint256 _before = ERC20(_assetVaultAsset).balanceOf(address(this));
-        ERC20(_assetVaultAsset).safeTransferFrom(assetVault, address(this), _amount);
-        _amountIn = ERC20(_assetVaultAsset).balanceOf(address(this)) - _before;
+        uint256 _before = IERC20(_assetVaultAsset).balanceOf(address(this));
+        IERC20(_assetVaultAsset).safeTransferFrom(assetVault, address(this), _amount);
+        uint256 _amountIn = IERC20(_assetVaultAsset).balanceOf(address(this)) - _before;
         if (_amountIn != _amount) revert AmountMismatch();
 
         emit Deposit(block.timestamp, _amountIn);
@@ -93,9 +92,10 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @inheritdoc IStrategy
     function withdraw(uint256 _amount) public virtual onlyAssetVault nonReentrant {
         address _assetVaultAsset = assetVaultAsset;
-        uint256 _before = ERC20(_assetVaultAsset).balanceOf(_assetVault);
-        ERC20(_assetVaultAsset).safeTransfer(_assetVault, _amount);
-        _amountOut = ERC20(_assetVaultAsset).balanceOf(_assetVault) - _before;
+        address _assetVault = assetVault;
+        uint256 _before = IERC20(_assetVaultAsset).balanceOf(_assetVault);
+        IERC20(_assetVaultAsset).safeTransfer(_assetVault, _amount);
+        uint256 _amountOut = IERC20(_assetVaultAsset).balanceOf(_assetVault) - _before;
         if (_amountOut != _amount) revert AmountMismatch();
 
         emit Withdraw(block.timestamp, _amountOut);
@@ -105,7 +105,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     function withdrawAll() public virtual onlyAssetVault {
         if (isActive()) revert StrategyActive();
 
-        withdraw(ERC20(assetVaultAsset).balanceOf(address(this)));
+        withdraw(IERC20(assetVaultAsset).balanceOf(address(this)));
     }
 
     /********************************** Platform Functions **********************************/

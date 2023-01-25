@@ -15,7 +15,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     using SafeERC20 for ERC20;
 
     /// @notice The asset managed by this vault
-    ERC20 public asset;
+    ERC20 internal asset;
 
     /// @notice Enables Platform to override isStrategiesActive value
     bool public isStrategiesActiveOverride;
@@ -27,10 +27,12 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     address public platform;
     /// @notice The vault manager address
     address public manager;
-    /// @notice The swap contract address
-    address public swap;
     /// @notice The timelock delay, in seconds
     uint256 public delay;
+    /// @notice The timelock timestamp
+    uint256 public timelock;
+    /// @notice Indicates if the timelock was set
+    bool public isTimelocked;
 
     /// @notice The address list of strategies
     address[] public strategyList;
@@ -40,13 +42,12 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /********************************** Constructor **********************************/
     
-    constructor(ERC20 _asset, address _metaVault, address _platform, address _manager, address _swap) {
+    constructor(ERC20 _asset, address _metaVault, address _metaVaultAsset, address _platform, address _manager) {
         asset = _asset;
         metaVault = _metaVault;
         platform = _platform;
         manager = _manager;
-        swap = _swap;
-        metaVaultAsset = address(IMetaVault(_metaVault).asset());
+        metaVaultAsset = _metaVaultAsset;
         delay = 86400; // 86400 seconds, 1 day
         isStrategiesActiveOverride = false;
     }
@@ -81,13 +82,18 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     function isStrategiesActive() public view returns (bool) {
         if (isStrategiesActiveOverride) return false;
 
-        address[] _strategyList = strategyList;
+        address[] memory _strategyList = strategyList;
         for (uint256 i = 0; i < _strategyList.length; i++) {
             if (isStrategyActive(_strategyList[i])) {
                 return true;
             }
         }
         return false;
+    }
+
+    /// @inheritdoc IAssetVault
+    function getAsset() external view returns (address) {
+        return address(asset);
     }
 
     /********************************** Meta Vault Functions **********************************/
@@ -100,7 +106,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
         ERC20(_metaVaultAsset).safeTransferFrom(metaVault, address(this), _amount);
         if (_asset != _metaVaultAsset) {
-            _amount = IFortressSwap(swap).swap(_metaVaultAsset, _asset, _amount);
+            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_metaVaultAsset, _asset, _amount);
         }
         
         _amountIn = ERC20(_asset).balanceOf(address(this)) - _before;
@@ -119,7 +125,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         uint256 _before = ERC20(_metaVaultAsset).balanceOf(_metaVault);
 
         if (_asset != _metaVaultAsset) {
-            _amount = IFortressSwap(swap).swap(_asset, _metaVaultAsset, _amount);
+            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_asset, _metaVaultAsset, _amount);
         }
 
         ERC20(_metaVaultAsset).safeTransfer(_metaVault, _amount);
@@ -229,14 +235,14 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     function _exitStrategies() internal {
         address _asset = address(asset);
-        address[] _strategyList = strategyList;
+        address[] memory _strategyList = strategyList;
         for (uint256 i = 0; i < _strategyList.length; i++) {
             IStrategy(_strategyList[i]).withdrawAll(_asset);
         }
     }
 
     function _onState(State _expectedState) internal view {
-        if (IMetaVault(metaVault).state != _expectedState) revert InvalidState();
+        if (IMetaVault(metaVault).getState() != _expectedState) revert InvalidState();
     }
 
     function _approve(address _asset, address _spender, uint256 _amount) internal {

@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 
 import {BaseStrategy} from "./BaseStrategy.sol";
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IFortGlp} from "./interfaces/IFortGlp.sol";
 
 contract FortressGlpStrategy is BaseStrategy {
@@ -11,37 +12,11 @@ contract FortressGlpStrategy is BaseStrategy {
     address public fortGlp;
     
     /********************************** Constructor **********************************/
-    
-    // constructor(
-    //         address[] _assets,
-    //         address _assetVault,
-    //         address _platform,
-    //         address _manager,
-    //         address _swap,
-    //         address _fortGlp
-    //     )
-    //     BaseStrategy(
-    //         address[] _assets,
-    //         address _assetVault,
-    //         address _platform,
-    //         address _manager,
-    //         address _swap
-    //     ) {
-    //         fortGlp = _fortGlp;
-    //     }
 
-    constructor(
-            address[] _assets,
-            address _assetVault,
-            address _platform,
-            address _manager,
-            address _swap,
-            address _fortGlp
-        ) public {
-            super(_assets, _assetVault, _platform, _manager, _swap);
+    constructor(address[] memory _assets, address _assetVault, address _platform, address _manager, address _fortGlp)
+        BaseStrategy(_assets, _assetVault, _platform, _manager) {
             fortGlp = _fortGlp;
         }
-
 
     /********************************** View Functions **********************************/
 
@@ -58,7 +33,7 @@ contract FortressGlpStrategy is BaseStrategy {
     /********************************** Manager Functions **********************************/
 
     function DepositToFortGlp(uint256 _amount, uint256 _minAmount) external onlyManager returns (uint256 _shares) {
-        _shares = IFortGlp(_fortGlp).depositUnderlying(_assetVaultAsset, _amount, address(this), _minAmount);
+        _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultAsset, _amount, address(this), _minAmount);
     }
 
     function RedeemFromFortGlp(uint256 _shares, uint256 _minAmount) external onlyManager returns (uint256 _amount) {
@@ -66,6 +41,6 @@ contract FortressGlpStrategy is BaseStrategy {
     }
 
     function RedeemAllFromFortGlp(uint256 _minAmount) external onlyManager returns (uint256 _amount) {
-        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultAsset, IFortGlp(fortGlp).balanceOf(address(this)), address(this), address(this), _minAmount);
+        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultAsset, IERC20(fortGlp).balanceOf(address(this)), address(this), address(this), _minAmount);
     }
 }

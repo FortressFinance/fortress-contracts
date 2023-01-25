@@ -51,7 +51,6 @@ interface IStrategy {
 
     /********************************** Errors **********************************/
 
-    error StrategyActive();
     error Unauthorized();
     error AmountMismatch();
     error StrategyActive();

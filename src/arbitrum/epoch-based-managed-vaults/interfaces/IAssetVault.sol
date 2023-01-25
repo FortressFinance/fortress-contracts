@@ -24,6 +24,9 @@ interface IAssetVault {
     /// @return True if assets are deployed in any strategy, false otherwise
     function isStrategiesActive() public view returns (bool);
 
+    /// @dev Returns the address of the VaultAsset asset
+    function getAsset() external view returns (address);
+
     /********************************** Meta Vault Functions **********************************/
 
     /// @dev Deposits assets into the AssetVault

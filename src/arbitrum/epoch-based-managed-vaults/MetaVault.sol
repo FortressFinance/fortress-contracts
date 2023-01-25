@@ -2,10 +2,15 @@
 pragma solidity 0.8.17;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {ERC4626} from "src/shared/interfaces/ERC4626.sol";
+import {FixedPointMathLib} from "src/shared/interfaces/utils/FixedPointMathLib.sol";
 import {AssetVault} from "./AssetVault.sol";
+
+import {IMetaVault} from "./interfaces/IMetaVault.sol";
+import {IFortressSwap} from "./interfaces/IFortressSwap.sol";
 
 contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
@@ -13,14 +18,16 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     using SafeERC20 for IERC20;
 
     /// @notice The current state of the vault
-    State public state = State.INITIAL;
+    State internal state = State.INITIAL;
 
     /// @notice The platform address
     address public platform;
     /// @notice The vault manager address
     address public manager;
     /// @notice The swap contract address
-    address public swap;
+    address internal swap;
+    /// @notice The internal accounting of AUM.
+    uint256 internal totalAUM;
     /// @notice The timelock delay, in seconds
     uint256 public delay;
     /// @notice Snapshot of total shares supply from previous epoch
@@ -45,6 +52,10 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     bool public punish;
     /// @notice Indicates whether to charge a performance fee for Vault Manager.
     bool public chargeManagerFee;
+    /// @notice Whether deposit for the pool is paused.
+    bool public pauseDeposit;
+    /// @notice Whether withdraw for the pool is paused.
+    bool public pauseWithdraw;
 
     /// @notice The mapping of addresses of assets to AssetVaults.
     /// @dev AssetVaults are standalone contracts that hold the assets and allow for the execution of Stratagies.
@@ -61,7 +72,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Constructor **********************************/
 
     constructor(
-            ERC20 _asset,
+            IERC20 _asset,
             string memory _name,
             string memory _symbol,
             address _platform,
@@ -177,6 +188,16 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return balanceOf[owner];
     }
 
+    /// @inheritdoc IMetaVault
+    function getSwap() public view returns (address) {
+        return swap;
+    }
+
+    /// @inheritdoc IMetaVault
+    function getState() public view returns (State) {
+        return state;
+    }
+
     /********************************** Investor Functions **********************************/
 
     /// @inheritdoc IMetaVault
@@ -290,18 +311,18 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function addAssetVault(address _asset) external onlyManager nonReentrant returns (address _assetVault) {
-        if (!IFortressSwap(swap).routeExists(address(asset), _asset)) revert SwapRouteNotFound();
-        if (assetBlacklist[_asset]) revert AssetBlacklisted();
+    function addAssetVault(address _targetAsset) external onlyManager nonReentrant returns (address _assetVault) {
+        if (!IFortressSwap(swap).routeExists(address(asset), _targetAsset)) revert SwapRouteNotFound();
+        if (assetBlacklist[_targetAsset]) revert AssetBlacklisted();
         
         _onState(State.UNMANAGED);
 
-        _assetVault = address(new AssetVault(ERC20(_asset), address(this), platform, manager, swap));
+        _assetVault = address(new AssetVault(IERC20(_targetAsset), address(this), address(asset), platform, manager));
         
-        assetVaults[_asset] = _assetVault;
+        assetVaults[_targetAsset] = _assetVault;
         assetVaultsList.push(_assetVault);
 
-        emit AssetVaultAdded(_assetVault, _asset);
+        emit AssetVaultAdded(_assetVault, _targetAsset);
 
         return _assetVault;
     }
@@ -343,7 +364,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function setPerformanceFee(uint256 _performanceFee) external onlyManager {
         _onState(State.UNMANAGED);
 
-        performanceFee = _performanceFee;
+        managerFeePercentage = _performanceFee;
 
         emit SetPerformanceFee(_performanceFee);
     }
@@ -475,7 +496,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     function _areAssetsBack() internal view returns (bool) {
-        address[] _assetVaultsList = assetVaultsList;
+        address[] memory _assetVaultsList = assetVaultsList;
         for (uint256 i = 0; i < _assetVaultsList.length; i++) {
             if (AssetVault(_assetVaultsList[i]).isStrategiesActive()) return false;
         }
@@ -487,7 +508,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     function _approve(address _asset, address _spender, uint256 _amount) internal {
-        ERC20(_asset).safeApprove(_spender, 0);
-        ERC20(_asset).safeApprove(_spender, _amount);
+        IERC20(_asset).safeApprove(_spender, 0);
+        IERC20(_asset).safeApprove(_spender, _amount);
     }
 }
