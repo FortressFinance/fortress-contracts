@@ -20,13 +20,19 @@ contract InitFortress is Script, InitCurveCompounders, InitBalancerCompounders, 
 
     function run() public {
         
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        // uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        // address deployer = vm.envAddress("DEPLOYER");
+        // deployer PK & address from Anvil
+        uint256 deployerPrivateKey = 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a;
+        address deployer = address(0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65);
+
         address owner = vm.envAddress("OWNER");
-        address platform = vm.envAddress("PLATFORM");
+        // address platform = vm.envAddress("PLATFORM");
+        address platform = owner;
 
         vm.startBroadcast(deployerPrivateKey);
 
-        FortressSwap fortressSwap = new FortressSwap(address(owner));
+        FortressSwap fortressSwap = new FortressSwap(address(deployer));
         FortressRegistry fortressRegistry = new FortressRegistry();
         
         // initialize Curve AMM Compounders
