@@ -14,85 +14,14 @@ interface IMetaVault {
     }
 
     /********************************** View Functions **********************************/
-    
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their deposit at the current block, given current on-chain conditions
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    /// @param _assets - The amount of assets to deposit
-    /// @return - The amount of shares to mint
-    function previewDeposit(uint256 _assets) public view returns (uint256);
-
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their mint at the current block, given current on-chain conditions
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    /// @param _shares - The amount of shares to mint
-    /// @return - The amount of assets to deposit
-    function previewMint(uint256 _shares) public view returns (uint256);
-
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    /// @param _shares - The amount of shares to redeem
-    /// @return - The amount of assets in return, after subtracting a withdrawal fee
-    function previewRedeem(uint256 _shares) public view returns (uint256);
-
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    /// @param _assets - The amount of assets to withdraw
-    /// @return - The amount of shares to burn, after subtracting a fee
-    function previewWithdraw(uint256 _assets) public view returns (uint256);
-
-    /// @dev Returns the total AUM
-    /// @dev 'totalAssets' may be inaccurate when 'state' is 'MANAGED' or 'INITIAL'
-    /// @return - The total AUM
-    function totalAssets() public view returns (uint256);
-
-    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    function maxDeposit(address) public view returns (uint256);
-
-    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    function maxMint(address) public view returns (uint256);
-
-    /// @dev Returns the maximum amount of the underlying asset that can be withdrawn from the owner balance in the Vault, through a withdraw call
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    function maxWithdraw(address owner) public view returns (uint256);
-
-    /// @dev Returns the maximum amount of Vault shares that can be redeemed from the owner balance in the Vault, through a redeem call
-    /// @dev Returns "0" if the Vault is in an "MANAGED" state
-    function maxRedeem(address owner) public view returns (uint256);
 
     /// @dev Returns the address of the FortressSwap contract
-    function getSwap() public view returns (address);
+    function getSwap() external view returns (address);
 
-    /// @dev Returns the current vault state
-    function getState() public view returns (State);
+    /// @dev Returns true if the Vault is in an "UNMANAGED" state, false otherwise
+    function isUnmanaged() external view returns (bool);
 
     /********************************** Investor Functions **********************************/
-
-    /// @dev Mints vault shares to _receiver by depositing exact amount of assets. Can only be called by anyone while "state" is "UNMANAGED"
-    /// @param _assets - The amount of assets to deposit
-    /// @param _receiver - The receiver of minted shares
-    /// @return _shares - The amount of shares minted
-    function deposit(uint256 _assets, address _receiver) external returns (uint256 _shares);
-
-    /// @dev Mints exact vault shares to _receiver by depositing assets. Can only be called by anyone while "state" is "UNMANAGED"
-    /// @param _shares - The amount of shares to mint
-    /// @param _receiver - The address of the receiver of shares
-    /// @return _assets - The amount of assets deposited
-    function mint(uint256 _shares, address _receiver) external returns (uint256 _assets);
-
-    /// @dev Burns shares from owner and sends exact amount of assets to _receiver. Can only be called by anyone while "state" is "UNMANAGED"
-    /// @param _assets - The amount of assets to receive
-    /// @param _receiver - The address of the receiver of assets
-    /// @param _owner - The owner of shares
-    /// @return _shares - The amount of shares burned
-    function withdraw(uint256 _assets, address _receiver, address _owner) external returns (uint256 _shares);
-
-    /// @dev Burns exact amount of shares from owner and sends assets to _receiver. Can only be called by anyone while "state" is "UNMANAGED"
-    /// @param _shares - The amount of shares to burn
-    /// @param _receiver - The address of the receiver of assets
-    /// @param _owner - The owner of shares
-    /// @return _assets - The amount of assets sent to the _receiver
-    function redeem(uint256 _shares, address _receiver, address _owner) external returns (uint256 _assets);
 
     /// @dev Cancels the charging of a performance fee for Vault Manager. Used in order to incentivize Vault Managers to end the epoch in the specified time. Can only be called by anyone while "state" is "MANAGED"
     function punishLateness() external;
@@ -109,7 +38,7 @@ interface IMetaVault {
     /// @param _epochEnd - The expected end of the epoch
     /// @param _punish - Whether to punish the Vault Manager for lateness
     /// @param _chargeFee - Whether to charge a performance fee
-    function requestStartEpoch(uint256 _epochEnd, bool _punish, bool _chargeFee) public;
+    function requestStartEpoch(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
 
     /// @dev Starts a new epoch. Can only be called by the Vault Manager while state is "UNMANAGED" and after the timelock has passed
     function startEpoch() external;

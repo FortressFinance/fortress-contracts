@@ -3,4 +3,5 @@ pragma solidity 0.8.17;
 
 import {BaseStrategy} from "./BaseStrategy.sol";
 
-contract Y2KFinanceStrategy is BaseStrategy {}
+contract Y2KFinanceStrategy {}
+// contract Y2KFinanceStrategy is BaseStrategy {}

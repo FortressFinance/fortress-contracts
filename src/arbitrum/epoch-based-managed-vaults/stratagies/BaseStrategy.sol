@@ -63,6 +63,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @inheritdoc IStrategy
     function isActive() public view virtual returns (bool) {
         if (isStrategiesActiveOverride) return false;
+        return true;
     }
 
     /// @inheritdoc IStrategy

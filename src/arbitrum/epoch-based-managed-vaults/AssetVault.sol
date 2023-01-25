@@ -14,11 +14,10 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     using SafeERC20 for ERC20;
 
-    /// @notice The asset managed by this vault
-    ERC20 internal asset;
-
     /// @notice Enables Platform to override isStrategiesActive value
     bool public isStrategiesActiveOverride;
+    /// @notice The asset managed by this vault
+    address internal asset;
     /// @notice The metaVault that manages this vault
     address public metaVault;
     /// @notice The metaVault Primary Asset
@@ -42,7 +41,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /********************************** Constructor **********************************/
     
-    constructor(ERC20 _asset, address _metaVault, address _metaVaultAsset, address _platform, address _manager) {
+    constructor(address _asset, address _metaVault, address _metaVaultAsset, address _platform, address _manager) {
         asset = _asset;
         metaVault = _metaVault;
         platform = _platform;
@@ -68,6 +67,11 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @notice Platform has admin access
     modifier onlyManager() {
         if (msg.sender != manager || msg.sender != platform) revert Unauthorized();
+        _;
+    }
+
+    modifier unmanaged() {
+        if (!IMetaVault(metaVault).isUnmanaged()) revert InvalidState();
         _;
     }
 
@@ -145,7 +149,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
         address _asset = address(asset);
         _approve(_asset, _strategy, _amount);
-        IStrategy(_strategy).deposit(_asset, _amount);
+        IStrategy(_strategy).deposit(_amount);
 
         emit DepositedToStrategy(block.timestamp, _strategy, _amount);
     }
@@ -154,7 +158,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     function withdrawFromStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
         if (!strategies[_strategy]) revert StrategyNotActive();
 
-        IStrategy(_strategy).withdraw(asset, _amount);
+        IStrategy(_strategy).withdraw(_amount);
 
         emit WithdrawnFromStrategy(block.timestamp, _strategy, _amount);
     }
@@ -169,9 +173,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function requestAddStrategy() public onlyManager nonReentrant {
-        _onState(State.UNMANAGED);
-
+    function requestAddStrategy() public onlyManager unmanaged nonReentrant {
         timelock = block.timestamp;
         isTimelocked = true;
 
@@ -179,12 +181,10 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function addStrategy(address _strategy) external onlyManager nonReentrant {
+    function addStrategy(address _strategy) external onlyManager unmanaged nonReentrant {
         if (isTimelocked == false) revert NotTimelocked();
         if (timelock + delay > block.timestamp) revert TimelockNotExpired();
         if (IStrategy(_strategy).isAssetEnabled(address(asset))) revert StrategyMismatch();
-
-        _onState(State.UNMANAGED);
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);
@@ -194,9 +194,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         emit StrategyAdded(block.timestamp, _strategy);
     }
 
-    /// @inheritdoc IMetaVault
-    function setManager(uint256 _manager) external onlyManager {
-        _onState(State.UNMANAGED);
+    /// @inheritdoc IAssetVault
+    function setManager(address _manager) external onlyManager unmanaged {
 
         manager = _manager;
     }
@@ -204,8 +203,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IAssetVault
-    function setTimelockDelay(uint256 _delay) external onlyPlatform {
-        _onState(State.UNMANAGED);
+    function setTimelockDelay(uint256 _delay) external onlyPlatform unmanaged {
 
         delay = _delay;
 
@@ -213,10 +211,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function platformAddStrategy(address _strategy) external onlyPlatform {
+    function platformAddStrategy(address _strategy) external onlyPlatform unmanaged {
         if (IStrategy(_strategy).isAssetEnabled(address(asset))) revert StrategyMismatch();
-
-        _onState(State.UNMANAGED);
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);
@@ -234,15 +230,10 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /********************************** Internal Functions **********************************/
 
     function _exitStrategies() internal {
-        address _asset = address(asset);
         address[] memory _strategyList = strategyList;
         for (uint256 i = 0; i < _strategyList.length; i++) {
-            IStrategy(_strategyList[i]).withdrawAll(_asset);
+            IStrategy(_strategyList[i]).withdrawAll();
         }
-    }
-
-    function _onState(State _expectedState) internal view {
-        if (IMetaVault(metaVault).getState() != _expectedState) revert InvalidState();
     }
 
     function _approve(address _asset, address _spender, uint256 _amount) internal {

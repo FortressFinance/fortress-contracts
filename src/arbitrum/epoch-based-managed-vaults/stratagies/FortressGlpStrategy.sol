@@ -20,7 +20,7 @@ contract FortressGlpStrategy is BaseStrategy {
 
     /********************************** View Functions **********************************/
 
-    function isActive() public view virtual returns (bool) {
+    function isActive() public view override returns (bool) {
         if (isStrategiesActiveOverride) return false;
 
         if (IERC20(fortGlp).balanceOf(address(this)) > 0) {

@@ -18,11 +18,11 @@ interface IAssetVault {
     /// @dev Indicates whether assets are deployed in a specific strategy
     /// @param _strategy The address of the strategy
     /// @return True if assets are deployed in the strategy, false otherwise
-    function isStrategyActive(address _strategy) public view returns (bool);
+    function isStrategyActive(address _strategy) external view returns (bool);
 
     /// @dev Indicates whether assets are deployed in any strategy
     /// @return True if assets are deployed in any strategy, false otherwise
-    function isStrategiesActive() public view returns (bool);
+    function isStrategiesActive() external view returns (bool);
 
     /// @dev Returns the address of the VaultAsset asset
     function getAsset() external view returns (address);
@@ -37,7 +37,7 @@ interface IAssetVault {
     /// @dev Withdraws assets from the AssetVault
     /// @param _amount The amount of assets to withdraw, in asset
     /// @return _amountOut amount of assets withdrawn, in metaVaultAsset
-    function withdraw(uint256 _amount) public returns (uint256 _amountOut);
+    function withdraw(uint256 _amount) external returns (uint256 _amountOut);
 
     /********************************** Manager Functions **********************************/
 
@@ -55,7 +55,7 @@ interface IAssetVault {
     function endEpoch() external;
 
     /// @dev Initiate the timelock to add a new strategy contract. Can only be called by the manager
-    function requestAddStrategy() public;
+    function requestAddStrategy() external;
 
     /// @dev Add a new strategy contract. Can only be called by the manager and after the timelock has expired
     function addStrategy(address _strategy) external;

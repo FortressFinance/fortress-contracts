@@ -6,6 +6,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {ERC4626} from "src/shared/interfaces/ERC4626.sol";
+import {ERC20} from "src/shared/interfaces/ERC4626.sol";
 import {FixedPointMathLib} from "src/shared/interfaces/utils/FixedPointMathLib.sol";
 import {AssetVault} from "./AssetVault.sol";
 
@@ -18,7 +19,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     using SafeERC20 for IERC20;
 
     /// @notice The current state of the vault
-    State internal state = State.INITIAL;
+    State public state = State.INITIAL;
 
     /// @notice The platform address
     address public platform;
@@ -72,7 +73,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Constructor **********************************/
 
     constructor(
-            IERC20 _asset,
+            ERC20 _asset,
             string memory _name,
             string memory _symbol,
             address _platform,
@@ -113,21 +114,24 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /********************************** View Functions **********************************/
 
-    /// @inheritdoc IMetaVault
-    function previewDeposit(uint256 _assets) public view virtual returns (uint256) {
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
+    function previewDeposit(uint256 _assets) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
         return convertToShares(_assets);
     }
 
-    /// @inheritdoc IMetaVault
-    function previewMint(uint256 _shares) public view virtual returns (uint256) {
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
+    function previewMint(uint256 _shares) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
         return convertToAssets(_shares);
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
@@ -142,7 +146,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return assets - _fee;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function previewWithdraw(uint256 _assets) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
@@ -154,12 +159,14 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - withdrawFeePercentage);
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice May return an inaccurate response when 'state' is 'MANAGED' or 'INITIAL'
     function totalAssets() public view override returns (uint256) {
         return totalAUM;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function maxDeposit(address) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
@@ -167,21 +174,24 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function maxMint(address) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
         return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function maxWithdraw(address owner) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
         return convertToAssets(balanceOf[owner]);
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function maxRedeem(address owner) public view override returns (uint256) {
         if (state != State.UNMANAGED) return 0;
 
@@ -194,13 +204,14 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function getState() public view returns (State) {
-        return state;
+    function isUnmanaged() public view returns (bool) {
+        return state == State.UNMANAGED;
     }
 
     /********************************** Investor Functions **********************************/
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
 
@@ -211,7 +222,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return _shares;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
 
@@ -222,7 +234,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return _assets;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function withdraw(uint256 _assets, address _receiver, address _owner) external override nonReentrant returns (uint256 _shares) {
         if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
 
@@ -233,7 +246,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return _shares;
     }
 
-    /// @inheritdoc IMetaVault
+    /// @inheritdoc ERC4626
+    /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function redeem(uint256 _shares, address _receiver, address _owner) external override nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
@@ -317,7 +331,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         
         _onState(State.UNMANAGED);
 
-        _assetVault = address(new AssetVault(IERC20(_targetAsset), address(this), address(asset), platform, manager));
+        _assetVault = address(new AssetVault(_targetAsset, address(this), address(asset), platform, manager));
         
         assetVaults[_targetAsset] = _assetVault;
         assetVaultsList.push(_assetVault);
@@ -370,7 +384,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function setManager(uint256 _manager) external onlyManager {
+    function setManager(address _manager) external onlyManager {
         _onState(State.UNMANAGED);
 
         manager = _manager;
@@ -471,7 +485,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     function _afterEpochEnd() internal virtual {
-        totalAUM = IERC20(asset).balanceOf(address(this));
+        totalAUM = asset.balanceOf(address(this));
     }
 
     function _executeSnapshot() internal virtual {
@@ -483,16 +497,17 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     function _chargeFees() internal virtual {
         uint256 _snapshotAssetBalance = snapshotAssetBalance;
-        uint256 _balance = IERC20(asset).balanceOf(address(this));
+        address _asset = address(asset);
+        uint256 _balance = IERC20(_asset).balanceOf(address(this));
         if (_balance > _snapshotAssetBalance && chargeManagerFee == true) {
             // send performance fee to Vault Manager
             // 1 / 5 = 20 / 100  --> (use '5' to take 20% from profit)
-            IERC20(asset).safeTransfer(manager, (_balance - _snapshotAssetBalance) / managerFeePercentage);
+            IERC20(_asset).safeTransfer(manager, (_balance - _snapshotAssetBalance) / managerFeePercentage);
         }
 
         // send management fee to platform
         // 1 / 600 = 2 / (100 * 12) --> (2% annually)
-        IERC20(asset).safeTransfer(platform, _snapshotAssetBalance / platformFeePercentage);
+        IERC20(_asset).safeTransfer(platform, _snapshotAssetBalance / platformFeePercentage);
     }
 
     function _areAssetsBack() internal view returns (bool) {

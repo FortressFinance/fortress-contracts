@@ -17,6 +17,6 @@ interface IFortGlp {
     /// @param _shares - The shares to burn
     /// @param _receiver - The address of the receiver of underlying assets
     /// @param _owner - The owner of shares to burn
-    /// @return _assets - The amount of assets returned to the user
+    /// @return _underlyingAssets - The amount of underlying assets returned to the user
     function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) external returns (uint256 _underlyingAssets);
 }

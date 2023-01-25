@@ -7,12 +7,12 @@ interface IStrategy {
 
     /// @dev Indicates whether the strategy has deployed assets
     /// @return True if the strategy has deployed assets, false otherwise
-    function isActive() public view returns (bool);
+    function isActive() external view returns (bool);
 
     /// @dev Indicates whether an asset is enabled for the strategy
     /// @param _asset The address of the asset to check
     /// @return True if the asset is enabled, false otherwise
-    function isAssetEnabled(address _asset) public view returns (bool);
+    function isAssetEnabled(address _asset) external view returns (bool);
 
     /********************************** Asset Vault Functions **********************************/
 
@@ -22,10 +22,10 @@ interface IStrategy {
 
     /// @dev Withdraws assets from the strategy. Can only be called by the AssetVault
     /// @param _amount The amount of assets to withdraw
-    function withdraw(uint256 _amount) public;
+    function withdraw(uint256 _amount) external;
 
     /// @dev Withdraws all assets from the strategy. Can only be called by the AssetVault. Fails if the strategy is not ready to exit
-    function withdrawAll() public;
+    function withdrawAll() external;
 
     /********************************** Platform Functions **********************************/
 
