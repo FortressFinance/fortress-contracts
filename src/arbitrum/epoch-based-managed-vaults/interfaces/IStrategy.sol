@@ -27,6 +27,16 @@ interface IStrategy {
     /// @dev Withdraws all assets from the strategy. Can only be called by the AssetVault. Fails if the strategy is not ready to exit
     function withdrawAll() external;
 
+    /********************************** Manager Functions **********************************/
+
+    /// @dev Executes the strategy. Can only be called by the manager
+    /// @param _configData The configuration data for the strategy
+    function executeStrategy(bytes memory _configData) external returns (uint256);
+
+    /// @dev Terminates the strategy. Can only be called by the manager
+    /// @param _configData The configuration data for the strategy
+    function terminateStrategy(bytes memory _configData) external returns (uint256);
+
     /********************************** Platform Functions **********************************/
 
     /// @dev Overrides the active status of the strategy. Can only be called by the platform

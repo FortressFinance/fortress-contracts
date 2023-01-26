@@ -25,7 +25,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
+import {ERC20, ERC4626, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
 import {AssetVault} from "./AssetVault.sol";
 
 import {IMetaVault} from "./interfaces/IMetaVault.sol";
@@ -295,17 +295,17 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Manager Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function initVault(uint256 _epochEnd, bool _punish, bool _chargeFee) external virtual onlyManager {
+    function initiateVault(uint256 _epochEnd, bool _punish, bool _chargeFee) external virtual onlyManager {
         _onState(State.INITIAL);
 
         state = State.UNMANAGED;
-        requestStartEpoch(_epochEnd, _punish, _chargeFee);
+        initiateEpochStart(_epochEnd, _punish, _chargeFee);
 
         emit EpochEnded(block.timestamp, 0, 0);
     }
 
     /// @inheritdoc IMetaVault
-    function requestStartEpoch(uint256 _epochEnd, bool _punish, bool _chargeFee) public onlyManager nonReentrant {
+    function initiateEpochStart(uint256 _epochEnd, bool _punish, bool _chargeFee) public onlyManager nonReentrant {
         _onState(State.UNMANAGED);
 
         timelock = block.timestamp;
@@ -535,7 +535,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function _areAssetsBack() internal view returns (bool) {
         address[] memory _assetVaultsList = assetVaultsList;
         for (uint256 i = 0; i < _assetVaultsList.length; i++) {
-            if (AssetVault(_assetVaultsList[i]).isStrategiesActive()) return false;
+            if (AssetVault(_assetVaultsList[i]).areStrategiesActive()) return false;
         }
         return true;
     }

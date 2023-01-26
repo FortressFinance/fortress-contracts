@@ -130,6 +130,14 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
         withdraw(IERC20(assetVaultAsset).balanceOf(address(this)));
     }
 
+    /********************************** Manager Functions **********************************/
+
+    /// @inheritdoc IStrategy
+    function executeStrategy(bytes memory _configData) external virtual onlyManager returns (uint256) {}
+
+    /// @inheritdoc IStrategy
+    function terminateStrategy(bytes memory _configData) external virtual onlyManager returns (uint256) {}
+
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IStrategy

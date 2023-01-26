@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-
 // ███████╗░█████╗░██████╗░████████╗██████╗░███████╗░██████╗░██████╗
 // ██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔════╝██╔════╝██╔════╝
 // █████╗░░██║░░██║██████╔╝░░░██║░░░██████╔╝█████╗░░╚█████╗░╚█████╗░
@@ -45,6 +44,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     address public platform;
     /// @notice The vault manager address
     address public manager;
+    /// @notice The address of the newly initiated strategy
+    address public initiatedStrategy;
     /// @notice The timelock delay, in seconds
     uint256 public delay;
     /// @notice The timelock timestamp
@@ -104,7 +105,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function isStrategiesActive() public view returns (bool) {
+    function areStrategiesActive() public view returns (bool) {
         if (isStrategiesActiveOverride) return false;
 
         address[] memory _strategyList = strategyList;
@@ -177,7 +178,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function exitStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
+    function withdrawFromStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
         if (!strategies[_strategy]) revert StrategyNotActive();
 
         IStrategy(_strategy).withdraw(_amount);
@@ -186,7 +187,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function exitStratagies() external onlyManager {
+    function withdrawAllFromAllStrategies() external onlyManager {
         address[] memory _strategyList = strategyList;
         for (uint256 i = 0; i < _strategyList.length; i++) {
             IStrategy(_strategyList[i]).withdrawAll();
@@ -197,18 +198,22 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function requestAddStrategy() public onlyManager unmanaged nonReentrant {
+    function initiateAddStrategy(address _strategy) public onlyManager unmanaged nonReentrant {
         timelock = block.timestamp;
         isTimelocked = true;
+        initiatedStrategy = _strategy;
 
-        emit AddStrategyRequested(block.timestamp);
+        emit AddStrategyRequested(block.timestamp, _strategy);
     }
 
     /// @inheritdoc IAssetVault
-    function addStrategy(address _strategy) external onlyManager unmanaged nonReentrant {
+    function addStrategy() external onlyManager unmanaged nonReentrant {
         if (isTimelocked == false) revert NotTimelocked();
         if (timelock + delay > block.timestamp) revert TimelockNotExpired();
+        
+        address _strategy = initiatedStrategy;
         if (IStrategy(_strategy).isAssetEnabled(address(asset))) revert StrategyMismatch();
+        if (strategies[_strategy]) revert StrategyAlreadyActive();
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);
@@ -221,14 +226,14 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @inheritdoc IAssetVault
     function setManager(address _manager) external onlyManager unmanaged {
         manager = _manager;
-        // TODO - add event
+
+        emit ManagerSet(block.timestamp, _manager);
     }
 
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IAssetVault
     function setTimelockDelay(uint256 _delay) external onlyPlatform unmanaged {
-
         delay = _delay;
 
         emit TimelockDelaySet(block.timestamp, _delay);

@@ -33,13 +33,13 @@ interface IMetaVault {
     /// @param _epochEnd - The expected end of the epoch
     /// @param _punish - Whether to punish the Vault Manager for lateness
     /// @param _chargeFee - Whether to charge a performance fee
-    function initVault(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
+    function initiateVault(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
 
     /// @dev Requests the start of a new epoch. Can only be called by the Vault Manager while state is "UNMANAGED"
     /// @param _epochEnd - The expected end of the epoch
     /// @param _punish - Whether to punish the Vault Manager for lateness
     /// @param _chargeFee - Whether to charge a performance fee
-    function requestStartEpoch(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
+    function initiateEpochStart(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
 
     /// @dev Starts a new epoch. Can only be called by the Vault Manager while state is "UNMANAGED" and after the timelock has passed
     function startEpoch() external;

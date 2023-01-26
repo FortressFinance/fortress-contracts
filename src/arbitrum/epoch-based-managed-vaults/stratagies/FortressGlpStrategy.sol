@@ -53,15 +53,25 @@ contract FortressGlpStrategy is BaseStrategy {
 
     /********************************** Manager Functions **********************************/
 
-    function DepositToFortGlp(uint256 _amount, uint256 _minAmount) external onlyManager returns (uint256 _shares) {
-        _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultAsset, _amount, address(this), _minAmount);
+    function executeStrategy(bytes memory _configData) external override onlyManager returns (uint256) {
+        (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
+
+        if (_entireBalance) {
+            _amount = IERC20(assetVaultAsset).balanceOf(address(this));
+        }
+        uint256 _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultAsset, _amount, address(this), _minAmount);
+
+        return _shares;
     }
 
-    function RedeemFromFortGlp(uint256 _shares, uint256 _minAmount) external onlyManager returns (uint256 _amount) {
-        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultAsset, _shares, address(this), address(this), _minAmount);
-    }
+    function terminateStrategy(bytes memory _configData) external override onlyManager returns (uint256) {
+        (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
 
-    function RedeemAllFromFortGlp(uint256 _minAmount) external onlyManager returns (uint256 _amount) {
-        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultAsset, IERC20(fortGlp).balanceOf(address(this)), address(this), address(this), _minAmount);
+        if (_entireBalance) {
+            _amount = IERC20(fortGlp).balanceOf(address(this));
+        }
+        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultAsset, _amount, address(this), address(this), _minAmount);
+
+        return _amount;
     }
 }
