@@ -14,8 +14,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     using SafeERC20 for ERC20;
 
-    /// @notice Enables Platform to override isStrategiesActive value
-    bool public isStrategiesActiveOverride;
     /// @notice The asset managed by this vault
     address internal asset;
     /// @notice The metaVault that manages this vault
@@ -32,6 +30,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     uint256 public timelock;
     /// @notice Indicates if the timelock was set
     bool public isTimelocked;
+    /// @notice Enables Platform to override isStrategiesActive value
+    bool public isStrategiesActiveOverride;
 
     /// @notice The address list of strategies
     address[] public strategyList;
@@ -97,20 +97,21 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function getAsset() external view returns (address) {
-        return address(asset);
+        return asset;
     }
 
     /********************************** Meta Vault Functions **********************************/
 
     /// @inheritdoc IAssetVault
     function deposit(uint256 _amount) external onlyMetaVault nonReentrant returns (uint256 _amountIn) {
-        address _asset = address(asset);
+        address _asset = asset;
+        address _metaVault = metaVault;
         address _metaVaultAsset = metaVaultAsset;
         uint256 _before = ERC20(_asset).balanceOf(address(this));
 
-        ERC20(_metaVaultAsset).safeTransferFrom(metaVault, address(this), _amount);
+        ERC20(_metaVaultAsset).safeTransferFrom(_metaVault, address(this), _amount);
         if (_asset != _metaVaultAsset) {
-            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_metaVaultAsset, _asset, _amount);
+            _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultAsset, _asset, _amount);
         }
         
         _amountIn = ERC20(_asset).balanceOf(address(this)) - _before;
@@ -123,7 +124,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function withdraw(uint256 _amount) public onlyMetaVault nonReentrant returns (uint256 _amountOut) {
-        address _asset = address(asset);
+        address _asset = asset;
         address _metaVaultAsset = metaVaultAsset;
         address _metaVault = metaVault;
         uint256 _before = ERC20(_metaVaultAsset).balanceOf(_metaVault);
@@ -155,7 +156,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function withdrawFromStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
+    function exitStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
         if (!strategies[_strategy]) revert StrategyNotActive();
 
         IStrategy(_strategy).withdraw(_amount);
@@ -164,10 +165,12 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function endEpoch() external onlyManager {
-        _exitStrategies();
-
-        withdraw(ERC20(asset).balanceOf(address(this)));
+    function exitStratagies() external onlyManager {
+        address[] memory _strategyList = strategyList;
+        for (uint256 i = 0; i < _strategyList.length; i++) {
+            IStrategy(_strategyList[i]).withdrawAll();
+        }
+        // TODO - add blacklist strategy
 
         emit EpochEnded(block.timestamp);
     }
@@ -196,8 +199,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function setManager(address _manager) external onlyManager unmanaged {
-
         manager = _manager;
+        // TODO - add event
     }
 
     /********************************** Platform Functions **********************************/
@@ -228,13 +231,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /********************************** Internal Functions **********************************/
-
-    function _exitStrategies() internal {
-        address[] memory _strategyList = strategyList;
-        for (uint256 i = 0; i < _strategyList.length; i++) {
-            IStrategy(_strategyList[i]).withdrawAll();
-        }
-    }
 
     function _approve(address _asset, address _spender, uint256 _amount) internal {
         ERC20(_asset).safeApprove(_spender, 0);

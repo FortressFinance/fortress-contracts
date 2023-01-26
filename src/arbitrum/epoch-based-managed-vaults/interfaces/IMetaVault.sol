@@ -24,6 +24,7 @@ interface IMetaVault {
     /********************************** Investor Functions **********************************/
 
     /// @dev Cancels the charging of a performance fee for Vault Manager. Used in order to incentivize Vault Managers to end the epoch in the specified time. Can only be called by anyone while "state" is "MANAGED"
+    /// @dev Not effective if epoch P&L is negative
     function punishLateness() external;
 
     /********************************** Manager Functions **********************************/

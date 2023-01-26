@@ -49,10 +49,10 @@ interface IAssetVault {
     /// @dev Withdraws assets from a strategy. Can only be called by the manager
     /// @param _strategy The address of the strategy
     /// @param _amount The amount of assets to withdraw
-    function withdrawFromStrategy(address _strategy, uint256 _amount) external;
+    function exitStrategy(address _strategy, uint256 _amount) external;
 
     /// @dev Withdraws all assets from all strategy. Fails if any strategy is not ready to exit. Can only be called by the manager
-    function endEpoch() external;
+    function exitStratagies() external;
 
     /// @dev Initiate the timelock to add a new strategy contract. Can only be called by the manager
     function requestAddStrategy() external;

@@ -5,9 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {ERC4626} from "src/shared/interfaces/ERC4626.sol";
-import {ERC20} from "src/shared/interfaces/ERC4626.sol";
-import {FixedPointMathLib} from "src/shared/interfaces/utils/FixedPointMathLib.sol";
+import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
 import {AssetVault} from "./AssetVault.sol";
 
 import {IMetaVault} from "./interfaces/IMetaVault.sol";
@@ -27,22 +25,25 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     address public manager;
     /// @notice The swap contract address
     address internal swap;
+    /// @notice The internal accounting of the deposit limit. Denominated in shares.
+    uint256 public depositCap;
+
     /// @notice The internal accounting of AUM.
     uint256 internal totalAUM;
-    /// @notice The timelock delay, in seconds
-    uint256 public delay;
     /// @notice Snapshot of total shares supply from previous epoch
     uint256 public snapshotSharesSupply;
     /// @notice Snapshot of total asset supply from previous epoch
     uint256 public snapshotAssetBalance;
-    /// @notice The internal accounting of the deposit limit. Denominated in shares.
-    uint256 public depositCap;
+    
     /// @notice The percentage of managment fee to pay for platform on AUM.
     uint256 public platformFeePercentage;
     /// @notice The percentage of performance fee to for Vault Manager on Epoch ending.
     uint256 public managerFeePercentage;
     /// @notice The percentage of fee to keep in vault on withdraw (distrebuted among vault participants).
     uint256 public withdrawFeePercentage;
+    
+    /// @notice The timelock delay, in seconds
+    uint256 public delay;
     /// @notice The time that the timelock started.
     uint256 public timelock;
     /// @notice The time that the Epoch should end.
@@ -53,6 +54,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     bool public punish;
     /// @notice Indicates whether to charge a performance fee for Vault Manager.
     bool public chargeManagerFee;
+    
     /// @notice Whether deposit for the pool is paused.
     bool public pauseDeposit;
     /// @notice Whether withdraw for the pool is paused.
