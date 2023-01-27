@@ -202,6 +202,7 @@ interface IMetaVault {
     error InsufficientBalance();
     error InsufficientAllowance();
     error InsufficientAmountOut();
+    error InsufficientManagerCollateral();
     error LatenessNotPunished();
     error EpochNotEnded();
     error SwapRouteNotFound();

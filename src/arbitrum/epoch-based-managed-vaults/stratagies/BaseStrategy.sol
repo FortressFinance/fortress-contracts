@@ -133,10 +133,10 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /********************************** Manager Functions **********************************/
 
     /// @inheritdoc IStrategy
-    function executeStrategy(bytes memory _configData) external virtual onlyManager returns (uint256) {}
+    function execute(bytes memory _configData) external virtual onlyManager returns (uint256) {}
 
     /// @inheritdoc IStrategy
-    function terminateStrategy(bytes memory _configData) external virtual onlyManager returns (uint256) {}
+    function terminate(bytes memory _configData) external virtual onlyManager returns (uint256) {}
 
     /********************************** Platform Functions **********************************/
 

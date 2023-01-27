@@ -134,6 +134,7 @@ interface IAssetVault {
     error StrategyNotActive();
     error StrategyAlreadyActive();
     error StrategyMismatch();
+    error StrategyBlacklisted();
     error AmountMismatch();
     error NotTimelocked();
     error TimelockNotExpired();

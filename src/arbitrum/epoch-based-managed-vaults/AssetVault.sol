@@ -60,6 +60,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @notice The mapping of strategies
     mapping(address => bool) public strategies;
+    /// @notice The mapping of blacklisted strategies
+    mapping(address => bool) public strategyBlacklist;
 
     /********************************** Constructor **********************************/
     
@@ -169,6 +171,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @inheritdoc IAssetVault
     function depositToStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
         if (!strategies[_strategy]) revert StrategyNotActive();
+        if (strategyBlacklist[_strategy]) revert StrategyBlacklisted();
 
         address _asset = address(asset);
         _approve(_asset, _strategy, _amount);
@@ -192,8 +195,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         for (uint256 i = 0; i < _strategyList.length; i++) {
             IStrategy(_strategyList[i]).withdrawAll();
         }
-        // TODO - add blacklist strategy
-
+        
         emit EpochEnded(block.timestamp);
     }
 
@@ -212,6 +214,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         if (timelock + delay > block.timestamp) revert TimelockNotExpired();
         
         address _strategy = initiatedStrategy;
+        if (strategyBlacklist[_strategy]) revert StrategyBlacklisted();
         if (IStrategy(_strategy).isAssetEnabled(address(asset))) revert StrategyMismatch();
         if (strategies[_strategy]) revert StrategyAlreadyActive();
 

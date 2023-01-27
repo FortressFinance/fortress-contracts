@@ -31,11 +31,11 @@ interface IStrategy {
 
     /// @dev Executes the strategy. Can only be called by the manager
     /// @param _configData The configuration data for the strategy
-    function executeStrategy(bytes memory _configData) external returns (uint256);
+    function execute(bytes memory _configData) external returns (uint256);
 
     /// @dev Terminates the strategy. Can only be called by the manager
     /// @param _configData The configuration data for the strategy
-    function terminateStrategy(bytes memory _configData) external returns (uint256);
+    function terminate(bytes memory _configData) external returns (uint256);
 
     /********************************** Platform Functions **********************************/
 

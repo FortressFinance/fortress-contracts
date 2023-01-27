@@ -53,7 +53,7 @@ contract FortressGlpStrategy is BaseStrategy {
 
     /********************************** Manager Functions **********************************/
 
-    function executeStrategy(bytes memory _configData) external override onlyManager returns (uint256) {
+    function execute(bytes memory _configData) external override onlyManager returns (uint256) {
         (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
 
         if (_entireBalance) {
@@ -64,7 +64,7 @@ contract FortressGlpStrategy is BaseStrategy {
         return _shares;
     }
 
-    function terminateStrategy(bytes memory _configData) external override onlyManager returns (uint256) {
+    function terminate(bytes memory _configData) external override onlyManager returns (uint256) {
         (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
 
         if (_entireBalance) {
