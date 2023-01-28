@@ -352,6 +352,10 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
          = abi.decode(_configData, (uint256, uint256, uint256, uint256, bool, bool, bool));
         
         // TODO - assert manager input values
+        if (epochEndTimestamp <= block.timestamp) revert EpochEndTimestampInvalid();
+        // if (managerPerformanceFee > 10000) revert ManagerPerformanceFeeInvalid();
+        // if (vaultWithdrawFee > 10000) revert VaultWithdrawFeeInvalid();
+        // if (collateralRequirement > 10000) revert CollateralRequirementInvalid();
 
         timelockStartTimestamp = block.timestamp;
         isTimelockInitiated = true;

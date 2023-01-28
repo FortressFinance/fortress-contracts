@@ -139,4 +139,8 @@ interface IAssetVault {
     error NotTimelocked();
     error TimelockNotExpired();
     error Unauthorized();
+    error EpochEndTimestampInvalid();
+    error ManagerPerformanceFeeInvalid();
+    error VaultWithdrawFeeInvalid();
+    error CollateralRequirementInvalid();
 }
