@@ -30,16 +30,16 @@ interface IMetaVault {
     /********************************** Manager Functions **********************************/
 
     /// @dev Opens vault for deposits and claims and requests to start an epoch. Can only be called by the Vault Manager while state is "INITIAL"
-    /// @param _epochEnd - The expected end of the epoch
-    /// @param _punish - Whether to punish the Vault Manager for lateness
-    /// @param _chargeFee - Whether to charge a performance fee
-    function initiateVault(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
+    // / @param _epochEnd - The expected end of the epoch
+    // / @param _punish - Whether to punish the Vault Manager for lateness
+    // / @param _chargeFee - Whether to charge a performance fee
+    function initiateVault(uint256 _epochEnd, uint256 _performanceFee, uint256 _requiredCollateral, bool _punish, bool _chargeManagerFee, bool _requireCollateral) external;
 
     /// @dev Requests the start of a new epoch. Can only be called by the Vault Manager while state is "UNMANAGED"
-    /// @param _epochEnd - The expected end of the epoch
-    /// @param _punish - Whether to punish the Vault Manager for lateness
-    /// @param _chargeFee - Whether to charge a performance fee
-    function initiateEpochStart(uint256 _epochEnd, bool _punish, bool _chargeFee) external;
+    // / @param _epochEnd - The expected end of the epoch
+    // / @param _punish - Whether to punish the Vault Manager for lateness
+    // / @param _chargeFee - Whether to charge a performance fee
+    function initiateEpochStart(uint256 _epochEnd, uint256 _performanceFee, uint256 _requiredCollateral, bool _punish, bool _chargeManagerFee, bool _requireCollateral) external;
 
     /// @dev Starts a new epoch. Can only be called by the Vault Manager while state is "UNMANAGED" and after the timelock has passed
     function startEpoch() external;
@@ -196,7 +196,7 @@ interface IMetaVault {
     error InvalidState();
     error DepositPaused();
     error WithdrawPaused();
-    error InsufficientDepositCap();
+    error InsufficientDepositLimit();
     error ZeroAmount();
     error ZeroAddress();
     error InsufficientBalance();

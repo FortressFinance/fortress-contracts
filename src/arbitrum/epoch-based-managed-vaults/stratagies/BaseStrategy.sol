@@ -37,7 +37,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @notice The assetVault that manages this vault
     address public assetVault;
     /// @notice The assetVault Primary Asset
-    address public assetVaultAsset;
+    address public assetVaultPrimaryAsset;
     /// @notice The platform address
     address public platform;
     /// @notice The vault manager address
@@ -46,17 +46,17 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     bool public isStrategiesActiveOverride;
 
     /// @notice The address list of enabled assets
-    address[] public assets;
+    address[] public enabledAssets;
     
 
     /********************************** Constructor **********************************/
     
-    constructor(address[] memory _assets, address _assetVault, address _platform, address _manager) {
-        assets = _assets;
+    constructor(address[] memory _enabledAssets, address _assetVault, address _platform, address _manager) {
+        enabledAssets = _enabledAssets;
         assetVault = _assetVault;
         platform = _platform;
         manager = _manager;
-        assetVaultAsset = IAssetVault(_assetVault).getAsset();
+        assetVaultPrimaryAsset = IAssetVault(_assetVault).getAsset();
         isStrategiesActiveOverride = false;
     }
 
@@ -89,9 +89,9 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /// @inheritdoc IStrategy
     function isAssetEnabled(address _asset) public view virtual returns (bool) {
-        address[] memory _assets = assets;
-        for (uint256 i = 0; i < _assets.length; i++) {
-            if (_assets[i] == _asset) {
+        address[] memory _enabledAssets = enabledAssets;
+        for (uint256 i = 0; i < _enabledAssets.length; i++) {
+            if (_enabledAssets[i] == _asset) {
                 return true;
             }
         }
@@ -102,10 +102,10 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /// @inheritdoc IStrategy
     function deposit(uint256 _amount) external virtual onlyAssetVault nonReentrant {
-        address _assetVaultAsset = assetVaultAsset;
-        uint256 _before = IERC20(_assetVaultAsset).balanceOf(address(this));
-        IERC20(_assetVaultAsset).safeTransferFrom(assetVault, address(this), _amount);
-        uint256 _amountIn = IERC20(_assetVaultAsset).balanceOf(address(this)) - _before;
+        address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
+        uint256 _before = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
+        IERC20(_assetVaultPrimaryAsset).safeTransferFrom(assetVault, address(this), _amount);
+        uint256 _amountIn = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this)) - _before;
         if (_amountIn != _amount) revert AmountMismatch();
 
         emit Deposit(block.timestamp, _amountIn);
@@ -113,11 +113,11 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /// @inheritdoc IStrategy
     function withdraw(uint256 _amount) public virtual onlyAssetVault nonReentrant {
-        address _assetVaultAsset = assetVaultAsset;
+        address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
         address _assetVault = assetVault;
-        uint256 _before = IERC20(_assetVaultAsset).balanceOf(_assetVault);
-        IERC20(_assetVaultAsset).safeTransfer(_assetVault, _amount);
-        uint256 _amountOut = IERC20(_assetVaultAsset).balanceOf(_assetVault) - _before;
+        uint256 _before = IERC20(_assetVaultPrimaryAsset).balanceOf(_assetVault);
+        IERC20(_assetVaultPrimaryAsset).safeTransfer(_assetVault, _amount);
+        uint256 _amountOut = IERC20(_assetVaultPrimaryAsset).balanceOf(_assetVault) - _before;
         if (_amountOut != _amount) revert AmountMismatch();
 
         emit Withdraw(block.timestamp, _amountOut);
@@ -127,7 +127,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     function withdrawAll() public virtual onlyAssetVault {
         if (isActive()) revert StrategyActive();
 
-        withdraw(IERC20(assetVaultAsset).balanceOf(address(this)));
+        withdraw(IERC20(assetVaultPrimaryAsset).balanceOf(address(this)));
     }
 
     /********************************** Manager Functions **********************************/

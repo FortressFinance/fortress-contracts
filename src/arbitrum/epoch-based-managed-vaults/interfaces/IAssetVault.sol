@@ -67,7 +67,7 @@ interface IAssetVault {
     /********************************** Platform Functions **********************************/
 
     /// @dev Set the timelock delay period. Can only be called by the platform
-    function setTimelockDelay(uint256 _delay) external;
+    function setTimelockDuration(uint256 _delay) external;
 
     /// @dev Add a new strategy contract. Can only be called by the platform
     function platformAddStrategy(address _strategy) external;
@@ -113,10 +113,10 @@ interface IAssetVault {
     /// @param _strategy The address of the strategy
     event StrategyAdded(uint256 indexed _timestamp, address _strategy);
 
-    /// @notice Emitted when the timelock delay is set
+    /// @notice Emitted when the timelock duration is set
     /// @param _timestamp The timestamp of the timelock delay set
     /// @param _delay The timelock delay
-    event TimelockDelaySet(uint256 indexed _timestamp, uint256 _delay);
+    event TimelockDurationSet(uint256 indexed _timestamp, uint256 _delay);
 
     /// @notice Emitted when the manager is set
     /// @param _timestamp The timestamp of the manager set

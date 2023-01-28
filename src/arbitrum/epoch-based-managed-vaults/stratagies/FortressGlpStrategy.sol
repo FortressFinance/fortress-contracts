@@ -57,9 +57,9 @@ contract FortressGlpStrategy is BaseStrategy {
         (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
 
         if (_entireBalance) {
-            _amount = IERC20(assetVaultAsset).balanceOf(address(this));
+            _amount = IERC20(assetVaultPrimaryAsset).balanceOf(address(this));
         }
-        uint256 _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultAsset, _amount, address(this), _minAmount);
+        uint256 _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultPrimaryAsset, _amount, address(this), _minAmount);
 
         return _shares;
     }
@@ -70,7 +70,7 @@ contract FortressGlpStrategy is BaseStrategy {
         if (_entireBalance) {
             _amount = IERC20(fortGlp).balanceOf(address(this));
         }
-        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultAsset, _amount, address(this), address(this), _minAmount);
+        _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultPrimaryAsset, _amount, address(this), address(this), _minAmount);
 
         return _amount;
     }

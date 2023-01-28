@@ -35,19 +35,19 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     using SafeERC20 for ERC20;
 
     /// @notice The asset managed by this vault
-    address internal asset;
+    address internal managedAsset;
     /// @notice The metaVault that manages this vault
     address public metaVault;
     /// @notice The metaVault Primary Asset
-    address public metaVaultAsset;
+    address public metaVaultPrimaryAsset;
     /// @notice The platform address
     address public platform;
     /// @notice The vault manager address
     address public manager;
     /// @notice The address of the newly initiated strategy
-    address public initiatedStrategy;
-    /// @notice The timelock delay, in seconds
-    uint256 public delay;
+    address public newStrategy;
+    /// @notice The timelock duration, in seconds
+    uint256 public timelockDuration;
     /// @notice The timelock timestamp
     uint256 public timelock;
     /// @notice Indicates if the timelock was set
@@ -61,17 +61,17 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @notice The mapping of strategies
     mapping(address => bool) public strategies;
     /// @notice The mapping of blacklisted strategies
-    mapping(address => bool) public strategyBlacklist;
+    mapping(address => bool) public blacklistedStrategies;
 
     /********************************** Constructor **********************************/
     
-    constructor(address _asset, address _metaVault, address _metaVaultAsset, address _platform, address _manager) {
-        asset = _asset;
+    constructor(address _managedAsset, address _metaVault, address _metaVaultPrimaryAsset, address _platform, address _manager) {
+        managedAsset = _managedAsset;
         metaVault = _metaVault;
         platform = _platform;
         manager = _manager;
-        metaVaultAsset = _metaVaultAsset;
-        delay = 86400; // 86400 seconds, 1 day
+        metaVaultPrimaryAsset = _metaVaultPrimaryAsset;
+        timelockDuration = 86400; // 86400 seconds, 1 day
         isStrategiesActiveOverride = false;
     }
 
@@ -121,24 +121,24 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function getAsset() external view returns (address) {
-        return asset;
+        return managedAsset;
     }
 
     /********************************** Meta Vault Functions **********************************/
 
     /// @inheritdoc IAssetVault
     function deposit(uint256 _amount) external onlyMetaVault nonReentrant returns (uint256 _amountIn) {
-        address _asset = asset;
+        address _managedAsset = managedAsset;
         address _metaVault = metaVault;
-        address _metaVaultAsset = metaVaultAsset;
-        uint256 _before = ERC20(_asset).balanceOf(address(this));
+        address _metaVaultPrimaryAsset = metaVaultPrimaryAsset;
+        uint256 _before = ERC20(_managedAsset).balanceOf(address(this));
 
-        ERC20(_metaVaultAsset).safeTransferFrom(_metaVault, address(this), _amount);
-        if (_asset != _metaVaultAsset) {
-            _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultAsset, _asset, _amount);
+        ERC20(_metaVaultPrimaryAsset).safeTransferFrom(_metaVault, address(this), _amount);
+        if (_managedAsset != _metaVaultPrimaryAsset) {
+            _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultPrimaryAsset, _managedAsset, _amount);
         }
         
-        _amountIn = ERC20(_asset).balanceOf(address(this)) - _before;
+        _amountIn = ERC20(_managedAsset).balanceOf(address(this)) - _before;
         if (_amountIn != _amount) revert AmountMismatch();
 
         emit Deposit(block.timestamp, _amount);
@@ -148,17 +148,17 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function withdraw(uint256 _amount) public onlyMetaVault nonReentrant returns (uint256 _amountOut) {
-        address _asset = asset;
-        address _metaVaultAsset = metaVaultAsset;
+        address _managedAsset = managedAsset;
+        address _metaVaultPrimaryAsset = metaVaultPrimaryAsset;
         address _metaVault = metaVault;
-        uint256 _before = ERC20(_metaVaultAsset).balanceOf(_metaVault);
+        uint256 _before = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault);
 
-        if (_asset != _metaVaultAsset) {
-            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_asset, _metaVaultAsset, _amount);
+        if (_managedAsset != _metaVaultPrimaryAsset) {
+            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_managedAsset, _metaVaultPrimaryAsset, _amount);
         }
 
-        ERC20(_metaVaultAsset).safeTransfer(_metaVault, _amount);
-        _amountOut = ERC20(_metaVaultAsset).balanceOf(_metaVault) - _before;
+        ERC20(_metaVaultPrimaryAsset).safeTransfer(_metaVault, _amount);
+        _amountOut = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault) - _before;
         if (_amountOut != _amount) revert AmountMismatch();
 
         emit Withdraw(block.timestamp, _amount);
@@ -171,10 +171,10 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @inheritdoc IAssetVault
     function depositToStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
         if (!strategies[_strategy]) revert StrategyNotActive();
-        if (strategyBlacklist[_strategy]) revert StrategyBlacklisted();
+        if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
 
-        address _asset = address(asset);
-        _approve(_asset, _strategy, _amount);
+        address _managedAsset = managedAsset;
+        _approve(_managedAsset, _strategy, _amount);
         IStrategy(_strategy).deposit(_amount);
 
         emit DepositedToStrategy(block.timestamp, _strategy, _amount);
@@ -203,7 +203,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     function initiateAddStrategy(address _strategy) public onlyManager unmanaged nonReentrant {
         timelock = block.timestamp;
         isTimelocked = true;
-        initiatedStrategy = _strategy;
+        newStrategy = _strategy;
 
         emit AddStrategyRequested(block.timestamp, _strategy);
     }
@@ -211,11 +211,11 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @inheritdoc IAssetVault
     function addStrategy() external onlyManager unmanaged nonReentrant {
         if (isTimelocked == false) revert NotTimelocked();
-        if (timelock + delay > block.timestamp) revert TimelockNotExpired();
+        if (timelock + timelockDuration > block.timestamp) revert TimelockNotExpired();
         
-        address _strategy = initiatedStrategy;
-        if (strategyBlacklist[_strategy]) revert StrategyBlacklisted();
-        if (IStrategy(_strategy).isAssetEnabled(address(asset))) revert StrategyMismatch();
+        address _strategy = newStrategy;
+        if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
+        if (IStrategy(_strategy).isAssetEnabled(managedAsset)) revert StrategyMismatch();
         if (strategies[_strategy]) revert StrategyAlreadyActive();
 
         strategies[_strategy] = true;
@@ -236,15 +236,15 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IAssetVault
-    function setTimelockDelay(uint256 _delay) external onlyPlatform unmanaged {
-        delay = _delay;
+    function setTimelockDuration(uint256 _timelockDuration) external onlyPlatform unmanaged {
+        timelockDuration = _timelockDuration;
 
-        emit TimelockDelaySet(block.timestamp, _delay);
+        emit TimelockDurationSet(block.timestamp, _timelockDuration);
     }
 
     /// @inheritdoc IAssetVault
     function platformAddStrategy(address _strategy) external onlyPlatform unmanaged {
-        if (IStrategy(_strategy).isAssetEnabled(address(asset))) revert StrategyMismatch();
+        if (IStrategy(_strategy).isAssetEnabled(managedAsset)) revert StrategyMismatch();
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);
