@@ -45,7 +45,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     /// @notice The vault manager address
     address public manager;
     /// @notice The address of the newly initiated strategy
-    address public newStrategy;
+    address public initiatedStrategy;
     /// @notice The timelock duration, in seconds
     uint256 public timelockDuration;
     /// @notice The timelock timestamp
@@ -71,6 +71,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         platform = _platform;
         manager = _manager;
         metaVaultPrimaryAsset = _metaVaultPrimaryAsset;
+        
         timelockDuration = 86400; // 86400 seconds, 1 day
         isStrategiesActiveOverride = false;
     }
@@ -132,7 +133,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         address _metaVault = metaVault;
         address _metaVaultPrimaryAsset = metaVaultPrimaryAsset;
         uint256 _before = ERC20(_managedAsset).balanceOf(address(this));
-
         ERC20(_metaVaultPrimaryAsset).safeTransferFrom(_metaVault, address(this), _amount);
         if (_managedAsset != _metaVaultPrimaryAsset) {
             _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultPrimaryAsset, _managedAsset, _amount);
@@ -141,7 +141,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         _amountIn = ERC20(_managedAsset).balanceOf(address(this)) - _before;
         if (_amountIn != _amount) revert AmountMismatch();
 
-        emit Deposit(block.timestamp, _amount);
+        emit Deposited(block.timestamp, _amount);
 
         return _amountIn;
     }
@@ -152,7 +152,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         address _metaVaultPrimaryAsset = metaVaultPrimaryAsset;
         address _metaVault = metaVault;
         uint256 _before = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault);
-
         if (_managedAsset != _metaVaultPrimaryAsset) {
             _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_managedAsset, _metaVaultPrimaryAsset, _amount);
         }
@@ -161,7 +160,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         _amountOut = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault) - _before;
         if (_amountOut != _amount) revert AmountMismatch();
 
-        emit Withdraw(block.timestamp, _amount);
+        emit Withdrawn(block.timestamp, _amount);
         
         return _amountOut;
     }
@@ -196,16 +195,16 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
             IStrategy(_strategyList[i]).withdrawAll();
         }
         
-        emit EpochEnded(block.timestamp);
+        emit WithdrawnFromAllStrategies(block.timestamp);
     }
 
     /// @inheritdoc IAssetVault
-    function initiateAddStrategy(address _strategy) public onlyManager unmanaged nonReentrant {
+    function initiateStrategy(address _strategy) public onlyManager unmanaged nonReentrant {
         timelock = block.timestamp;
         isTimelocked = true;
-        newStrategy = _strategy;
+        initiatedStrategy = _strategy;
 
-        emit AddStrategyRequested(block.timestamp, _strategy);
+        emit StrategyInitiated(block.timestamp, _strategy);
     }
 
     /// @inheritdoc IAssetVault
@@ -213,9 +212,9 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         if (isTimelocked == false) revert NotTimelocked();
         if (timelock + timelockDuration > block.timestamp) revert TimelockNotExpired();
         
-        address _strategy = newStrategy;
+        address _strategy = initiatedStrategy;
         if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
-        if (IStrategy(_strategy).isAssetEnabled(managedAsset)) revert StrategyMismatch();
+        if (!IStrategy(_strategy).isAssetEnabled(managedAsset)) revert AssetDisabled();
         if (strategies[_strategy]) revert StrategyAlreadyActive();
 
         strategies[_strategy] = true;
@@ -227,24 +226,24 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     }
 
     /// @inheritdoc IAssetVault
-    function setManager(address _manager) external onlyManager unmanaged {
+    function updateManager(address _manager) external onlyManager unmanaged {
         manager = _manager;
 
-        emit ManagerSet(block.timestamp, _manager);
+        emit ManagerUpdated(block.timestamp, _manager);
     }
 
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IAssetVault
-    function setTimelockDuration(uint256 _timelockDuration) external onlyPlatform unmanaged {
+    function updateTimelockDuration(uint256 _timelockDuration) external onlyPlatform unmanaged {
         timelockDuration = _timelockDuration;
 
-        emit TimelockDurationSet(block.timestamp, _timelockDuration);
+        emit TimelockDurationUpdated(block.timestamp, _timelockDuration);
     }
 
     /// @inheritdoc IAssetVault
     function platformAddStrategy(address _strategy) external onlyPlatform unmanaged {
-        if (IStrategy(_strategy).isAssetEnabled(managedAsset)) revert StrategyMismatch();
+        if (IStrategy(_strategy).isAssetEnabled(managedAsset)) revert AssetDisabled();
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);

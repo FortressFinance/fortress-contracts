@@ -29,12 +29,12 @@ interface IAssetVault {
 
     /********************************** Meta Vault Functions **********************************/
 
-    /// @dev Deposits assets into the AssetVault
+    /// @dev Deposits assets into the AssetVault. Can only be called by the MetaVault
     /// @param _amount The amount of assets to deposit, in metaVaultAsset
     /// @return _amountIn The amount of assets deposited, in asset
     function deposit(uint256 _amount) external returns (uint256 _amountIn);
 
-    /// @dev Withdraws assets from the AssetVault
+    /// @dev Withdraws assets from the AssetVault. Can only be called by the MetaVault
     /// @param _amount The amount of assets to withdraw, in asset
     /// @return _amountOut amount of assets withdrawn, in metaVaultAsset
     function withdraw(uint256 _amount) external returns (uint256 _amountOut);
@@ -55,19 +55,19 @@ interface IAssetVault {
     function withdrawAllFromAllStrategies() external;
 
     /// @dev Initiate the timelock to add a new strategy contract. Can only be called by the manager
-    function initiateAddStrategy(address _strategy) external;
+    function initiateStrategy(address _strategy) external;
 
     /// @dev Add a new strategy contract. Can only be called by the manager and after the timelock has expired
     function addStrategy() external;
 
     /// @dev Sets a new Vault Manager. Can only be called by the Vault Manager while state is "UNMANAGED"
     /// @param _manager - The new Vault Manager
-    function setManager(address _manager) external;
+    function updateManager(address _manager) external;
 
     /********************************** Platform Functions **********************************/
 
     /// @dev Set the timelock delay period. Can only be called by the platform
-    function setTimelockDuration(uint256 _delay) external;
+    function updateTimelockDuration(uint256 _delay) external;
 
     /// @dev Add a new strategy contract. Can only be called by the platform
     function platformAddStrategy(address _strategy) external;
@@ -80,12 +80,12 @@ interface IAssetVault {
     /// @notice Emitted when a deposit is made
     /// @param _timestamp The timestamp of the deposit
     /// @param _amount The amount of assets deposited
-    event Deposit(uint256 indexed _timestamp, uint256 _amount);
+    event Deposited(uint256 indexed _timestamp, uint256 _amount);
 
     /// @notice Emitted when a withdrawal is made
     /// @param _timestamp The timestamp of the withdrawal
     /// @param _amount The amount of assets withdrawn
-    event Withdraw(uint256 indexed _timestamp, uint256 _amount);
+    event Withdrawn(uint256 indexed _timestamp, uint256 _amount);
 
     /// @notice Emitted when assets are deposited into a strategy
     /// @param _timestamp The timestamp of the deposit
@@ -99,14 +99,14 @@ interface IAssetVault {
     /// @param _amount The amount of assets withdrawn
     event WithdrawnFromStrategy(uint256 indexed _timestamp, address _strategy, uint256 _amount);
     
-    /// @notice Emitted when an epoch is ended
-    /// @param _timestamp The timestamp of the epoch end
-    event EpochEnded(uint256 indexed _timestamp);
+    /// @notice Emitted when assets were withdrawn from all strategies
+    /// @param _timestamp The timestamp of the withdrawal
+    event WithdrawnFromAllStrategies(uint256 indexed _timestamp);
 
     /// @notice Emitted when a timelock is initiated to add a new strategy
     /// @param _timestamp The timestamp of the timelock initiation
     /// @param _strategy The address of the new strategy
-    event AddStrategyRequested(uint256 indexed _timestamp, address _strategy);
+    event StrategyInitiated(uint256 indexed _timestamp, address _strategy);
 
     /// @notice Emitted when a new strategy is added
     /// @param _timestamp The timestamp of the strategy addition
@@ -116,12 +116,12 @@ interface IAssetVault {
     /// @notice Emitted when the timelock duration is set
     /// @param _timestamp The timestamp of the timelock delay set
     /// @param _delay The timelock delay
-    event TimelockDurationSet(uint256 indexed _timestamp, uint256 _delay);
+    event TimelockDurationUpdated(uint256 indexed _timestamp, uint256 _delay);
 
     /// @notice Emitted when the manager is set
     /// @param _timestamp The timestamp of the manager set
     /// @param _manager The address of the new manager
-    event ManagerSet(uint256 indexed _timestamp, address _manager);
+    event ManagerUpdated(uint256 indexed _timestamp, address _manager);
 
     /// @notice Emitted when platform overrides the active status of the AssetVault
     /// @param _timestamp The timestamp of the active status override
@@ -133,7 +133,7 @@ interface IAssetVault {
     error InvalidState();
     error StrategyNotActive();
     error StrategyAlreadyActive();
-    error StrategyMismatch();
+    error AssetDisabled();
     error StrategyBlacklisted();
     error AmountMismatch();
     error NotTimelocked();

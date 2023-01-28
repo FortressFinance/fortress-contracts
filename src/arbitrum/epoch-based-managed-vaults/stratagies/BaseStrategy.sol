@@ -56,6 +56,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
         assetVault = _assetVault;
         platform = _platform;
         manager = _manager;
+        
         assetVaultPrimaryAsset = IAssetVault(_assetVault).getAsset();
         isStrategiesActiveOverride = false;
     }

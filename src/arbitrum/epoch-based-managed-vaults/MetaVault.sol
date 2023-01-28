@@ -39,52 +39,64 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @notice The current state of the vault
     State public currentVaultState = State.INITIAL;
 
+    // Vault owners
+    
     /// @notice The platform address
     address public platform;
     /// @notice The vault manager address
     address public manager;
-    /// @notice The swap contract address
-    address internal swap;
-    /// @notice The deposit limit, denominated in shares
-    uint256 public depositLimit;
-
-    /// @notice The internal accounting of AUM
-    uint256 internal totalAUM;
-    /// @notice Snapshot of total shares supply from previous epoch
-    uint256 public snapshotSharesSupply;
-    /// @notice Snapshot of total asset supply from previous epoch
-    uint256 public snapshotAssetBalance;
     
-    /// @notice The percentage of managment fee to pay for platform on AUM
-    uint256 public platformManagementFee;
-    /// @notice The percentage of performance fee to for Vault Manager on Epoch ending
+    // Manager settings
+
+    /// @notice The percentage of performance fee to for Vault Manager
     uint256 public managerPerformanceFee;
     /// @notice The percentage of TVL that is the max performance fee. Used to disincentivize over risk taking
     uint256 public performanceFeeLimit;
     /// @notice The percentage of fee to keep in vault on withdraw (distrebuted among vault participants)
     uint256 public vaultWithdrawFee;
-    /// @notice The percentage of TVL required in collateral for the Vault Manager
+    /// @notice The percentage of TVL required in collateral by Vault Manager
     uint256 public collateralRequirement;
-    
-    /// @notice The timelock period, in seconds
-    uint256 public timelockDuration;
-    /// @notice The time that the timelock stepochEndarted
-    uint256 public timelockStartTimestamp;
     /// @notice The time that the Epoch is expected to end
     uint256 public epochEndTimestamp;
-    /// @notice Indicates whether the timelock has been initiated
-    bool public isTimelockInitiated;
     /// @notice Indicates whether to punish vault manager on not finishing an Epoch at the specified time
     bool public shouldPunishManager;
     /// @notice Indicates whether to charge a performance fee for Vault Manager
     bool public isPerformanceFeeEnabled;
     /// @notice Indicates whether to require collateral from the Vault Manager
     bool public isCollateralRequired;
-    
+
+    // Platform settings
+
+    /// @notice The swap contract address
+    address internal swap;
+    /// @notice The deposit limit, denominated in shares
+    uint256 public depositLimit;
+    /// @notice The percentage of managment fee to pay for platform
+    uint256 public platformManagementFee;
+    /// @notice The timelock period, in seconds
+    uint256 public timelockDuration;
     /// @notice Whether deposit for the pool is paused
     bool public isDepositPaused;
     /// @notice Whether withdraw for the pool is paused
     bool public isWithdrawPaused;
+    
+    // Accounting
+
+    /// @notice The internal accounting of AUM
+    uint256 internal totalAUM;
+    /// @notice The snapshot of total shares supply from previous epoch
+    uint256 public snapshotSharesSupply;
+    /// @notice The snapshot of total asset supply from previous epoch
+    uint256 public snapshotAssetBalance;
+
+    // Utilitiy
+
+    /// @notice The timestamp that the timelock has started
+    uint256 public timelockStartTimestamp;
+    /// @notice Indicates whether the timelock has been initiated
+    bool public isTimelockInitiated;
+    /// @notice The fee denominator
+    uint256 internal constant FEE_DENOMINATOR = 1e9;
 
     /// @notice The mapping of addresses of assets to AssetVaults
     /// @dev AssetVaults are standalone contracts that hold the assets and allow for the execution of Stratagies
@@ -94,9 +106,6 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @notice The list of addresses of AssetVaults
     address[] public assetVaultList;
-
-    /// @notice The fee denominator
-    uint256 internal constant FEE_DENOMINATOR = 1e9;
 
     /********************************** Constructor **********************************/
 
@@ -116,17 +125,17 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         // Manager settings
         managerPerformanceFee = 5; // 20%
+        vaultWithdrawFee = 2000000; // 0.2%
         performanceFeeLimit = 5; // limit performance fee to 20% of TVL
         collateralRequirement = 200; // require manager to hold 0.5% of outstanding shares
-        
+
         shouldPunishManager = true;
         isPerformanceFeeEnabled = true;
         isCollateralRequired = true;
-
+        
         // Platform settings
         swap = _swap;
         platformManagementFee = 600; // 2% annually
-        vaultWithdrawFee = 2000000; // 0.2%
         depositLimit = 0;
         timelockDuration = 86400; // 86400 seconds, 1 day
 
@@ -207,30 +216,23 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         if (currentVaultState != State.UNMANAGED) return 0;
         
         uint256 _depositLimit = convertToAssets(depositLimit);
-        uint256 _vaultLimitation = _depositLimit == 0 ? type(uint256).max : _depositLimit - totalAUM;
+        uint256 _platformImposedLimit = _depositLimit == 0 ? type(uint256).max : _depositLimit - totalAUM;
 
-        if (isCollateralRequired) {
-            if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
-                return 0;
-            } else {
-                // TODO - return the max amount where balanceOf[address(this)] would be equal to (totalSupply / collateralRequirement)
-                // how much we can increase totalSupply so that balanceOf[address(this)] is equal to (totalSupply / collateralRequirement)
-                uint256 collateralLimitation = (balanceOf[address(this)] * collateralRequirement - totalSupply);
-                // e.g. say totalSupply is 100, collateralRequirement is 100 so the amount required is 1, say balanceOf[address(this)] is 2 --> we can add (2 * 100) - 100 (100) to totalSupply
+        uint256 _collateralImposedLimit = convertToAssets(_getCollateralImposedLimit());
 
-                _vaultLimitation = _vaultLimitation < collateralLimitation ? _vaultLimitation : collateralLimitation;
-            }
-        }
-        return _vaultLimitation;
+        return _platformImposedLimit < _collateralImposedLimit ? _platformImposedLimit : _collateralImposedLimit;
     }
 
     /// @inheritdoc ERC4626
     /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function maxMint(address) public view override returns (uint256) {
         if (currentVaultState != State.UNMANAGED) return 0;
-        if (isCollateralRequired == true && totalSupply / collateralRequirement > balanceOf[address(this)]) revert InsufficientManagerCollateral();
+        
+        uint256 _platformImposedLimit = depositLimit == 0 ? type(uint256).max : depositLimit - totalSupply;
 
-        return depositLimit == 0 ? type(uint256).max : depositLimit - totalSupply;
+        uint256 _collateralImposedLimit = _getCollateralImposedLimit();
+
+        return _platformImposedLimit < _collateralImposedLimit ? _platformImposedLimit : _collateralImposedLimit;
     }
 
     /// @inheritdoc ERC4626
@@ -264,7 +266,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc ERC4626
     /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
-        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositLimit();
+        if (_assets >= maxDeposit(msg.sender)) revert DepositLimitExceeded();
 
         _shares = previewDeposit(_assets);
 
@@ -278,7 +280,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc ERC4626
     /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
-        if (_shares >= maxMint(msg.sender)) revert InsufficientDepositLimit();
+        if (_shares >= maxMint(msg.sender)) revert DepositLimitExceeded();
 
         _assets = previewMint(_shares);
         
@@ -318,44 +320,43 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function punishLateness() external nonReentrant {
-        if (shouldPunishManager == false) revert LatenessNotPunished();
-        if (block.timestamp < epochEndTimestamp) revert EpochNotEnded();
+    function executeLatenessPenalty() external nonReentrant {
+        if (shouldPunishManager == false) revert LatenessNotPenalized();
+        if (block.timestamp < epochEndTimestamp) revert EpochNotCompleted();
         
         _onState(State.MANAGED);
 
         isPerformanceFeeEnabled = false;
         _burn(address(this), balanceOf[address(this)]);
         
-        emit LatenessPunished(block.timestamp);
+        emit LatenessPenalty(block.timestamp);
     }
 
     /********************************** Manager Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function initiateVault(uint256 _epochEndTimestamp, uint256 _managerPerformanceFee, uint256 _collateralRequirement, bool _punish, bool _isPerformanceFeeEnabled, bool _isCollateralRequired) external virtual onlyManager nonReentrant {
+    function initiateVault(bytes memory _configData) external virtual onlyManager nonReentrant {
         _onState(State.INITIAL);
 
         currentVaultState = State.UNMANAGED;
-        initiateEpochStart(_epochEndTimestamp, _managerPerformanceFee, _collateralRequirement, _punish, _isPerformanceFeeEnabled, _isCollateralRequired);
+        initiateEpoch(_configData);
 
-        emit EpochEnded(block.timestamp, 0, 0);
+        emit EpochCompleted(block.timestamp, 0, 0);
     }
 
     /// @inheritdoc IMetaVault
-    function initiateEpochStart(uint256 _epochEndTimestamp, uint256 _managerPerformanceFee, uint256 _collateralRequirement, bool _shouldPunishManager, bool _isPerformanceFeeEnabled, bool _isCollateralRequired) public onlyManager nonReentrant {
+    function initiateEpoch(bytes memory _configData) public onlyManager nonReentrant {
         _onState(State.UNMANAGED);
 
-        timelockStartTimestamp = block.timestamp;
-        collateralRequirement = _collateralRequirement;
-        isCollateralRequired = _isCollateralRequired;
-        isTimelockInitiated = true;
-        epochEndTimestamp = _epochEndTimestamp;
-        shouldPunishManager = _shouldPunishManager;
-        isPerformanceFeeEnabled = _isPerformanceFeeEnabled;
-        managerPerformanceFee = _managerPerformanceFee;
+        (epochEndTimestamp, managerPerformanceFee, vaultWithdrawFee, collateralRequirement, shouldPunishManager, isPerformanceFeeEnabled, isCollateralRequired)
+         = abi.decode(_configData, (uint256, uint256, uint256, uint256, bool, bool, bool));
+        
+        // TODO - assert manager input values
 
-        emit EpochRequested(block.timestamp, _epochEndTimestamp, _shouldPunishManager, _isPerformanceFeeEnabled);
+        timelockStartTimestamp = block.timestamp;
+        isTimelockInitiated = true;
+        
+        emit EpochInitiated(block.timestamp, _configData);
     }
 
     /// @inheritdoc IMetaVault
@@ -382,16 +383,16 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         currentVaultState = State.UNMANAGED;
 
-        emit EpochEnded(block.timestamp, snapshotAssetBalance, snapshotSharesSupply);
+        emit EpochCompleted(block.timestamp, snapshotAssetBalance, snapshotSharesSupply);
 
         _afterEpochEnd();
     }
 
     /// @inheritdoc IMetaVault
     function addAssetVault(address _targetAsset) external onlyManager nonReentrant returns (address _assetVault) {
-        if (!IFortressSwap(swap).routeExists(address(asset), _targetAsset)) revert SwapRouteNotFound();
-        if (!IFortressSwap(swap).routeExists(_targetAsset, address(asset))) revert SwapRouteNotFound();
-        if (blacklistedAssets[_targetAsset]) revert AssetBlacklisted();
+        if (!IFortressSwap(swap).routeExists(address(asset), _targetAsset)) revert InvalidSwapRoute();
+        if (!IFortressSwap(swap).routeExists(_targetAsset, address(asset))) revert InvalidSwapRoute();
+        if (blacklistedAssets[_targetAsset]) revert BlacklistedAsset();
         
         _onState(State.UNMANAGED);
 
@@ -406,77 +407,70 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function depositToAssetVault(address _asset, uint256 _amount, uint256 _minAmount) external onlyManager nonReentrant returns (uint256) {
-        if (blacklistedAssets[_asset]) revert AssetBlacklisted();
+    function depositAsset(address _asset, uint256 _amount, uint256 _minAmount) external onlyManager nonReentrant returns (uint256) {
+        if (blacklistedAssets[_asset]) revert BlacklistedAsset();
         
         _onState(State.MANAGED);
 
         address _assetVault = assetVaults[_asset];
-        if (_assetVault == address(0)) revert AssetVaultNotFound();
+        if (_assetVault == address(0)) revert AssetVaultNotAvailable();
 
         _approve(_asset, _assetVault, _amount);
         _amount = AssetVault(_assetVault).deposit(_amount);
         if (_amount < _minAmount) revert InsufficientAmountOut();
 
-        emit DepositedToAssetVault(_assetVault, _asset, _amount);
+        emit AssetDeposited(_assetVault, _asset, _amount);
 
         return _amount;
     }
 
     /// @inheritdoc IMetaVault
-    function withdrawFromAssetVault(address _asset, uint256 _amount, uint256 _minAmount) external onlyManager nonReentrant returns (uint256) {
+    function withdrawAsset(address _asset, uint256 _amount, uint256 _minAmount) external onlyManager nonReentrant returns (uint256) {
         _onState(State.MANAGED);
 
         address _assetVault = assetVaults[_asset];
-        if (_assetVault == address(0)) revert AssetVaultNotFound();
+        if (_assetVault == address(0)) revert AssetVaultNotAvailable();
 
         _amount = AssetVault(_assetVault).withdraw(_amount);
         if (_amount < _minAmount) revert InsufficientAmountOut();
 
-        emit WithdrawnFromAssetVault(_assetVault, _asset, _amount);
+        emit AssetWithdrawn(_assetVault, _asset, _amount);
 
         return _amount;
     }
 
     /// @inheritdoc IMetaVault
-    function setPerformanceFee(uint256 _managerPerformanceFee) external onlyManager {
-        _onState(State.UNMANAGED);
-
-        managerPerformanceFee = _managerPerformanceFee;
-
-        emit SetPerformanceFee(_managerPerformanceFee);
-    }
-
-    /// @inheritdoc IMetaVault
-    function setManager(address _manager) external onlyManager {
+    function updateManager(address _manager) external onlyManager {
         _onState(State.UNMANAGED);
 
         manager = _manager;
+
+        emit ManagerUpdated(_manager);
     }
 
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function setFees(uint256 _platformManagementFee, uint256 _vaultWithdrawFee) external onlyPlatform {
+    function setManagementFees(uint256 _platformManagementFee) external onlyPlatform {
         _onState(State.UNMANAGED);
 
         platformManagementFee = _platformManagementFee;
-        vaultWithdrawFee = _vaultWithdrawFee;
 
-        emit SetFees(_platformManagementFee, _vaultWithdrawFee);
+        emit ManagementFeeUpdated(_platformManagementFee);
     }
 
     /// @inheritdoc IMetaVault
-    function setPauseInteraction(bool _isDepositPaused, bool _isWithdrawPaused) external onlyPlatform {
+    function updatePauseInteractions(bool _isDepositPaused, bool _isWithdrawPaused) external onlyPlatform {
         isDepositPaused = _isDepositPaused;
         isWithdrawPaused = _isWithdrawPaused;
 
-        emit PauseInteractions(_isDepositPaused, _isWithdrawPaused);
+        emit PauseInteractionsUpdated(_isDepositPaused, _isWithdrawPaused);
     }
 
     /// @inheritdoc IMetaVault
-    function setSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external onlyPlatform {
-        if (_depositLimit >= totalAUM) revert InsufficientDepositLimit();
+    function updateSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external onlyPlatform {
+        if (_depositLimit <= totalSupply) revert DepositLimitExceeded();
+        
         _onState(State.UNMANAGED);
 
         currentVaultState = _currentVaultState;
@@ -484,16 +478,16 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         depositLimit = _depositLimit;
         timelockDuration = _timelockDuration;
 
-        emit SetSettings(_currentVaultState, _swap, _depositLimit, _timelockDuration);
+        emit SettingsUpdated(_currentVaultState, _swap, _depositLimit, _timelockDuration);
     }
 
     /// @inheritdoc IMetaVault
-    function setBlacklistAsset(address _asset) external onlyPlatform {
+    function blacklistAsset(address _asset) external onlyPlatform {
         _onState(State.UNMANAGED);
 
         blacklistedAssets[_asset] = true;
 
-        emit SetBlacklistAsset(_asset);
+        emit AssetBlacklisted(_asset);
     }
 
     /********************************** Internal Functions **********************************/
@@ -509,7 +503,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         _mint(_receiver, _shares);
         totalAUM += _assets;
 
-        emit Deposit(_caller, _receiver, _assets, _shares);
+        emit Deposited(_caller, _receiver, _assets, _shares);
     }
 
     function _withdraw(address _caller, address _receiver, address _owner, uint256 _assets, uint256 _shares) internal override {
@@ -530,7 +524,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         _burn(_owner, _shares);
         totalAUM -= _assets;
 
-        emit Withdraw(_caller, _receiver, _owner, _assets, _shares);
+        emit Withdrawn(_caller, _receiver, _owner, _assets, _shares);
     }
 
     function _beforeEpochStart() internal virtual {
@@ -595,6 +589,18 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     function _onState(State _expectedState) internal view virtual {
         if (currentVaultState != _expectedState) revert InvalidState();
+    }
+
+    function _getCollateralImposedLimit() internal view returns (uint256) {
+        if (isCollateralRequired) {
+            if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
+                return 0;
+            } else {
+                return  balanceOf[address(this)] * collateralRequirement - totalSupply;
+            }
+        } else {
+            return type(uint256).max;
+        }
     }
 
     function _approve(address _asset, address _spender, uint256 _amount) internal {
