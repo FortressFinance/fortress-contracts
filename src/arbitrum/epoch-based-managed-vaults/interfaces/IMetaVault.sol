@@ -196,4 +196,9 @@ interface IMetaVault {
     error TimelockNotExpired();
     error Unauthorized();
     error AssetsNotBack();
+    error EpochEndTimestampInvalid();
+    error ManagerPerformanceFeeInvalid();
+    error VaultWithdrawFeeInvalid();
+    error CollateralRequirementInvalid();
+    error PlatformManagementFeeInvalid();
 }

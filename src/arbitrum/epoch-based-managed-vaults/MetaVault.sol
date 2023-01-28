@@ -326,8 +326,11 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         
         _onState(State.MANAGED);
 
+        if (isCollateralRequired) {
+            _burn(address(this), balanceOf[address(this)]);
+        }
+
         isPerformanceFeeEnabled = false;
-        _burn(address(this), balanceOf[address(this)]);
         
         emit LatenessPenalty(block.timestamp);
     }
@@ -456,6 +459,9 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @inheritdoc IMetaVault
     function setManagementFees(uint256 _platformManagementFee) external onlyPlatform {
+        // TODO - limit to 5%
+        // if (_platformManagementFee > 10000) revert PlatformManagementFeeInvalid();
+
         _onState(State.UNMANAGED);
 
         platformManagementFee = _platformManagementFee;
