@@ -35,7 +35,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     using SafeERC20 for ERC20;
 
     /// @notice The asset managed by this vault
-    address internal managedAsset;
+    address internal primaryAsset;
     /// @notice The metaVault that manages this vault
     address public metaVault;
     /// @notice The metaVault Primary Asset
@@ -65,8 +65,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /********************************** Constructor **********************************/
     
-    constructor(address _managedAsset, address _metaVault, address _metaVaultPrimaryAsset, address _platform, address _manager) {
-        managedAsset = _managedAsset;
+    constructor(address _primaryAsset, address _metaVault, address _metaVaultPrimaryAsset, address _platform, address _manager) {
+        primaryAsset = _primaryAsset;
         metaVault = _metaVault;
         platform = _platform;
         manager = _manager;
@@ -122,23 +122,23 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function getAsset() external view returns (address) {
-        return managedAsset;
+        return primaryAsset;
     }
 
     /********************************** Meta Vault Functions **********************************/
 
     /// @inheritdoc IAssetVault
     function deposit(uint256 _amount) external onlyMetaVault nonReentrant returns (uint256 _amountIn) {
-        address _managedAsset = managedAsset;
+        address _primaryAsset = primaryAsset;
         address _metaVault = metaVault;
         address _metaVaultPrimaryAsset = metaVaultPrimaryAsset;
-        uint256 _before = ERC20(_managedAsset).balanceOf(address(this));
+        uint256 _before = ERC20(_primaryAsset).balanceOf(address(this));
         ERC20(_metaVaultPrimaryAsset).safeTransferFrom(_metaVault, address(this), _amount);
-        if (_managedAsset != _metaVaultPrimaryAsset) {
-            _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultPrimaryAsset, _managedAsset, _amount);
+        if (_primaryAsset != _metaVaultPrimaryAsset) {
+            _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultPrimaryAsset, _primaryAsset, _amount);
         }
         
-        _amountIn = ERC20(_managedAsset).balanceOf(address(this)) - _before;
+        _amountIn = ERC20(_primaryAsset).balanceOf(address(this)) - _before;
         if (_amountIn != _amount) revert AmountMismatch();
 
         emit Deposited(block.timestamp, _amount);
@@ -148,12 +148,12 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function withdraw(uint256 _amount) public onlyMetaVault nonReentrant returns (uint256 _amountOut) {
-        address _managedAsset = managedAsset;
+        address _primaryAsset = primaryAsset;
         address _metaVaultPrimaryAsset = metaVaultPrimaryAsset;
         address _metaVault = metaVault;
         uint256 _before = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault);
-        if (_managedAsset != _metaVaultPrimaryAsset) {
-            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_managedAsset, _metaVaultPrimaryAsset, _amount);
+        if (_primaryAsset != _metaVaultPrimaryAsset) {
+            _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_primaryAsset, _metaVaultPrimaryAsset, _amount);
         }
 
         ERC20(_metaVaultPrimaryAsset).safeTransfer(_metaVault, _amount);
@@ -172,8 +172,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         if (!strategies[_strategy]) revert StrategyNotActive();
         if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
 
-        address _managedAsset = managedAsset;
-        _approve(_managedAsset, _strategy, _amount);
+        address _primaryAsset = primaryAsset;
+        _approve(_primaryAsset, _strategy, _amount);
         IStrategy(_strategy).deposit(_amount);
 
         emit DepositedToStrategy(block.timestamp, _strategy, _amount);
@@ -214,7 +214,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         
         address _strategy = initiatedStrategy;
         if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
-        if (!IStrategy(_strategy).isAssetEnabled(managedAsset)) revert AssetDisabled();
+        if (!IStrategy(_strategy).isAssetEnabled(primaryAsset)) revert AssetDisabled();
         if (strategies[_strategy]) revert StrategyAlreadyActive();
 
         strategies[_strategy] = true;
@@ -243,7 +243,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function platformAddStrategy(address _strategy) external onlyPlatform unmanaged {
-        if (IStrategy(_strategy).isAssetEnabled(managedAsset)) revert AssetDisabled();
+        if (IStrategy(_strategy).isAssetEnabled(primaryAsset)) revert AssetDisabled();
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);

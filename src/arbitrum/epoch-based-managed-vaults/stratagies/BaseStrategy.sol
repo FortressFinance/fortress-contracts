@@ -34,7 +34,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     using SafeERC20 for IERC20;
     
-    /// @notice The assetVault that manages this vault
+    /// @notice The assetVault that manages this strategy vault
     address public assetVault;
     /// @notice The assetVault Primary Asset
     address public assetVaultPrimaryAsset;
@@ -56,7 +56,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
         assetVault = _assetVault;
         platform = _platform;
         manager = _manager;
-        
+
         assetVaultPrimaryAsset = IAssetVault(_assetVault).getAsset();
         isStrategiesActiveOverride = false;
     }

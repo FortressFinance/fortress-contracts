@@ -53,10 +53,12 @@ contract FortressGlpStrategy is BaseStrategy {
 
     /********************************** Manager Functions **********************************/
 
+    /// @dev Executes the strategy - deposit into fortGLP
+    /// @dev _configData expects _amount and _minAmount. If _amount is set to type(uint256).max, it will deposit all the funds
     function execute(bytes memory _configData) external override onlyManager returns (uint256) {
-        (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
+        (uint256 _amount, uint256 _minAmount) = abi.decode(_configData, (uint256, uint256));
 
-        if (_entireBalance) {
+        if (_amount == type(uint256).max) {
             _amount = IERC20(assetVaultPrimaryAsset).balanceOf(address(this));
         }
         uint256 _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultPrimaryAsset, _amount, address(this), _minAmount);
@@ -64,10 +66,12 @@ contract FortressGlpStrategy is BaseStrategy {
         return _shares;
     }
 
+    /// @dev Terminates the strategy - withdraw from fortGLP
+    /// @dev _configData expects _amount and _minAmount. If _amount is set to type(uint256).max, it will withdraw all the funds
     function terminate(bytes memory _configData) external override onlyManager returns (uint256) {
-        (uint256 _amount, uint256 _minAmount, bool _entireBalance) = abi.decode(_configData, (uint256, uint256, bool));
+        (uint256 _amount, uint256 _minAmount) = abi.decode(_configData, (uint256, uint256));
 
-        if (_entireBalance) {
+        if (_amount == type(uint256).max) {
             _amount = IERC20(fortGlp).balanceOf(address(this));
         }
         _amount = IFortGlp(fortGlp).redeemUnderlying(assetVaultPrimaryAsset, _amount, address(this), address(this), _minAmount);

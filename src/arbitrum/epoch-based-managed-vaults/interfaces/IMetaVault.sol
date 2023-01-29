@@ -65,9 +65,9 @@ interface IMetaVault {
 
     /********************************** Platform Functions **********************************/
 
-    /// @dev Sets platform and withdrawal fees. Can only be called by the Platform while "state" is "UNMANAGED"
+    /// @dev Updates platform fees. Can only be called by the Platform while "state" is "UNMANAGED"
     /// @param _platformFeePercentage - The new platform fee percentage
-    function setManagementFees(uint256 _platformFeePercentage) external;
+    function updateManagementFees(uint256 _platformFeePercentage) external;
 
     /// @dev Sets the _isDepositPaused and _isWithdrawPaused. Can only be called by the Platform
     /// @param _isDepositPaused - Whether to pause deposits

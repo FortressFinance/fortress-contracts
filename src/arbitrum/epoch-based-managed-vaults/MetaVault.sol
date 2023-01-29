@@ -59,7 +59,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @notice The time that the Epoch is expected to end
     uint256 public epochEndTimestamp;
     /// @notice Indicates whether to punish vault manager on not finishing an Epoch at the specified time
-    bool public shouldPunishManager;
+    bool public isPenaltyEnabled;
     /// @notice Indicates whether to charge a performance fee for Vault Manager
     bool public isPerformanceFeeEnabled;
     /// @notice Indicates whether to require collateral from the Vault Manager
@@ -125,11 +125,11 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         // Manager settings
         managerPerformanceFee = 5; // 20%
-        vaultWithdrawFee = 2000000; // 0.2%
         performanceFeeLimit = 5; // limit performance fee to 20% of TVL
+        vaultWithdrawFee = 2000000; // 0.2%
         collateralRequirement = 200; // require manager to hold 0.5% of outstanding shares
 
-        shouldPunishManager = true;
+        isPenaltyEnabled = true;
         isPerformanceFeeEnabled = true;
         isCollateralRequired = true;
         
@@ -321,7 +321,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @inheritdoc IMetaVault
     function executeLatenessPenalty() external nonReentrant {
-        if (shouldPunishManager == false) revert LatenessNotPenalized();
+        if (isPenaltyEnabled == false) revert LatenessNotPenalized();
         if (block.timestamp < epochEndTimestamp) revert EpochNotCompleted();
         
         _onState(State.MANAGED);
@@ -338,7 +338,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Manager Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function initiateVault(bytes memory _configData) external virtual onlyManager nonReentrant {
+    function initiateVault(bytes memory _configData) external onlyManager nonReentrant {
         _onState(State.INITIAL);
 
         currentVaultState = State.UNMANAGED;
@@ -351,7 +351,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function initiateEpoch(bytes memory _configData) public onlyManager nonReentrant {
         _onState(State.UNMANAGED);
 
-        (epochEndTimestamp, managerPerformanceFee, vaultWithdrawFee, collateralRequirement, shouldPunishManager, isPerformanceFeeEnabled, isCollateralRequired)
+        (epochEndTimestamp, managerPerformanceFee, vaultWithdrawFee, collateralRequirement, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
          = abi.decode(_configData, (uint256, uint256, uint256, uint256, bool, bool, bool));
         
         // TODO - assert manager input values
@@ -458,7 +458,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function setManagementFees(uint256 _platformManagementFee) external onlyPlatform {
+    function updateManagementFees(uint256 _platformManagementFee) external onlyPlatform {
         // TODO - limit to 5%
         // if (_platformManagementFee > 10000) revert PlatformManagementFeeInvalid();
 
@@ -550,12 +550,12 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         _chargeFees();
 
+        totalAUM = asset.balanceOf(address(this));
+
         _executeSnapshot();
     }
 
-    function _afterEpochEnd() internal virtual {
-        totalAUM = asset.balanceOf(address(this));
-    }
+    function _afterEpochEnd() internal virtual {}
 
     function _executeSnapshot() internal virtual {
         snapshotSharesSupply = totalSupply;
@@ -606,7 +606,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
             if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
                 return 0;
             } else {
-                return  balanceOf[address(this)] * collateralRequirement - totalSupply;
+                return  balanceOf[address(this)] * collateralRequirement - totalSupply; // TODO - make sure it works as expected
             }
         } else {
             return type(uint256).max;
