@@ -65,7 +65,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /// @notice Platform has admin access
     modifier onlyAssetVault() {
-        if (msg.sender != assetVault || msg.sender != platform) revert Unauthorized();
+        if (msg.sender != assetVault && msg.sender != platform) revert Unauthorized();
         _;
     }
 
@@ -76,7 +76,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /// @notice Platform has admin access
     modifier onlyManager() {
-        if (msg.sender != manager || msg.sender != platform) revert Unauthorized();
+        if (msg.sender != manager && msg.sender != platform) revert Unauthorized();
         _;
     }
 

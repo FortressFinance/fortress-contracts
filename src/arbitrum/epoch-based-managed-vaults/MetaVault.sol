@@ -79,6 +79,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     bool public isDepositPaused;
     /// @notice Whether withdraw for the pool is paused
     bool public isWithdrawPaused;
+    /// @notice Whether an epoch is initiated
+    bool public isEpochinitiated;
     
     // Accounting
 
@@ -142,6 +144,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         isDepositPaused = false;
         isWithdrawPaused = false;
         isTimelockInitiated = false;
+        isEpochinitiated = false;
     }
 
     /********************************* Modifiers **********************************/
@@ -153,7 +156,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @notice Platform has admin access
     modifier onlyManager() {
-        if (msg.sender != manager || msg.sender != platform) revert Unauthorized();
+        if (msg.sender != manager && msg.sender != platform) revert Unauthorized();
         _;
     }
 
@@ -338,7 +341,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Manager Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function initiateVault(bytes memory _configData) external onlyManager nonReentrant {
+    function initiateVault(bytes memory _configData) external onlyManager {
         _onState(State.INITIAL);
 
         currentVaultState = State.UNMANAGED;
@@ -349,19 +352,19 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @inheritdoc IMetaVault
     function initiateEpoch(bytes memory _configData) public onlyManager nonReentrant {
+        if (isEpochinitiated == true) revert EpochAlreadyInitiated();
+
         _onState(State.UNMANAGED);
 
-        (epochEndTimestamp, managerPerformanceFee, vaultWithdrawFee, collateralRequirement, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
-         = abi.decode(_configData, (uint256, uint256, uint256, uint256, bool, bool, bool));
         
-        // TODO - assert manager input values
+        (epochEndTimestamp, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
+         = abi.decode(_configData, (uint256, bool, bool, bool));
+        
         if (epochEndTimestamp <= block.timestamp) revert EpochEndTimestampInvalid();
-        // if (managerPerformanceFee > 10000) revert ManagerPerformanceFeeInvalid();
-        // if (vaultWithdrawFee > 10000) revert VaultWithdrawFeeInvalid();
-        // if (collateralRequirement > 10000) revert CollateralRequirementInvalid();
 
         timelockStartTimestamp = block.timestamp;
         isTimelockInitiated = true;
+        isEpochinitiated = true;
         
         emit EpochInitiated(block.timestamp, _configData);
     }
@@ -455,6 +458,24 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         emit ManagerUpdated(_manager);
     }
 
+    /// @inheritdoc IMetaVault
+    function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external onlyManager {
+        if (_managerPerformanceFee < 0 || _managerPerformanceFee > 5) revert ManagerPerformanceFeeInvalid();
+        if (_vaultWithdrawFee < 0 || _vaultWithdrawFee > 2000000) revert VaultWithdrawFeeInvalid();
+        if (_collateralRequirement < 0 || _collateralRequirement > 200) revert CollateralRequirementInvalid();
+        if (_performanceFeeLimit < 0 || _performanceFeeLimit > 5) revert PerformanceFeeLimitInvalid();
+
+        _onState(State.UNMANAGED);
+
+        managerPerformanceFee = _managerPerformanceFee;
+        vaultWithdrawFee = _vaultWithdrawFee;
+        collateralRequirement = _collateralRequirement;
+        performanceFeeLimit = _performanceFeeLimit;
+
+        emit ManagerSettingsUpdated(_managerPerformanceFee, _vaultWithdrawFee, _collateralRequirement, _performanceFeeLimit);
+    }
+    
+
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IMetaVault
@@ -478,7 +499,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function updateSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external onlyPlatform {
+    function updatePlatformSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external onlyPlatform {
         if (_depositLimit <= totalSupply) revert DepositLimitExceeded();
         
         _onState(State.UNMANAGED);
@@ -555,7 +576,9 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         _executeSnapshot();
     }
 
-    function _afterEpochEnd() internal virtual {}
+    function _afterEpochEnd() internal virtual {
+        isEpochinitiated = false;
+    }
 
     function _executeSnapshot() internal virtual {
         snapshotSharesSupply = totalSupply;

@@ -63,6 +63,13 @@ interface IMetaVault {
     /// @param _manager - The new Vault Manager
     function updateManager(address _manager) external;
 
+    /// @dev Updates the Vault Manager's settings. Can only be called by the Vault Manager while state is "UNMANAGED"
+    /// @param _managerPerformanceFee - The new manager performance fee
+    /// @param _vaultWithdrawFee - The new vault withdraw fee
+    /// @param _collateralRequirement - The new collateral requirement
+    /// @param _performanceFeeLimit - The new performance fee limit
+    function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external;
+
     /********************************** Platform Functions **********************************/
 
     /// @dev Updates platform fees. Can only be called by the Platform while "state" is "UNMANAGED"
@@ -79,7 +86,7 @@ interface IMetaVault {
     /// @param _swap - The new FortressSwap address
     /// @param _depositLimit - The new deposit cap
     /// @param _timelockDuration - The new timelock delay
-    function updateSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external;
+    function updatePlatformSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external;
 
     /// @dev Blacklists an asset. Can only be called by the Platform while "state" is "UNMANAGED"
     /// @param _asset - The address of the asset to blacklist
@@ -169,6 +176,13 @@ interface IMetaVault {
     /// @param _amount The amount of assets withdrawn
     event AssetWithdrawn(address indexed _assetVault, address indexed _asset, uint256 _amount);
 
+    /// @notice emitted when manager settings are updated
+    /// @param _managerPerformanceFee The new manager performance fee
+    /// @param _vaultWithdrawFee The new vault withdraw fee
+    /// @param _collateralRequirement The new collateral requirement
+    /// @param _performanceFeeLimit The new performance fee limit
+    event ManagerSettingsUpdated(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit);
+
     /// @notice emitted when vault balance snapshot is taken
     /// @param _timestamp The snapshot timestamp (indexed)
     /// @param _assetBalance The asset balance at this time
@@ -201,4 +215,6 @@ interface IMetaVault {
     error VaultWithdrawFeeInvalid();
     error CollateralRequirementInvalid();
     error PlatformManagementFeeInvalid();
+    error PerformanceFeeLimitInvalid();
+    error EpochAlreadyInitiated();
 }

@@ -12,6 +12,11 @@ contract TestFortGlpStrategy is BaseTest {
 
     function testSanity() public {
         assertTrue(true);
-        _testInitVault();
+        uint256 _timeLockDuration = 1000000;
+        _initVault(_timeLockDuration);
+
+        _addAssetVault(WETH);
+        
+        _startEpoch();
     }
 }

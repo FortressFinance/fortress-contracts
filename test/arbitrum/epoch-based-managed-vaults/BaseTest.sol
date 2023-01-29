@@ -71,23 +71,93 @@ contract BaseTest is Test, AddressesArbi {
 
     // ------------------- CORRECT FLOWS -------------------
 
-    function _testInitVault() internal {
-        uint256 _epochEndTimestamp = uint256(block.timestamp) + 1000000;
-        uint256 _managerPerformanceFee = 20;
-        uint256 _vaultWithdrawFee = 5;
-        uint256 _collateralRequirement = 100;
+    function _addAssetVault(address _targetAsset) internal {
+        if ((_targetAsset == WETH && address(metaVault.asset()) == USDC) || (_targetAsset == USDC && address(metaVault.asset()) == WETH)) {
+            _addWETHUSDCRouteToSwap();
+        }
+        
+        // TODO
+        // assertTrue(IFortressSwap(fortressSwap).routeExists(address(metaVault.asset), _targetAsset), "_addAssetVault: E1");
+        // assertTrue(IFortressSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset)), "_addAssetVault: E2");
+        assertTrue(metaVault.isUnmanaged(), "_addAssetVault: E3");
+        
+        vm.startPrank(manager);
+
+        address _assetVault = metaVault.addAssetVault(_targetAsset);
+
+        assertEq(metaVault.assetVaults(_targetAsset), _assetVault, "_addAssetVault: E4");
+        assertEq(metaVault.assetVaultList(0), _assetVault, "_addAssetVault: E5");
+
+        vm.stopPrank();
+    }
+
+    function _initVault(uint256 _timeLockDuration) internal {
+        uint256 _epochEndTimestamp = uint256(block.timestamp) + _timeLockDuration;
         bool _isPenaltyEnabled = true;
         bool _isPerformanceFeeEnabled = true;
         bool _isCollateralRequired = true;
 
-        bytes memory _configData = abi.encodePacked(
-            _epochEndTimestamp, _managerPerformanceFee, _vaultWithdrawFee, _collateralRequirement, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired
-        );
+        bytes memory _configData = abi.encode(_epochEndTimestamp, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired);
         
         vm.startPrank(manager);
         metaVault.initiateVault(_configData);
+        
+        assertEq(true, true, "_testInitVault: E1");
+        assertEq(metaVault.epochEndTimestamp(), _epochEndTimestamp, "_testInitVault: E1");
+        assertEq(metaVault.isPenaltyEnabled(), _isPenaltyEnabled, "_testInitVault: E2");
+        assertEq(metaVault.isPerformanceFeeEnabled(), _isPerformanceFeeEnabled, "_testInitVault: E3");
+        assertEq(metaVault.isCollateralRequired(), _isCollateralRequired, "_testInitVault: E4");
+        assertEq(metaVault.isUnmanaged(), true, "_testInitVault: E5");
+        assertEq(metaVault.timelockStartTimestamp(), block.timestamp, "_testInitVault: E6");
+        assertEq(metaVault.isTimelockInitiated(), true, "_testInitVault: E7");
+
+        vm.expectRevert();
+        metaVault.initiateEpoch(_configData);
+
+        vm.expectRevert();
+        metaVault.startEpoch();
+
         vm.stopPrank();
     }
+
+    function _startEpoch() internal {
+        assertEq(metaVault.isEpochinitiated(), true, "_testStartEpoch: E1");
+        assertEq(metaVault.isUnmanaged(), true, "_testInitVault: E2");
+
+        vm.startPrank(manager);
+
+        if (metaVault.timelockStartTimestamp() + metaVault.timelockDuration() > block.timestamp) {
+            vm.expectRevert();
+            metaVault.startEpoch();
+
+            uint256 _timeLeft = metaVault.timelockStartTimestamp() + metaVault.timelockDuration() - block.timestamp;
+            skip(_timeLeft);
+        }
+
+        metaVault.startEpoch();
+
+        vm.stopPrank();
+
+        assertEq(metaVault.isUnmanaged(), false, "_testInitVault: E8");
+        assertEq(metaVault.snapshotSharesSupply(), metaVault.totalSupply(), "_testInitVault: E9");
+        assertEq(metaVault.snapshotAssetBalance(), metaVault.totalAssets(), "_testInitVault: E10");
+        assertEq(metaVault.isEpochinitiated(), true, "_testInitVault: E11");
+        assertEq(metaVault.isTimelockInitiated(), false, "_testInitVault: E12");
+    }
+
+    // function _manageAssetsVaults() internal {
+    //     assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
+    //     assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+
+    //     vm.startPrank(manager);
+
+    //     metaVault.manageAssetsVaults();
+
+    //     assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E3");
+    //     assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E4");
+
+    //     vm.stopPrank();
+    // }
 
     // 1* 
     // 1. initiate vault (which intiates an epoch)
@@ -153,7 +223,38 @@ contract BaseTest is Test, AddressesArbi {
     // *8 (end epoch without withdawing assets)
 
     // *9 (deposit a blacklisted asset)
+    
+    // ------------------- UTILS -------------------
 
+    function _addWETHUSDCRouteToSwap() internal {
+        uint256[] memory _poolType1 = new uint256[](1);    
+        address[] memory _poolAddress1 = new address[](1);
+        address[] memory _fromList1 = new address[](1);
+        address[] memory _toList1 = new address[](1);
 
+        _poolType1[0] = 14;    
+        _poolAddress1[0] = address(0);
 
+        // TODO 
+        // vm.startPrank(fortressSwap.owner());
+        vm.startPrank(address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc));
+
+        // WETH --> USDC
+        if (!(fortressSwap.routeExists(WETH, USDC))) {
+            _fromList1[0] = WETH;
+            _toList1[0] = USDC;
+
+            fortressSwap.updateRoute(WETH, USDC, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+
+        // USDC --> WETH
+        if (!(fortressSwap.routeExists(USDC, WETH))) {
+            _fromList1[0] = USDC;
+            _toList1[0] = WETH;
+
+            fortressSwap.updateRoute(USDC, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+
+        vm.stopPrank();
+    }
 }

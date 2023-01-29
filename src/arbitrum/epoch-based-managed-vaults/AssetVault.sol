@@ -85,13 +85,13 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @notice Platform has admin access
     modifier onlyMetaVault {
-        if (msg.sender != metaVault || msg.sender != platform) revert Unauthorized();
+        if (msg.sender != metaVault && msg.sender != platform) revert Unauthorized();
         _;
     }
 
     /// @notice Platform has admin access
     modifier onlyManager() {
-        if (msg.sender != manager || msg.sender != platform) revert Unauthorized();
+        if (msg.sender != manager && msg.sender != platform) revert Unauthorized();
         _;
     }
 
