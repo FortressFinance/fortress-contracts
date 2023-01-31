@@ -69,28 +69,9 @@ contract BaseTest is Test, AddressesArbi {
     }
 
 
-    // ------------------- CORRECT FLOWS -------------------
+    // ------------------- MANAGER CORRECT FLOW -------------------
 
-    function _addAssetVault(address _targetAsset) internal {
-        if ((_targetAsset == WETH && address(metaVault.asset()) == USDC) || (_targetAsset == USDC && address(metaVault.asset()) == WETH)) {
-            _addWETHUSDCRouteToSwap();
-        }
-        
-        // TODO
-        // assertTrue(IFortressSwap(fortressSwap).routeExists(address(metaVault.asset), _targetAsset), "_addAssetVault: E1");
-        // assertTrue(IFortressSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset)), "_addAssetVault: E2");
-        assertTrue(metaVault.isUnmanaged(), "_addAssetVault: E3");
-        
-        vm.startPrank(manager);
-
-        address _assetVault = metaVault.addAssetVault(_targetAsset);
-
-        assertEq(metaVault.assetVaults(_targetAsset), _assetVault, "_addAssetVault: E4");
-        assertEq(metaVault.assetVaultList(0), _assetVault, "_addAssetVault: E5");
-
-        vm.stopPrank();
-    }
-
+    // call first
     function _initVault(uint256 _timeLockDuration) internal {
         uint256 _epochEndTimestamp = uint256(block.timestamp) + _timeLockDuration;
         bool _isPenaltyEnabled = true;
@@ -120,6 +101,57 @@ contract BaseTest is Test, AddressesArbi {
         vm.stopPrank();
     }
 
+    // call when vault is "unmanaged"
+    function _addAssetVault(address _targetAsset) internal {
+        if ((_targetAsset == WETH && address(metaVault.asset()) == USDC) || (_targetAsset == USDC && address(metaVault.asset()) == WETH)) {
+            _addWETHUSDCRouteToSwap();
+        }
+        
+        assertTrue(IFortressSwap(fortressSwap).routeExists(address(metaVault.asset()), _targetAsset), "_addAssetVault: E1");
+        assertTrue(IFortressSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset())), "_addAssetVault: E2");
+        assertTrue(metaVault.isUnmanaged(), "_addAssetVault: E3");
+        
+        vm.startPrank(manager);
+
+        address _assetVaultAddress = metaVault.addAssetVault(_targetAsset);
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
+
+        assertEq(metaVault.assetVaults(_targetAsset), _assetVaultAddress, "_addAssetVault: E4");
+        assertEq(metaVault.assetVaultList(metaVault.getAssetVaultsLength() - 1), _assetVaultAddress, "_addAssetVault: E5");
+        assertEq(_assetVault.getAsset(), _targetAsset, "_addAssetVault: E6");
+        assertEq(_assetVault.metaVault(), address(metaVault), "_addAssetVault: E7");
+        assertEq(_assetVault.metaVaultPrimaryAsset(), address(metaVault.asset()), "_addAssetVault: E8");
+        
+        vm.stopPrank();
+    }
+
+    function _letInvestorsDepositOnCollateralRequired(uint256 _amount) internal {
+        assertEq(metaVault.isUnmanaged(), true, "_testInitVault: E5");
+        
+        uint256 _totalSupply = metaVault.previewDeposit(_amount) * 3;
+        _managerAddCollateral(_totalSupply / metaVault.collateralRequirement());
+        assertEq(metaVault.maxMint(), _totalSupply, "_letInvestorsDeposit: E1");
+        assertEq(metaVault.maxDeposit(), metaVault.convertToAssets(_totalSupply), "_letInvestorsDeposit: E2");
+
+        _dealERC20(address(metaVault.asset()), alice, _amount);
+        _dealERC20(address(metaVault.asset()), bob, _amount);
+        _dealERC20(address(metaVault.asset()), charlie, _amount);
+
+        vm.prank(alice);
+        metaVault.deposit(_amount, alice);
+        
+        assertEq(metaVault.balanceOf(alice), _amount, "_letInvestorsDeposit: E1");
+
+        metaVault.deposit(_amount, bob);
+        metaVault.deposit(_amount, charlie);
+
+        assertEq(metaVault.maxDeposit(), 0, "_letInvestorsDeposit: E2");
+        assertEq(metaVault.maxMint(), 0, "_letInvestorsDeposit: E2");
+
+        vm.stopPrank();
+    }
+
+    // call when vault is "unmanaged" + epoch is initiated + asset were added
     function _startEpoch() internal {
         assertEq(metaVault.isEpochinitiated(), true, "_testStartEpoch: E1");
         assertEq(metaVault.isUnmanaged(), true, "_testInitVault: E2");
@@ -145,19 +177,27 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isTimelockInitiated(), false, "_testInitVault: E12");
     }
 
-    // function _manageAssetsVaults() internal {
-    //     assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
-    //     assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+    // call when vault is "managed" + epoch is initiated
+    // _assetVaultAddress should be the associated _asset's AssetVault address
+    function _manageAssetsVaults(address _assetVaultAddress, address _asset, uint256 _amount) internal {
+        assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
+        assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+        assertEq(metaVault.blacklistedAssets(_asset), false, "_testManageAssetsVaults: E3");
+        assertTrue(metaVault.assetVaults(_asset) != address(0), "_testManageAssetsVaults: E4");
+        
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
 
-    //     vm.startPrank(manager);
+        assertEq(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress), 0, "_testManageAssetsVaults: E5");
 
-    //     metaVault.manageAssetsVaults();
+        vm.startPrank(manager);
 
-    //     assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E3");
-    //     assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E4");
+        metaVault.depositAsset(_asset, _amount, 0);
 
-    //     vm.stopPrank();
-    // }
+        // assert
+        vm.stopPrank();
+    }
+
+    // function _manageStratagies
 
     // 1* 
     // 1. initiate vault (which intiates an epoch)

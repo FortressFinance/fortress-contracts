@@ -21,6 +21,9 @@ interface IMetaVault {
     /// @dev Returns true if the Vault is in an "UNMANAGED" state, false otherwise
     function isUnmanaged() external view returns (bool);
 
+    /// @dev Returns the length of the AssetVaults array
+    function getAssetVaultsLength() external view returns (uint256);
+        
     /********************************** Investor Functions **********************************/
 
     /// @dev Burns manager's collateral + cancels the charging of performance fee for the epoch. Used in order to incentivize Vault Managers to end the epoch at the specified time

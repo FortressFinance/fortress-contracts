@@ -264,6 +264,11 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return currentVaultState == State.UNMANAGED;
     }
 
+    /// @inheritdoc IMetaVault
+    function getAssetVaultsLength() public view returns (uint256) {
+        return assetVaultList.length;
+    }
+
     /********************************** Investor Functions **********************************/
 
     /// @inheritdoc ERC4626
