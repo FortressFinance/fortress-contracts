@@ -10,13 +10,19 @@ contract TestFortGlpStrategy is BaseTest {
         _setUp(USDC);
     }
 
-    function testSanity() public {
-        assertTrue(true);
-        uint256 _timeLockDuration = 1000000;
-        _initVault(_timeLockDuration);
+    function testSanity(uint256 _epochDuration, uint256 _investorDepositAmount) public {
+        vm.assume(_epochDuration < (type(uint256).max - block.timestamp));
+        vm.assume(_epochDuration > 0);
+        vm.assume(_investorDepositAmount > 1 ether && _investorDepositAmount < 10 ether);
+
+        _initVault(_epochDuration);
 
         _addAssetVault(WETH);
+
+        _letInvestorsDepositOnCollateralRequired(_investorDepositAmount);
         
         _startEpoch();
+
+        // _manageAssetsVaults();
     }
 }

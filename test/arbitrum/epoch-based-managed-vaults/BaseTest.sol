@@ -72,8 +72,8 @@ contract BaseTest is Test, AddressesArbi {
     // ------------------- MANAGER CORRECT FLOW -------------------
 
     // call first
-    function _initVault(uint256 _timeLockDuration) internal {
-        uint256 _epochEndTimestamp = uint256(block.timestamp) + _timeLockDuration;
+    function _initVault(uint256 _epochDuration) internal {
+        uint256 _epochEndTimestamp = uint256(block.timestamp) + _epochDuration;
         bool _isPenaltyEnabled = true;
         bool _isPerformanceFeeEnabled = true;
         bool _isCollateralRequired = true;
@@ -125,30 +125,66 @@ contract BaseTest is Test, AddressesArbi {
         vm.stopPrank();
     }
 
+    // call when vault is "unmanaged"
     function _letInvestorsDepositOnCollateralRequired(uint256 _amount) internal {
+        vm.assume(_amount > metaVault.collateralRequirement());
         assertEq(metaVault.isUnmanaged(), true, "_testInitVault: E5");
         
         uint256 _totalSupply = metaVault.previewDeposit(_amount) * 3;
-        _managerAddCollateral(_totalSupply / metaVault.collateralRequirement());
-        assertEq(metaVault.maxMint(), _totalSupply, "_letInvestorsDeposit: E1");
-        assertEq(metaVault.maxDeposit(), metaVault.convertToAssets(_totalSupply), "_letInvestorsDeposit: E2");
+        uint256 _managerShares = _managerAddCollateral(_totalSupply / metaVault.collateralRequirement());
+        uint256 _maxMintAmount = _totalSupply - (_totalSupply / metaVault.collateralRequirement());
+        uint256 _maxMintDelta = _totalSupply - _maxMintAmount;
+        assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount, 1e5, "_letInvestorsDeposit: E1");
+        assertApproxEqAbs(metaVault.maxDeposit(address(0)), _maxMintAmount, 1e5, "_letInvestorsDeposit: E2");
 
         _dealERC20(address(metaVault.asset()), alice, _amount);
-        _dealERC20(address(metaVault.asset()), bob, _amount);
-        _dealERC20(address(metaVault.asset()), charlie, _amount);
-
-        vm.prank(alice);
-        metaVault.deposit(_amount, alice);
-        
-        assertEq(metaVault.balanceOf(alice), _amount, "_letInvestorsDeposit: E1");
-
-        metaVault.deposit(_amount, bob);
-        metaVault.deposit(_amount, charlie);
-
-        assertEq(metaVault.maxDeposit(), 0, "_letInvestorsDeposit: E2");
-        assertEq(metaVault.maxMint(), 0, "_letInvestorsDeposit: E2");
-
+        vm.startPrank(alice);
+        IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
+        uint256 _sharesAlice = metaVault.deposit(_amount, alice);
         vm.stopPrank();
+        
+        assertEq(metaVault.balanceOf(alice), metaVault.convertToShares(_amount), "_letInvestorsDeposit: E3");
+        assertEq(metaVault.balanceOf(alice), _sharesAlice, "_letInvestorsDeposit: E4");
+        assertEq(metaVault.maxMint(address(0)), _maxMintAmount - _sharesAlice, "_letInvestorsDeposit: E5");
+        
+        _dealERC20(address(metaVault.asset()), bob, _amount);
+        vm.startPrank(bob);
+        IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
+        uint256 _sharesBob = metaVault.deposit(_amount, bob);
+        vm.stopPrank();
+        
+        assertEq(metaVault.balanceOf(alice), metaVault.convertToShares(_amount), "_letInvestorsDeposit: E6");
+        assertEq(metaVault.balanceOf(alice), _sharesBob, "_letInvestorsDeposit: E7");
+        assertEq(metaVault.maxMint(address(0)), _maxMintAmount - (_sharesAlice + _sharesBob), "_letInvestorsDeposit: E8");
+
+        _dealERC20(address(metaVault.asset()), charlie, _amount);
+        vm.startPrank(charlie);
+        IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
+        uint256 _sharesCharlie = metaVault.deposit(_amount - _maxMintDelta, charlie);
+        vm.stopPrank();
+        
+        assertEq(metaVault.balanceOf(charlie), metaVault.convertToShares(_amount - _maxMintDelta), "_letInvestorsDeposit: E9");
+        assertEq(metaVault.balanceOf(charlie), _sharesCharlie, "_letInvestorsDeposit: E10");
+        assertEq(metaVault.maxMint(address(0)), _maxMintAmount - (_sharesAlice + _sharesBob + _sharesCharlie), "_letInvestorsDeposit: E11");
+
+        assertEq(metaVault.maxDeposit(address(0)), 0, "_letInvestorsDeposit: E12");
+        assertEq(metaVault.maxMint(address(0)), 0, "_letInvestorsDeposit: E13");
+        assertEq(metaVault.totalAssets(), IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), "_letInvestorsDeposit: E14");
+        assertEq(metaVault.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie + _managerShares), "_letInvestorsDeposit: E15");
+    }
+
+    // call when vault is "unmanaged"
+    function _managerAddCollateral(uint256 _amount) internal returns (uint256 _shares) {
+        _dealERC20(address(metaVault.asset()), manager, _amount);
+        uint256 _expectedShare = metaVault.previewDeposit(_amount);
+        
+        vm.startPrank(manager);
+        IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
+        _shares = metaVault.deposit(_amount, address(metaVault));
+        vm.stopPrank();
+
+        assertEq(metaVault.balanceOf(address(metaVault)), metaVault.convertToShares(_amount), "_managerAddCollateral: E1");
+        assertEq(metaVault.balanceOf(address(metaVault)), _expectedShare, "_managerAddCollateral: E2");
     }
 
     // call when vault is "unmanaged" + epoch is initiated + asset were added

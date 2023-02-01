@@ -274,7 +274,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc ERC4626
     /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
-        if (_assets >= maxDeposit(msg.sender)) revert DepositLimitExceeded();
+        if (_assets > maxDeposit(msg.sender)) revert DepositLimitExceeded();
 
         _shares = previewDeposit(_assets);
 
@@ -288,7 +288,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc ERC4626
     /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
-        if (_shares >= maxMint(msg.sender)) revert DepositLimitExceeded();
+        if (_shares > maxMint(msg.sender)) revert DepositLimitExceeded();
 
         _assets = previewMint(_shares);
         
@@ -465,6 +465,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @inheritdoc IMetaVault
     function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external onlyManager {
+        // TODO - fix values
         if (_managerPerformanceFee < 0 || _managerPerformanceFee > 5) revert ManagerPerformanceFeeInvalid();
         if (_vaultWithdrawFee < 0 || _vaultWithdrawFee > 2000000) revert VaultWithdrawFeeInvalid();
         if (_collateralRequirement < 0 || _collateralRequirement > 200) revert CollateralRequirementInvalid();
@@ -630,11 +631,11 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     function _getCollateralImposedLimit() internal view returns (uint256) {
-        if (isCollateralRequired) {
+        if (isCollateralRequired && msg.sender != manager) {
             if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
                 return 0;
             } else {
-                return  balanceOf[address(this)] * collateralRequirement - totalSupply; // TODO - make sure it works as expected
+                return  balanceOf[address(this)] * collateralRequirement - totalSupply;
             }
         } else {
             return type(uint256).max;
