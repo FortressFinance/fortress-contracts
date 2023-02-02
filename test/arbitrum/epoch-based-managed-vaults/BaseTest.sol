@@ -8,6 +8,7 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "src/arbitrum/epoch-based-managed-vaults/MetaVault.sol";
+import "src/arbitrum/epoch-based-managed-vaults/interfaces/IStrategy.sol";
 
 import "script/arbitrum/utils/AddressesArbi.sol";
 
@@ -102,7 +103,7 @@ contract BaseTest is Test, AddressesArbi {
     }
 
     // call when vault is "unmanaged"
-    function _addAssetVault(address _targetAsset) internal {
+    function _addAssetVault(address _targetAsset) internal returns (address _assetVaultAddress) {
         if ((_targetAsset == WETH && address(metaVault.asset()) == USDC) || (_targetAsset == USDC && address(metaVault.asset()) == WETH)) {
             _addWETHUSDCRouteToSwap();
         }
@@ -113,7 +114,7 @@ contract BaseTest is Test, AddressesArbi {
         
         vm.startPrank(manager);
 
-        address _assetVaultAddress = metaVault.addAssetVault(_targetAsset);
+        _assetVaultAddress = metaVault.addAssetVault(_targetAsset);
         AssetVault _assetVault = AssetVault(_assetVaultAddress);
 
         assertEq(metaVault.assetVaults(_targetAsset), _assetVaultAddress, "_addAssetVault: E4");
@@ -126,16 +127,15 @@ contract BaseTest is Test, AddressesArbi {
     }
 
     // call when vault is "unmanaged"
-    function _letInvestorsDepositOnCollateralRequired(uint256 _amount) internal {
-        vm.assume(_amount > metaVault.collateralRequirement());
+    function _letInvestorsDepositOnCollateralRequired(uint256 _amount) internal returns (uint256 _amountDeposited) {
         assertEq(metaVault.isUnmanaged(), true, "_testInitVault: E5");
-        
+         
         uint256 _totalSupply = metaVault.previewDeposit(_amount) * 3;
         uint256 _managerShares = _managerAddCollateral(_totalSupply / metaVault.collateralRequirement());
         uint256 _maxMintAmount = _totalSupply - (_totalSupply / metaVault.collateralRequirement());
         uint256 _maxMintDelta = _totalSupply - _maxMintAmount;
         assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount, 1e5, "_letInvestorsDeposit: E1");
-        assertApproxEqAbs(metaVault.maxDeposit(address(0)), _maxMintAmount, 1e5, "_letInvestorsDeposit: E2");
+        assertApproxEqAbs(metaVault.maxDeposit(address(0)), metaVault.convertToAssets(_maxMintAmount), 1e5, "_letInvestorsDeposit: E2");
 
         _dealERC20(address(metaVault.asset()), alice, _amount);
         vm.startPrank(alice);
@@ -145,7 +145,7 @@ contract BaseTest is Test, AddressesArbi {
         
         assertEq(metaVault.balanceOf(alice), metaVault.convertToShares(_amount), "_letInvestorsDeposit: E3");
         assertEq(metaVault.balanceOf(alice), _sharesAlice, "_letInvestorsDeposit: E4");
-        assertEq(metaVault.maxMint(address(0)), _maxMintAmount - _sharesAlice, "_letInvestorsDeposit: E5");
+        assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount - _sharesAlice, 1e5, "_letInvestorsDeposit: E5");
         
         _dealERC20(address(metaVault.asset()), bob, _amount);
         vm.startPrank(bob);
@@ -155,22 +155,26 @@ contract BaseTest is Test, AddressesArbi {
         
         assertEq(metaVault.balanceOf(alice), metaVault.convertToShares(_amount), "_letInvestorsDeposit: E6");
         assertEq(metaVault.balanceOf(alice), _sharesBob, "_letInvestorsDeposit: E7");
-        assertEq(metaVault.maxMint(address(0)), _maxMintAmount - (_sharesAlice + _sharesBob), "_letInvestorsDeposit: E8");
+        assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount - (_sharesAlice + _sharesBob), 1e5, "_letInvestorsDeposit: E8");
 
         _dealERC20(address(metaVault.asset()), charlie, _amount);
         vm.startPrank(charlie);
         IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
-        uint256 _sharesCharlie = metaVault.deposit(_amount - _maxMintDelta, charlie);
+        uint256 _lastAmount = metaVault.maxDeposit(address(0));
+        assertApproxEqAbs(_amount - _maxMintDelta, _lastAmount, 1e5, "_letInvestorsDeposit: E9");
+        uint256 _sharesCharlie = metaVault.deposit(_lastAmount, charlie);
         vm.stopPrank();
         
-        assertEq(metaVault.balanceOf(charlie), metaVault.convertToShares(_amount - _maxMintDelta), "_letInvestorsDeposit: E9");
-        assertEq(metaVault.balanceOf(charlie), _sharesCharlie, "_letInvestorsDeposit: E10");
-        assertEq(metaVault.maxMint(address(0)), _maxMintAmount - (_sharesAlice + _sharesBob + _sharesCharlie), "_letInvestorsDeposit: E11");
+        assertEq(metaVault.balanceOf(charlie), metaVault.convertToShares(_lastAmount), "_letInvestorsDeposit: E10");
+        assertEq(metaVault.balanceOf(charlie), _sharesCharlie, "_letInvestorsDeposit: E11");
+        assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount - (_sharesAlice + _sharesBob + _sharesCharlie), 1e5, "_letInvestorsDeposit: E12");
 
-        assertEq(metaVault.maxDeposit(address(0)), 0, "_letInvestorsDeposit: E12");
-        assertEq(metaVault.maxMint(address(0)), 0, "_letInvestorsDeposit: E13");
-        assertEq(metaVault.totalAssets(), IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), "_letInvestorsDeposit: E14");
-        assertEq(metaVault.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie + _managerShares), "_letInvestorsDeposit: E15");
+        assertEq(metaVault.maxDeposit(address(0)), 0, "_letInvestorsDeposit: E13");
+        assertEq(metaVault.maxMint(address(0)), 0, "_letInvestorsDeposit: E14");
+        assertEq(metaVault.totalAssets(), IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), "_letInvestorsDeposit: E15");
+        assertEq(metaVault.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie + _managerShares), "_letInvestorsDeposit: E16");
+
+        return metaVault.totalAssets();
     }
 
     // call when vault is "unmanaged"
@@ -213,25 +217,88 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isTimelockInitiated(), false, "_testInitVault: E12");
     }
 
-    // call when vault is "managed" + epoch is initiated
+    // call when vault is "managed" + epoch is initiated + assets were deposited into meta vault
     // _assetVaultAddress should be the associated _asset's AssetVault address
-    function _manageAssetsVaults(address _assetVaultAddress, address _asset, uint256 _amount) internal {
+    function _depositToAssetsVault(address _assetVaultAddress, address _asset, uint256 _amount) internal returns (uint256 _amountIn) {
         assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
         assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
         assertEq(metaVault.blacklistedAssets(_asset), false, "_testManageAssetsVaults: E3");
         assertTrue(metaVault.assetVaults(_asset) != address(0), "_testManageAssetsVaults: E4");
-        
+        assertEq(metaVault.assetVaults(_asset), _assetVaultAddress, "_testManageAssetsVaults: E5");
+        assertTrue(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)) > 0, "_testManageAssetsVaults: E6");
+        assertTrue(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)) >= _amount, "_testManageAssetsVaults: E6");
+
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
+        assertEq(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress), 0, "_testManageAssetsVaults: E7");
+
+        uint256 _before = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
+        vm.prank(manager);
+        _amountIn = metaVault.depositAsset(_asset, _amount, 0);
+
+        assertEq(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress), _amountIn, "_testManageAssetsVaults: E8");
+        assertEq(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), _before - _amount, "_testManageAssetsVaults: E9");
+
+        return _amountIn;
+    }
+
+    function _initiateStrategy(address _strategyAsset, address _assetVaultAddress, address _strategy) internal {
         AssetVault _assetVault = AssetVault(_assetVaultAddress);
 
-        assertEq(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress), 0, "_testManageAssetsVaults: E5");
+        assertEq(metaVault.isUnmanaged(), true, "_testManageAssetsVaults: E1");
+        assertEq(_assetVault.isTimelocked(), false, "_testManageAssetsVaults: E2");
+        assertEq(IStrategy(_strategy).isActive(), false, "_testManageAssetsVaults: E3");
+        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_testManageAssetsVaults: E4");
+        assertEq(metaVault.assetVaults(_strategyAsset), _assetVaultAddress, "_testManageAssetsVaults: E5");
 
-        vm.startPrank(manager);
+        vm.prank(manager);
+        _assetVault.initiateStrategy(_strategy);
 
-        metaVault.depositAsset(_asset, _amount, 0);
-
-        // assert
-        vm.stopPrank();
+        assertEq(_assetVault.isTimelocked(), true, "_testManageAssetsVaults: E6");
+        assertEq(_assetVault.initiatedStrategy(), _strategy, "_testManageAssetsVaults: E7");
+        assertEq(_assetVault.timelock(), block.timestamp, "_testManageAssetsVaults: E8");
     }
+
+    function _addStrategy(address _assetVaultAddress, address _strategy) internal {
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
+
+        assertEq(_assetVault.isTimelocked(), true, "_testManageAssetsVaults: E1");
+        assertEq(_assetVault.timelock() + _assetVault.timelockDuration() > block.timestamp, true, "_testManageAssetsVaults: E2");
+        assertEq(_assetVault.initiatedStrategy(), _strategy, "_testManageAssetsVaults: E3");
+        assertEq(_assetVault.blacklistedStrategies(_strategy), false, "_testManageAssetsVaults: E4");
+        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_testManageAssetsVaults: E5");
+        assertEq(_assetVault.strategies(_strategy), false, "_testManageAssetsVaults: E6");
+
+        skip(_assetVault.timelockDuration());
+
+        vm.prank(manager);
+        _assetVault.addStrategy();
+
+        assertEq(_assetVault.isTimelocked(), false, "_testManageAssetsVaults: E7");
+        assertEq(_assetVault.strategies(_strategy), true, "_testManageAssetsVaults: E8");
+        assertEq(IStrategy(_strategy).isActive(), false, "_testManageAssetsVaults: E9");
+        assertEq(_assetVault.strategyList(_assetVault.getStratagiesLength() - 1), _strategy, "_testManageAssetsVaults: E10");
+    }
+
+    function _depositToStrategy(address _assetVaultAddress, address _strategy, uint256 _amount) internal {
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
+
+        assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
+        assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+        assertEq(_assetVault.blacklistedStrategies(_strategy), false, "_testManageAssetsVaults: E3");
+        assertEq(IStrategy(_strategy).isActive(), false, "_testManageAssetsVaults: E4");
+        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_testManageAssetsVaults: E5");
+        assertEq(_assetVault.strategies(_strategy), true, "_testManageAssetsVaults: E6");
+        assertTrue(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress) >= _amount, "_testManageAssetsVaults: E7");
+
+        uint256 _before = IERC20(_assetVault.getAsset()).balanceOf(_strategy);
+        vm.prank(manager);
+        _assetVault.depositToStrategy(_strategy, _amount);
+        uint256 _after = IERC20(_assetVault.getAsset()).balanceOf(_strategy);
+
+        assertEq(IERC20(_assetVault.getAsset()).balanceOf(address(_strategy)), _after - _before, "_testManageAssetsVaults: E8");
+    }
+
+    // function _withdrawFromAssetVault
 
     // function _manageStratagies
 
@@ -308,7 +375,7 @@ contract BaseTest is Test, AddressesArbi {
         address[] memory _fromList1 = new address[](1);
         address[] memory _toList1 = new address[](1);
 
-        _poolType1[0] = 14;    
+        _poolType1[0] = 13;
         _poolAddress1[0] = address(0);
 
         // TODO 

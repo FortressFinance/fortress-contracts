@@ -195,12 +195,14 @@ interface IMetaVault {
     /********************************** Errors **********************************/
 
     error InvalidState();
+    error InvalidAmount();
     error DepositPaused();
     error WithdrawPaused();
     error DepositLimitExceeded();
     error ZeroAmount();
     error ZeroAddress();
     error InsufficientBalance();
+    error InsufficientCollateral();
     error InsufficientAllowance();
     error InsufficientAmountOut();
     error InsufficientManagerCollateral();

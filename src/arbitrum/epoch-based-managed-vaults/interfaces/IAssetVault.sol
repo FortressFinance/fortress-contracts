@@ -27,6 +27,9 @@ interface IAssetVault {
     /// @dev Returns the address of the VaultAsset asset
     function getAsset() external view returns (address);
 
+    /// @dev Returns the length of the strategyList array
+    function getStratagiesLength() external view returns (uint256);
+
     /********************************** Meta Vault Functions **********************************/
 
     /// @dev Deposits assets into the AssetVault. Can only be called by the MetaVault

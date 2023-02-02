@@ -22,7 +22,7 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import {BaseStrategy} from "./BaseStrategy.sol";
+import {BaseStrategy, IAssetVault} from "./BaseStrategy.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IFortGlp} from "./interfaces/IFortGlp.sol";
@@ -34,8 +34,8 @@ contract FortressGlpStrategy is BaseStrategy {
     
     /********************************** Constructor **********************************/
 
-    constructor(address[] memory _assets, address _assetVault, address _platform, address _manager, address _fortGlp)
-        BaseStrategy(_assets, _assetVault, _platform, _manager) {
+    constructor(address _asset, address _assetVault, address _platform, address _manager, address _fortGlp)
+        BaseStrategy(_asset, _assetVault, _platform, _manager) {
             fortGlp = _fortGlp;
         }
 
@@ -43,12 +43,10 @@ contract FortressGlpStrategy is BaseStrategy {
 
     function isActive() public view override returns (bool) {
         if (isStrategiesActiveOverride) return false;
+        if (IERC20(IAssetVault(assetVault).getAsset()).balanceOf(address(this)) > 0) return true;
+        if (IERC20(fortGlp).balanceOf(address(this)) > 0) return true;
 
-        if (IERC20(fortGlp).balanceOf(address(this)) > 0) {
-            return true;
-        } else {
-            return false;
-        }
+        return false;
     }
 
     /********************************** Manager Functions **********************************/
@@ -58,10 +56,14 @@ contract FortressGlpStrategy is BaseStrategy {
     function execute(bytes memory _configData) external override onlyManager returns (uint256) {
         (uint256 _amount, uint256 _minAmount) = abi.decode(_configData, (uint256, uint256));
 
+        address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
         if (_amount == type(uint256).max) {
-            _amount = IERC20(assetVaultPrimaryAsset).balanceOf(address(this));
+            _amount = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
         }
-        uint256 _shares = IFortGlp(fortGlp).depositUnderlying(assetVaultPrimaryAsset, _amount, address(this), _minAmount);
+        
+        IERC20(_assetVaultPrimaryAsset).approve(fortGlp, 0);
+        IERC20(_assetVaultPrimaryAsset).approve(fortGlp, _amount);
+        uint256 _shares = IFortGlp(fortGlp).depositUnderlying(_assetVaultPrimaryAsset, _amount, address(this), _minAmount);
 
         return _shares;
     }

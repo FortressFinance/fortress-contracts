@@ -378,6 +378,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function startEpoch() external onlyManager nonReentrant {
         if (isTimelockInitiated == false) revert NotTimelocked();
         if (timelockStartTimestamp + timelockDuration > block.timestamp) revert TimelockNotExpired();
+        if (isCollateralRequired && balanceOf[address(this)] < totalSupply / collateralRequirement) revert InsufficientCollateral();
         
         _onState(State.UNMANAGED);
 
@@ -430,7 +431,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         address _assetVault = assetVaults[_asset];
         if (_assetVault == address(0)) revert AssetVaultNotAvailable();
 
-        _approve(_asset, _assetVault, _amount);
+        _approve(address(asset), _assetVault, _amount);
         _amount = AssetVault(_assetVault).deposit(_amount);
         if (_amount < _minAmount) revert InsufficientAmountOut();
 
@@ -452,6 +453,24 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         emit AssetWithdrawn(_assetVault, _asset, _amount);
 
         return _amount;
+    }
+
+    // @inheritdoc IMetaVault
+    // TODO
+    /// @notice Vault Manager can add collateral by calling the "deposit" function with "_receiver" as "address(this)"
+    function removeCollateral(uint256 _shares) external onlyManager nonReentrant returns (uint256 _assets) {
+        if (_shares > maxRedeem(address(this))) revert InsufficientBalance();
+        
+        _onState(State.UNMANAGED);
+
+        _assets = previewRedeem(_shares);
+        
+        address _receiver = manager;
+        _withdraw(address(this), _receiver, address(this), _assets, _shares);
+
+        IERC20(address(asset)).safeTransfer(_receiver, _assets);
+
+        return _assets;
     }
 
     /// @inheritdoc IMetaVault

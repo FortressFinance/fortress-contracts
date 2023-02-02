@@ -125,6 +125,11 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         return primaryAsset;
     }
 
+    /// @inheritdoc IAssetVault
+    function getStratagiesLength() external view returns (uint256) {
+        return strategyList.length;
+    }
+
     /********************************** Meta Vault Functions **********************************/
 
     /// @inheritdoc IAssetVault
@@ -135,7 +140,9 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         uint256 _before = ERC20(_primaryAsset).balanceOf(address(this));
         ERC20(_metaVaultPrimaryAsset).safeTransferFrom(_metaVault, address(this), _amount);
         if (_primaryAsset != _metaVaultPrimaryAsset) {
-            _amount = IFortressSwap(IMetaVault(_metaVault).getSwap()).swap(_metaVaultPrimaryAsset, _primaryAsset, _amount);
+            address _swap = IMetaVault(_metaVault).getSwap();
+            _approve(_metaVaultPrimaryAsset, _swap, _amount);
+            _amount = IFortressSwap(_swap).swap(_metaVaultPrimaryAsset, _primaryAsset, _amount);
         }
         
         _amountIn = ERC20(_primaryAsset).balanceOf(address(this)) - _before;

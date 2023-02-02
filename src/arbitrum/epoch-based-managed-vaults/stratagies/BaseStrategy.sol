@@ -38,6 +38,8 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     address public assetVault;
     /// @notice The assetVault Primary Asset
     address public assetVaultPrimaryAsset;
+    /// @notice The enabled asset
+    address public asset;
     /// @notice The platform address
     address public platform;
     /// @notice The vault manager address
@@ -45,14 +47,10 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @notice Enables Platform to override isStrategiesActive value
     bool public isStrategiesActiveOverride;
 
-    /// @notice The address list of enabled assets
-    address[] public enabledAssets;
-    
-
     /********************************** Constructor **********************************/
     
-    constructor(address[] memory _enabledAssets, address _assetVault, address _platform, address _manager) {
-        enabledAssets = _enabledAssets;
+    constructor(address _asset, address _assetVault, address _platform, address _manager) {
+        asset = _asset;
         assetVault = _assetVault;
         platform = _platform;
         manager = _manager;
@@ -85,17 +83,14 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @inheritdoc IStrategy
     function isActive() public view virtual returns (bool) {
         if (isStrategiesActiveOverride) return false;
-        return true;
+        if (IERC20(IAssetVault(assetVault).getAsset()).balanceOf(address(this)) > 0) return true;
+        
+        return false;
     }
 
     /// @inheritdoc IStrategy
-    function isAssetEnabled(address _asset) public view virtual returns (bool) {
-        address[] memory _enabledAssets = enabledAssets;
-        for (uint256 i = 0; i < _enabledAssets.length; i++) {
-            if (_enabledAssets[i] == _asset) {
-                return true;
-            }
-        }
+    function isAssetEnabled(address _targetAsset) public view virtual returns (bool) {
+        if (_targetAsset == asset) return true;
         return false;
     }
 
