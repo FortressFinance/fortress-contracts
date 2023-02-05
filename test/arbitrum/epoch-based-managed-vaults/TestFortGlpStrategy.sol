@@ -37,12 +37,13 @@ contract TestFortGlpStrategy is BaseTest {
 
         _depositToStrategy(_wethAssetVault, _fortGlpStrategy, _amountDeposited);
         
-        _executeFortGlpStrategy(_wethAssetVault, _fortGlpStrategy, _amountDeposited);
+        uint256 _fortGlpShares = _executeFortGlpStrategy(_wethAssetVault, _fortGlpStrategy, _amountDeposited);
 
-        // _terminateFortGlpStrategy
+        uint256 _amountOut = _terminateFortGlpStrategy(_wethAssetVault, _fortGlpStrategy, _fortGlpShares);
 
-        // _withdrawFromStrategy
-        // _withdrawFromAssetsVault
+        _withdrawFromStrategy(_wethAssetVault, _fortGlpStrategy, _amountOut);
+
+        _withdrawFromAssetVault(_wethAssetVault, _amountOut);
         // _endEpoch();
     }
 
@@ -55,7 +56,7 @@ contract TestFortGlpStrategy is BaseTest {
         return address(_fortGlpStrategy);
     }
 
-    function _executeFortGlpStrategy(address _assetVaultAddress, address _strategy, uint256 _amount) internal {
+    function _executeFortGlpStrategy(address _assetVaultAddress, address _strategy, uint256 _amount) internal returns (uint256 _fortGlpShares) {
         assertEq(metaVault.isUnmanaged(), false, "_executeFortGlpStrategy: E1");
         assertEq(metaVault.isEpochinitiated(), true, "_executeFortGlpStrategy: E2");
         assertEq(IStrategy(_strategy).isActive(), true, "_executeFortGlpStrategy: E3");
@@ -64,9 +65,30 @@ contract TestFortGlpStrategy is BaseTest {
         bytes memory _configData = abi.encode(_amount, 0);
 
         vm.prank(manager);
-        uint256 _fortGlpShares = IStrategy(_strategy).execute(_configData);
+        _fortGlpShares = IStrategy(_strategy).execute(_configData);
 
         assertEq(IERC20(fortGlp).balanceOf(_strategy), _fortGlpShares, "_executeFortGlpStrategy: E4");
         assertEq(IStrategy(_strategy).isActive(), true, "_executeFortGlpStrategy: E5");
+
+        return _fortGlpShares;
+    }
+
+    function _terminateFortGlpStrategy(address _assetVaultAddress, address _strategy, uint256 _amount) internal returns (uint256 _amountOut) {
+        assertEq(metaVault.isUnmanaged(), false, "_terminateFortGlpStrategy: E1");
+        assertEq(metaVault.isEpochinitiated(), true, "_terminateFortGlpStrategy: E2");
+        assertEq(IStrategy(_strategy).isActive(), true, "_terminateFortGlpStrategy: E4");
+
+        bytes memory _configData = abi.encode(_amount, 0);
+
+        uint256 _before = IERC20(fortGlp).balanceOf(address(_strategy));
+        uint256 _underlyingBefore = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(address(_strategy));
+        vm.prank(manager);
+        _amountOut = IStrategy(_strategy).terminate(_configData);
+
+        assertEq(IERC20(fortGlp).balanceOf(_strategy), _before - _amount, "_terminateFortGlpStrategy: E6");
+        assertEq(IStrategy(_strategy).isActive(), true, "_terminateFortGlpStrategy: E7");
+        assertEq(IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy), (_underlyingBefore + _amountOut), "_terminateFortGlpStrategy: E8");
+
+        return _amountOut;
     }
 }

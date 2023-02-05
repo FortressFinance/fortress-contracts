@@ -298,7 +298,43 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(IERC20(_assetVault.getAsset()).balanceOf(address(_strategy)), _after - _before, "_testManageAssetsVaults: E8");
     }
 
-    // function _withdrawFromAssetVault
+    function _withdrawFromStrategy(address _assetVaultAddress, address _strategy, uint256 _amount) internal {
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
+
+        assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
+        assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+        assertEq(_assetVault.blacklistedStrategies(_strategy), false, "_testManageAssetsVaults: E3");
+        assertEq(IStrategy(_strategy).isActive(), true, "_testManageAssetsVaults: E4");
+        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_testManageAssetsVaults: E5");
+        assertEq(_assetVault.strategies(_strategy), true, "_testManageAssetsVaults: E6");
+        assertTrue(IERC20(_assetVault.getAsset()).balanceOf(_strategy) >= _amount, "_testManageAssetsVaults: E7");
+
+        uint256 _before = IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress);
+        vm.prank(manager);
+        _assetVault.withdrawFromStrategy(_strategy, _amount);
+        uint256 _after = IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress);
+
+        assertEq(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress), _after - _before, "_testManageAssetsVaults: E8");
+    }
+
+    function _withdrawFromAssetVault(address _assetVaultAddress, uint256 _amount) internal {
+        AssetVault _assetVault = AssetVault(_assetVaultAddress);
+
+        assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
+        assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+        assertTrue(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress) >= _amount, "_testManageAssetsVaults: E3");
+
+        uint256 _assetVaultBefore = IERC20(_assetVault.getAsset()).balanceOf(address(this));
+        uint256 _metaVaultBefore = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
+        vm.prank(manager);
+        uint256 _amountOut = _assetVault.withdraw(_amount); // should be done from metavault withdrawAsset(address _asset, uint256 _amount, uint256 _minAmount)
+        uint256 _assetVaultAfter = IERC20(_assetVault.getAsset()).balanceOf(address(this));
+        uint256 _metaVaultAfter = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
+
+        assertEq(IERC20(_assetVault.getAsset()).balanceOf(address(_assetVault)), _assetVaultAfter - _assetVaultBefore, "_testManageAssetsVaults: E4");
+        assertEq(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), _metaVaultAfter - _metaVaultBefore, "_testManageAssetsVaults: E5");
+        assertEq(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), _amountOut, "_testManageAssetsVaults: E6");
+    }
 
     // function _manageStratagies
 
