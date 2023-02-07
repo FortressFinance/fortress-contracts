@@ -19,4 +19,10 @@ interface IFortGlp {
     /// @param _owner - The owner of shares to burn
     /// @return _underlyingAssets - The amount of underlying assets returned to the user
     function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) external returns (uint256 _underlyingAssets);
+
+    /// @dev Adds the ability to choose the underlying asset to deposit to the base function.
+    /// @dev Harvest the pending rewards and convert to underlying token, then stake.
+    /// @param _receiver - The address of account to receive harvest bounty.
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    function harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) external returns (uint256 _rewards);
 }

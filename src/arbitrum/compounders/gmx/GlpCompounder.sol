@@ -154,10 +154,19 @@ contract GlpCompounder is TokenCompounderBase {
         uint256 _startBalance = IERC20(_sGLP).balanceOf(address(this));
         
         // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH.
+        // function handleRewards(bool _shouldClaimGmx,
+        // bool _shouldStakeGmx,
+        // bool _shouldClaimEsGmx,
+        // bool _shouldStakeEsGmx,
+        // bool _shouldStakeMultiplierPoints,
+        // bool _shouldClaimWeth,
+        // bool _shouldConvertWethToEth
         IGlpRewardHandler(rewardHandler).handleRewards(true, true, true, true, true, true, false);
+        // IGlpRewardHandler(rewardHandler).handleRewards(true, false, true, true, true, true, false);
         
         address _weth = WETH;
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
+        require(_balance > 0, "No rewards to harvest"); // TODO  implement gmx rewards
         if (_underlyingAsset != _weth) {
             _balance = IFortressSwap(swap).swap(_weth, _underlyingAsset, _balance);
         }

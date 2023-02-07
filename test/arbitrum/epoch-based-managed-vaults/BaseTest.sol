@@ -326,8 +326,9 @@ contract BaseTest is Test, AddressesArbi {
 
         uint256 _assetVaultBefore = IERC20(_assetVault.getAsset()).balanceOf(address(this));
         uint256 _metaVaultBefore = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
-        vm.prank(manager);
-        uint256 _amountOut = _assetVault.withdraw(_amount); // should be done from metavault withdrawAsset(address _asset, uint256 _amount, uint256 _minAmount)
+        vm.startPrank(manager);
+        uint256 _amountOut = metaVault.withdrawAsset(_assetVault.getAsset(), _amount, 0);
+        vm.stopPrank();
         uint256 _assetVaultAfter = IERC20(_assetVault.getAsset()).balanceOf(address(this));
         uint256 _metaVaultAfter = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
 
@@ -335,6 +336,56 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), _metaVaultAfter - _metaVaultBefore, "_testManageAssetsVaults: E5");
         assertEq(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), _amountOut, "_testManageAssetsVaults: E6");
     }
+
+    function _endEpoch() internal {
+        assertEq(metaVault.isUnmanaged(), false, "_testManageAssetsVaults: E1");
+        assertEq(metaVault.isEpochinitiated(), true, "_testManageAssetsVaults: E2");
+
+        console.log("snapshotAssetBalance: ", metaVault.snapshotAssetBalance());
+        console.log("balanceOf: ", IERC20(address(metaVault.asset())).balanceOf(address(metaVault)));
+        // balanceOf:  300000000000000000 // snapshotAssetBalance
+        // balanceOf:  9202587221994
+        console.log("isPerformanceFeeEnabled: ", metaVault.isPerformanceFeeEnabled());
+        console.log("managerPerformanceFee: ", metaVault.managerPerformanceFee());
+        console.log("performanceFeeLimit: ", metaVault.performanceFeeLimit());
+        // isPerformanceFeeEnabled:  true
+        // managerPerformanceFee:  5
+        // performanceFeeLimit:  5
+
+        vm.startPrank(manager);
+        metaVault.endEpoch();
+        vm.stopPrank();
+
+        assertEq(metaVault.isEpochinitiated(), false, "_testManageAssetsVaults: E3");
+        assertEq(metaVault.isUnmanaged(), true, "_testManageAssetsVaults: E4");
+        // TODO - check charge fees
+        // TODO - check totalAUM
+        // TODO - check snapshot
+    }
+
+    // function endEpoch() external onlyManager nonReentrant {
+    //     _onState(State.MANAGED);
+
+    //     _beforeEpochEnd();
+
+    //     currentVaultState = State.UNMANAGED;
+
+    //     emit EpochCompleted(block.timestamp, snapshotAssetBalance, snapshotSharesSupply);
+
+    //     _afterEpochEnd();
+    // }
+    // function _beforeEpochEnd() internal virtual {
+    //     if(!_areAssetsBack()) revert AssetsNotBack();
+
+    //     _chargeFees();
+
+    //     totalAUM = asset.balanceOf(address(this));
+
+    //     _executeSnapshot();
+    // }
+    // function _afterEpochEnd() internal virtual {
+    //     isEpochinitiated = false;
+    // }
 
     // function _manageStratagies
 

@@ -617,6 +617,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         address _asset = address(asset);
         uint256 _balance = IERC20(_asset).balanceOf(address(this));
         if (_balance > _snapshotAssetBalance && isPerformanceFeeEnabled == true) {
+            revert("asdasd");
             uint256 _delta = _balance - _snapshotAssetBalance;
             
             // 1 / 5 = 20 / 100  --> (set 'managerPerformanceFee' to '5' to take 20% from profit)
@@ -631,10 +632,12 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
             // send performance fee to Vault Manager
             IERC20(_asset).safeTransfer(manager, _managerFee);
         }
-
+        revert("asdasd1");
         // send management fee to platform
         // 1 / 600 = 2 / (100 * 12) --> (set 'platformManagementFee' to '600' to charge 2% annually)
         IERC20(_asset).safeTransfer(platform, _snapshotAssetBalance / platformManagementFee);
+
+        // TODO - emit fees charged event
     }
 
     function _areAssetsBack() internal view returns (bool) {

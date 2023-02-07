@@ -160,6 +160,8 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         address _metaVault = metaVault;
         uint256 _before = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault);
         if (_primaryAsset != _metaVaultPrimaryAsset) {
+            address _swap = IMetaVault(metaVault).getSwap();
+            _approve(_primaryAsset, _swap, _amount);
             _amount = IFortressSwap(IMetaVault(metaVault).getSwap()).swap(_primaryAsset, _metaVaultPrimaryAsset, _amount);
         }
 
