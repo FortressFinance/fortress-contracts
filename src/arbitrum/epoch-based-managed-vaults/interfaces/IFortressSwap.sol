@@ -24,4 +24,9 @@ interface IFortressSwap {
     /// @param _fromList The tokens to swap from
     /// @param _toList The tokens to swap to
     function updateRoute(address _fromToken, address _toToken, uint256[] memory _poolType, address[] memory _poolAddress, address[] memory _fromList, address[] memory _toList) external;
+
+    /// @dev Delete a swap route.
+    /// @param _fromToken - The address of the input token.
+    /// @param _toToken - The address of the output token.
+    function deleteRoute(address _fromToken, address _toToken) external;    
 }

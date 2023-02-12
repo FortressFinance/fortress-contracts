@@ -44,6 +44,8 @@ contract GlpCompounder is TokenCompounderBase {
 
     /// @notice The address of sGLP token.
     address public constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
+    /// @notice The address of GMX token.
+    address public constant GMX = 0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a;
     /// @notice The address of WETH token.
     address public constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     
@@ -154,19 +156,15 @@ contract GlpCompounder is TokenCompounderBase {
         uint256 _startBalance = IERC20(_sGLP).balanceOf(address(this));
         
         // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH.
-        // function handleRewards(bool _shouldClaimGmx,
-        // bool _shouldStakeGmx,
-        // bool _shouldClaimEsGmx,
-        // bool _shouldStakeEsGmx,
-        // bool _shouldStakeMultiplierPoints,
-        // bool _shouldClaimWeth,
-        // bool _shouldConvertWethToEth
-        IGlpRewardHandler(rewardHandler).handleRewards(true, true, true, true, true, true, false);
-        // IGlpRewardHandler(rewardHandler).handleRewards(true, false, true, true, true, true, false);
-        
+        IGlpRewardHandler(rewardHandler).handleRewards(true, false, true, true, true, true, false);
+
         address _weth = WETH;
+        uint256 _gmxBalance = IERC20(GMX).balanceOf(address(this));
+        if (_gmxBalance > 0) {
+            IFortressSwap(swap).swap(GMX, _weth, _gmxBalance);
+        }
+
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
-        require(_balance > 0, "No rewards to harvest"); // TODO  implement gmx rewards
         if (_underlyingAsset != _weth) {
             _balance = IFortressSwap(swap).swap(_weth, _underlyingAsset, _balance);
         }
