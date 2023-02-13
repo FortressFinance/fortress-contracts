@@ -380,8 +380,61 @@ contract BaseTest is Test, AddressesArbi {
         // assertEq(_platformManagementFeePaid, (metaVault.totalAssets() / metaVault.platformManagementFee()), "_endEpoch: E13");
     }
 
-    // function _removeCollateral(uint256 _shares) internal {
-    //     // TODO
+    function _removeCollateral(uint256 _shares) internal {
+        // _shares = _shares;
+        console.log("removeCollateral: ", _shares);
+        assertEq(metaVault.isUnmanaged(), true, "_removeCollateral: E1");
+        assertEq(metaVault.isEpochinitiated(), false, "_removeCollateral: E2");
+        assertTrue(metaVault.balanceOf(address(metaVault)) > 0, "_removeCollateral: E3");
+        assertTrue(_shares <= metaVault.balanceOf(address(metaVault)), "_removeCollateral: E4");
+
+        uint256 _managerBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(manager));
+        uint256 _managerSharesBefore = metaVault.balanceOf(address(metaVault));
+        uint256 _totalSupplyBefore = metaVault.totalSupply();
+        uint256 _totalAssetsBefore = metaVault.totalAssets();
+        uint256 _expectedAssetAmount = metaVault.previewDeposit(_shares);
+
+        // vm.startPrank(manager);
+        // metaVault.removeCollateral(_shares);
+        // vm.stopPrank();
+
+        // assertTrue(IERC20(address(metaVault.asset())).balanceOf(address(manager)) > _managerBalanceBefore, "_removeCollateral: E5");
+        // assertTrue(IERC20(address(metaVault.asset())).balanceOf(address(manager)) > 0, "_removeCollateral: E6");
+        // assertEq(_managerSharesBefore - _shares, metaVault.balanceOf(address(metaVault)), "_removeCollateral: E7");
+        // assertEq(metaVault.totalSupply(), _totalSupplyBefore - _shares, "_removeCollateral: E8");
+        // assertApproxEqAbs(metaVault.totalAssets() + _expectedAssetAmount, _totalAssetsBefore, 1e15, "_removeCollateral: E9");
+
+        console.log("manager balance ", IERC20(address(metaVault)).balanceOf(address(metaVault)));
+        console.log("totalSupply ", metaVault.totalSupply());
+        console.log("collateralRequirement ", metaVault.collateralRequirement());
+        if (IERC20(address(metaVault)).balanceOf(address(metaVault)) <= (metaVault.totalSupply() / metaVault.collateralRequirement())) {
+            assertEq(metaVault.maxMint(address(0)), 0, "_removeCollateral: E10");
+            revert("asdasd1");
+        } else {
+            revert("asdasd");
+            // there's enough collateral for more deposits --> check how much
+            console.log("metaVault.balanceOf(address(metaVault))", metaVault.balanceOf(address(metaVault)));
+            console.log("metaVault.collateralRequirement()", metaVault.collateralRequirement());
+            console.log("metaVault.totalSupply()", metaVault.totalSupply());
+            console.log("metaVault.maxMint()", metaVault.maxMint(address(0)));
+            uint256 _maxMintAmount = metaVault.balanceOf(address(metaVault)) * metaVault.collateralRequirement() - metaVault.totalSupply();
+            assertEq(metaVault.maxMint(address(0)), _maxMintAmount, "_removeCollateral: E11");
+        }
+    }
+
+    // function removeCollateral(uint256 _shares) external onlyManager nonReentrant returns (uint256 _assets) {
+    //     if (_shares > maxRedeem(address(this))) revert InsufficientBalance();
+        
+    //     _onState(State.UNMANAGED);
+
+    //     _assets = previewRedeem(_shares);
+        
+    //     address _receiver = manager;
+    //     _withdraw(address(this), _receiver, address(this), _assets, _shares);
+
+    //     IERC20(address(asset)).safeTransfer(_receiver, _assets);
+
+    //     return _assets;
     // }
 
     

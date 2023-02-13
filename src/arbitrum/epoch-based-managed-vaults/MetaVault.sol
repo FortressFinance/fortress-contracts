@@ -204,7 +204,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         uint256 _totalSupply = totalSupply;
 
         // Factor in additional shares to fulfill withdrawal fee if user is not the last to withdraw
-        return (isCollateralRequired == true || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - vaultWithdrawFee);
+        return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - vaultWithdrawFee);
     }
 
     /// @inheritdoc ERC4626
@@ -218,8 +218,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function maxDeposit(address) public view override returns (uint256) {
         if (currentVaultState != State.UNMANAGED) return 0;
         
-        uint256 _depositLimit = convertToAssets(depositLimit);
-        uint256 _platformImposedLimit = _depositLimit == 0 ? type(uint256).max : _depositLimit - totalAUM;
+        uint256 _depositLimitInAssets = convertToAssets(depositLimit);
+        uint256 _platformImposedLimit = _depositLimitInAssets == 0 ? type(uint256).max : _depositLimitInAssets - totalAUM;
 
         uint256 _collateralImposedLimit = convertToAssets(_getCollateralImposedLimit());
 
@@ -656,7 +656,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
             if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
                 return 0;
             } else {
-                return  balanceOf[address(this)] * collateralRequirement - totalSupply;
+                return balanceOf[address(this)] * collateralRequirement - totalSupply;
             }
         } else {
             return type(uint256).max;

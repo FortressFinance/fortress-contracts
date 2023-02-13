@@ -72,6 +72,8 @@ contract TestFortGlpStrategy is BaseTest {
         _withdrawFromAssetVault(_wethAssetVault, _amountOut);
         
         _endEpoch();
+
+        _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
     }
 
     function _deployFortGlpStrategy(address _enabledAsset, address _assetVault) internal returns (address) {
