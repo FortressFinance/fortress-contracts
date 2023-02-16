@@ -132,6 +132,11 @@ contract BaseTest is Test, AddressesArbi {
          
         uint256 _totalSupply = metaVault.previewDeposit(_amount) * 3;
         uint256 _managerShares = _managerAddCollateral(_totalSupply / metaVault.collateralRequirement());
+        // uint256 _managerShares = _managerAddCollateral((_totalSupply / metaVault.collateralRequirement()) + 1 ether);
+        // TODO erc20deal deals from scratch
+        // revert("zxczxczxczxc");
+        _managerAddCollateral(1 ether);
+        revert("zxczxczxczxc1");
         uint256 _maxMintAmount = _totalSupply - (_totalSupply / metaVault.collateralRequirement());
         uint256 _maxMintDelta = _totalSupply - _maxMintAmount;
         assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount, 1e5, "_letInvestorsDepositOnCollateralRequired: E1");
@@ -179,13 +184,24 @@ contract BaseTest is Test, AddressesArbi {
 
     // call when vault is "unmanaged"
     function _managerAddCollateral(uint256 _amount) internal returns (uint256 _shares) {
+        assertEq(metaVault.isUnmanaged(), true, "_managerAddCollateral: E0");
+
         _dealERC20(address(metaVault.asset()), manager, _amount);
         uint256 _expectedShare = metaVault.previewDeposit(_amount);
         
         vm.startPrank(manager);
+        console.log("manager balance: %s", IERC20(address(metaVault.asset())).balanceOf(address(manager)));
+        console.log("amount: %s", _amount);
+        console.log("address(metaVault): %s", address(manager));
         IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
         _shares = metaVault.deposit(_amount, address(metaVault));
+        if (_amount == 1 ether) {
+            revert ("t1tt23");
+        }
         vm.stopPrank();
+        if (_amount == 1 ether) {
+            revert ("t1tt");
+        }
 
         assertEq(metaVault.balanceOf(address(metaVault)), metaVault.convertToShares(_amount), "_managerAddCollateral: E1");
         assertEq(metaVault.balanceOf(address(metaVault)), _expectedShare, "_managerAddCollateral: E2");
@@ -407,9 +423,15 @@ contract BaseTest is Test, AddressesArbi {
         console.log("manager balance ", IERC20(address(metaVault)).balanceOf(address(metaVault)));
         console.log("totalSupply ", metaVault.totalSupply());
         console.log("collateralRequirement ", metaVault.collateralRequirement());
+        // if Manager's collateral is less than the collateral requirement
         if (IERC20(address(metaVault)).balanceOf(address(metaVault)) <= (metaVault.totalSupply() / metaVault.collateralRequirement())) {
             assertEq(metaVault.maxMint(address(0)), 0, "_removeCollateral: E10");
             revert("asdasd1");
+            // vm.expectRevert();
+            // vm.startPrank(alice);
+            // IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
+            // uint256 _sharesAlice = metaVault.deposit(_amount, alice);
+            // vm.stopPrank();
         } else {
             revert("asdasd");
             // there's enough collateral for more deposits --> check how much

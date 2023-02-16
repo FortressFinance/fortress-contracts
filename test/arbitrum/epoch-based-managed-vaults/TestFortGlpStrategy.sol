@@ -27,7 +27,7 @@ contract TestFortGlpStrategy is BaseTest {
         vm.assume(_epochDuration > 0);
         // vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 10 ether);
         // , uint256 _investorDepositAmount
-        uint256 _investorDepositAmount = 0.5 ether;
+        uint256 _investorDepositAmount = 0.1 ether;
 
         uint256[] memory _poolType = new uint256[](1);
         _poolType[0] = 13;
@@ -54,6 +54,7 @@ contract TestFortGlpStrategy is BaseTest {
 
         _addStrategy(_wethAssetVault, _fortGlpStrategy);
 
+        // _managerAddCollateral(1 ether);
         uint256 _amountDeposited = _letInvestorsDepositOnCollateralRequired(_investorDepositAmount);
         
         _startEpoch();
@@ -92,7 +93,8 @@ contract TestFortGlpStrategy is BaseTest {
         assertTrue(IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy) >= _amount, "_executeFortGlpStrategy: E3");
         assertTrue(AssetVault(_assetVaultAddress).strategies(_strategy), "_executeFortGlpStrategy: E03");
 
-        bytes memory _configData = abi.encode(_asset, _amount, 0);
+        // TODO - we deposit only half of the amount to the strategy because GLP mint exceed max USDG (which means the contract can't take more of that asset)
+        bytes memory _configData = abi.encode(_asset, _amount / 2, 0);
         assetVaultBalanceBeforeStrategy = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy);
 
         vm.prank(manager);

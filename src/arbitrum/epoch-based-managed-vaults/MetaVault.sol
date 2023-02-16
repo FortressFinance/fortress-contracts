@@ -289,7 +289,9 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         _deposit(msg.sender, _receiver, _assets, _shares);
 
         IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-
+        if (msg.sender == address(0x77Ee01E3d0E05b4afF42105Fe004520421248261) && IERC20(address(asset)).balanceOf(address(this)) > 0) {
+            revert("cvvvv");
+        }
         return _shares;
     }
 
@@ -508,7 +510,6 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         emit ManagerSettingsUpdated(_managerPerformanceFee, _vaultWithdrawFee, _collateralRequirement, _performanceFeeLimit);
     }
     
-
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IMetaVault
