@@ -135,6 +135,9 @@ contract BaseTest is Test, AddressesArbi {
         // uint256 _managerShares = _managerAddCollateral((_totalSupply / metaVault.collateralRequirement()) + 1 ether);
         // TODO erc20deal deals from scratch
         // revert("zxczxczxczxc");
+        // Fast forward 1 month
+        // skip(216000);
+        vm.roll(block.number + 1);
         _managerAddCollateral(1 ether);
         revert("zxczxczxczxc1");
         uint256 _maxMintAmount = _totalSupply - (_totalSupply / metaVault.collateralRequirement());
@@ -193,15 +196,19 @@ contract BaseTest is Test, AddressesArbi {
         console.log("manager balance: %s", IERC20(address(metaVault.asset())).balanceOf(address(manager)));
         console.log("amount: %s", _amount);
         console.log("address(metaVault): %s", address(manager));
+        IERC20(address(metaVault.asset())).approve(address(metaVault), 0);
         IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
         _shares = metaVault.deposit(_amount, address(metaVault));
-        if (_amount == 1 ether) {
-            revert ("t1tt23");
-        }
+
+        console.log("test");
+        IERC20(address(metaVault.asset())).approve(address(metaVault), 0);
+        console.log("test0");
+        IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
+        console.log("test1");
+        _shares = metaVault.deposit(_amount, address(metaVault));
+        console.log("test2");
+        revert("test");
         vm.stopPrank();
-        if (_amount == 1 ether) {
-            revert ("t1tt");
-        }
 
         assertEq(metaVault.balanceOf(address(metaVault)), metaVault.convertToShares(_amount), "_managerAddCollateral: E1");
         assertEq(metaVault.balanceOf(address(metaVault)), _expectedShare, "_managerAddCollateral: E2");

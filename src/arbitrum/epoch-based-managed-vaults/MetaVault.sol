@@ -220,9 +220,9 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         
         uint256 _depositLimitInAssets = convertToAssets(depositLimit);
         uint256 _platformImposedLimit = _depositLimitInAssets == 0 ? type(uint256).max : _depositLimitInAssets - totalAUM;
-
-        uint256 _collateralImposedLimit = convertToAssets(_getCollateralImposedLimit());
-
+        
+        uint256 _collateralImposedLimit = msg.sender == manager ? type(uint256).max : convertToAssets(_getCollateralImposedLimit());
+        
         return _platformImposedLimit < _collateralImposedLimit ? _platformImposedLimit : _collateralImposedLimit;
     }
 
@@ -233,7 +233,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         
         uint256 _platformImposedLimit = depositLimit == 0 ? type(uint256).max : depositLimit - totalSupply;
 
-        uint256 _collateralImposedLimit = _getCollateralImposedLimit();
+        uint256 _collateralImposedLimit = msg.sender == manager ? type(uint256).max : _getCollateralImposedLimit();
 
         return _platformImposedLimit < _collateralImposedLimit ? _platformImposedLimit : _collateralImposedLimit;
     }
@@ -283,15 +283,16 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         if (_assets > maxDeposit(msg.sender)) revert DepositLimitExceeded();
-
+        if (_testCounter > 0) revert("cvvvv1");
         _shares = previewDeposit(_assets);
+        if (_testCounter > 0) revert("cvvvv2");
 
         _deposit(msg.sender, _receiver, _assets, _shares);
 
         IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        if (msg.sender == address(0x77Ee01E3d0E05b4afF42105Fe004520421248261) && IERC20(address(asset)).balanceOf(address(this)) > 0) {
-            revert("cvvvv");
-        }
+        
+        if (_testCounter > 0) revert("cvvvv last");
+        _testCounter++;
         return _shares;
     }
 
@@ -653,14 +654,10 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     function _getCollateralImposedLimit() internal view returns (uint256) {
-        if (isCollateralRequired && msg.sender != manager) {
-            if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
-                return 0;
-            } else {
-                return balanceOf[address(this)] * collateralRequirement - totalSupply;
-            }
+        if (balanceOf[address(this)] <= totalSupply / collateralRequirement) {
+            return 0;
         } else {
-            return type(uint256).max;
+            return balanceOf[address(this)] * collateralRequirement - totalSupply;
         }
     }
 
