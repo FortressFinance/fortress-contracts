@@ -45,7 +45,7 @@ contract BaseTest is Test, AddressesArbi {
         owner = address(0x16cAD91E1928F994816EbC5e759d8562aAc65ab2);
         alice = address(0xFa0C696bC56AE0d256D34a307c447E80bf92Dd41);
         bob = address(0x864e4b0c28dF7E2f317FF339CebDB5224F47220e);
-        charlie = address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc);
+        charlie = address(0x5C1E6bA712e9FC3399Ee7d5824B6Ec68A0363C02);
         manager = address(0x77Ee01E3d0E05b4afF42105Fe004520421248261);
         platform = address(0x9cbD8440E5b8f116082a0F4B46802DB711592fAD);
 
@@ -132,14 +132,7 @@ contract BaseTest is Test, AddressesArbi {
          
         uint256 _totalSupply = metaVault.previewDeposit(_amount) * 3;
         uint256 _managerShares = _managerAddCollateral(_totalSupply / metaVault.collateralRequirement());
-        // uint256 _managerShares = _managerAddCollateral((_totalSupply / metaVault.collateralRequirement()) + 1 ether);
-        // TODO erc20deal deals from scratch
-        // revert("zxczxczxczxc");
-        // Fast forward 1 month
-        // skip(216000);
-        vm.roll(block.number + 1);
-        _managerAddCollateral(1 ether);
-        revert("zxczxczxczxc1");
+        
         uint256 _maxMintAmount = _totalSupply - (_totalSupply / metaVault.collateralRequirement());
         uint256 _maxMintDelta = _totalSupply - _maxMintAmount;
         assertApproxEqAbs(metaVault.maxMint(address(0)), _maxMintAmount, 1e5, "_letInvestorsDepositOnCollateralRequired: E1");
@@ -191,27 +184,17 @@ contract BaseTest is Test, AddressesArbi {
 
         _dealERC20(address(metaVault.asset()), manager, _amount);
         uint256 _expectedShare = metaVault.previewDeposit(_amount);
+
+        uint256 _managerBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
         
         vm.startPrank(manager);
-        console.log("manager balance: %s", IERC20(address(metaVault.asset())).balanceOf(address(manager)));
-        console.log("amount: %s", _amount);
-        console.log("address(metaVault): %s", address(manager));
-        IERC20(address(metaVault.asset())).approve(address(metaVault), 0);
+        assertTrue(IERC20(address(metaVault.asset())).balanceOf(address(manager)) >= _amount, "_managerAddCollateral: E01");
         IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
         _shares = metaVault.deposit(_amount, address(metaVault));
-
-        console.log("test");
-        IERC20(address(metaVault.asset())).approve(address(metaVault), 0);
-        console.log("test0");
-        IERC20(address(metaVault.asset())).approve(address(metaVault), _amount);
-        console.log("test1");
-        _shares = metaVault.deposit(_amount, address(metaVault));
-        console.log("test2");
-        revert("test");
         vm.stopPrank();
 
-        assertEq(metaVault.balanceOf(address(metaVault)), metaVault.convertToShares(_amount), "_managerAddCollateral: E1");
-        assertEq(metaVault.balanceOf(address(metaVault)), _expectedShare, "_managerAddCollateral: E2");
+        assertEq(metaVault.balanceOf(address(metaVault)) - _managerBalanceBefore, metaVault.convertToShares(_amount), "_managerAddCollateral: E1");
+        assertEq(metaVault.balanceOf(address(metaVault)) - _managerBalanceBefore, _expectedShare, "_managerAddCollateral: E2");
     }
 
     // call when vault is "unmanaged" + epoch is initiated + asset were added

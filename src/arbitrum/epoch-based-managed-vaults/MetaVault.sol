@@ -283,16 +283,13 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @notice Can only be called by anyone while "state" is "UNMANAGED"
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         if (_assets > maxDeposit(msg.sender)) revert DepositLimitExceeded();
-        if (_testCounter > 0) revert("cvvvv1");
+
         _shares = previewDeposit(_assets);
-        if (_testCounter > 0) revert("cvvvv2");
 
         _deposit(msg.sender, _receiver, _assets, _shares);
 
         IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        
-        if (_testCounter > 0) revert("cvvvv last");
-        _testCounter++;
+
         return _shares;
     }
 

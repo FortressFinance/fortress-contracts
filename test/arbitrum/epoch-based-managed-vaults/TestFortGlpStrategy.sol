@@ -54,9 +54,9 @@ contract TestFortGlpStrategy is BaseTest {
 
         _addStrategy(_wethAssetVault, _fortGlpStrategy);
 
-        // _managerAddCollateral(1 ether);
         uint256 _amountDeposited = _letInvestorsDepositOnCollateralRequired(_investorDepositAmount);
-        
+        _managerAddCollateral(1 ether);
+
         _startEpoch();
 
         _amountDeposited = _depositToAssetsVault(_wethAssetVault, WETH, _amountDeposited);
