@@ -20,14 +20,6 @@ contract TestFortGlpStrategy is BaseTest {
 
         GlpCompounder _glpCompounder = new GlpCompounder(fortGlp, manager, platform);
         fortGlp = address(_glpCompounder);
-    }
-
-    function testCorrectFlow(uint256 _epochDuration) public {
-        vm.assume(_epochDuration < (type(uint256).max - block.timestamp));
-        vm.assume(_epochDuration > 0);
-        // vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 10 ether);
-        // , uint256 _investorDepositAmount
-        uint256 _investorDepositAmount = 0.1 ether;
 
         uint256[] memory _poolType = new uint256[](1);
         _poolType[0] = 13;
@@ -43,39 +35,120 @@ contract TestFortGlpStrategy is BaseTest {
         IFortressSwap(FORTRESS_SWAP).deleteRoute(WETH, USDC);
         IFortressSwap(FORTRESS_SWAP).updateRoute(WETH, USDC, _poolType, _poolAddress, _fromList, _toList);
         vm.stopPrank();
+    }
 
+    function testCorrectFlow(uint256 _epochDuration, uint256 _investorDepositAmount) public {
+        vm.assume(_epochDuration < (type(uint256).max - block.timestamp));
+        vm.assume(_epochDuration > 0);
+        vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 10 ether);
+        
         _initVault(_epochDuration);
 
-        address _wethAssetVault = _addAssetVault(WETH);
+        for (uint256 i = 0; i < 2; i++) {
+            if (i > 0) {
+                _initEpoch(_epochDuration);
+            }
 
-        address _fortGlpStrategy = _deployFortGlpStrategy(WETH, _wethAssetVault);
+            address _wethAssetVault = _addAssetVault(WETH);
 
-        _initiateStrategy(WETH, _wethAssetVault, _fortGlpStrategy);
+            address _fortGlpStrategy = _deployFortGlpStrategy(WETH, _wethAssetVault);
 
-        _addStrategy(_wethAssetVault, _fortGlpStrategy);
+            _initiateStrategy(WETH, _wethAssetVault, _fortGlpStrategy);
 
-        uint256 _amountDeposited = _letInvestorsDepositOnCollateralRequired(_investorDepositAmount);
-        _managerAddCollateral(1 ether);
+            _addStrategy(_wethAssetVault, _fortGlpStrategy);
+            
+            // if (i > 0) revert("test0");
+            uint256 _amountDeposited = _letInvestorsDepositOnCollateralRequired(_investorDepositAmount);
+            // _managerAddCollateral(1 ether);
+            // if (i > 0) revert("test1");
 
-        _startEpoch();
+            _startEpoch();
 
-        _amountDeposited = _depositToAssetsVault(_wethAssetVault, WETH, _amountDeposited);
+            _amountDeposited = _depositToAssetsVault(_wethAssetVault, WETH, _amountDeposited);
 
-        _depositToStrategy(_wethAssetVault, _fortGlpStrategy, _amountDeposited);
-        
-        uint256 _fortGlpShares = _executeFortGlpStrategy(WETH, _wethAssetVault, _fortGlpStrategy, _amountDeposited);
+            _depositToStrategy(_wethAssetVault, _fortGlpStrategy, _amountDeposited);
+            
+            uint256 _fortGlpShares = _executeFortGlpStrategy(WETH, _wethAssetVault, _fortGlpStrategy, _amountDeposited);
 
-        uint256 _amountOut = _profitableTerminateFortGlpStrategy(WETH, _wethAssetVault, _fortGlpStrategy, _fortGlpShares);
+            uint256 _amountOut = _profitableTerminateFortGlpStrategy(WETH, _wethAssetVault, _fortGlpStrategy, _fortGlpShares);
 
-        // _withdrawFromStrategy(_wethAssetVault, _fortGlpStrategy, _amountOut);
-        _withdrawAllFromStrategy(_wethAssetVault, _fortGlpStrategy);
+            // _withdrawFromStrategy(_wethAssetVault, _fortGlpStrategy, _amountOut);
+            _withdrawAllFromStrategy(_wethAssetVault, _fortGlpStrategy);
 
-        _withdrawFromAssetVault(_wethAssetVault, _amountOut);
-        
-        _endEpoch();
+            _withdrawFromAssetVault(_wethAssetVault, _amountOut);
+            
+            _endEpoch();
 
-        _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
+            _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
+        }
     }
+
+    // 1*
+    // 1. initiate vault (which intiates an epoch)
+    // 2. user deposits
+    // 3. start epoch
+    // 4. manage assets (1. deposit into AssetsVault, 2. deposit into Strategy vaults)
+    // 5. end epoch
+    // 6. user withdraws
+
+    // 2* (continue from 1)
+    // 1. call 1*
+    // 2. initiate a new epoch (initiateEpoch)
+    // 3. user deposits
+    // 4. start epoch
+    // 5. manage assets (1. deposit into AssetsVault, 2. deposit into Strategy vaults)
+    // 6. end epoch
+    // 7. user withdraws
+
+    // *3 (add asset vault)
+    // 1. call 2*
+    // 2. add asset vault
+    // 3. call 2* again
+
+    // *4 (add strategy vault)
+    // 1. call 2*
+    // 2. add strategy vault
+    // 3. call 2* again
+
+    // *5 (remove asset vault (blacklist asset))
+    // 1. call 3*
+    // 2. remove asset vault
+    // 3. call 2*
+
+    // *6 (update manager)
+    // 1. call 2*
+    // 2. update manager
+    // 3. call 2* again
+
+    // *7 (manager didnt finish epoch on time)
+    // 1. call 2*
+    // 2. start epoch
+    // 3. manage assets (1. deposit into AssetsVault, 2. deposit into Strategy vaults)
+    // 4. do not end epoch on time
+    // 5. punish vault manager
+    // 6. end epoch
+
+    // ------------------- WRONG FLOWS -------------------
+
+    // *1 (Investor interact with contract on wrong state)
+
+    // *2 (call executeLatenessPenalty (1) before end epoch and (2) when penalty is disabled)
+
+    // *3 (test modifiers)
+
+    // *4 (deposit wrong asset)
+
+    // *5 (withdraw wrong asset)
+
+    // *6 (start epoch before timelock passed)
+
+    // *7 (start epoch without calling initiateEpoch)
+
+    // *8 (end epoch without withdawing assets)
+
+    // *9 (deposit a blacklisted asset)
+
+    // ------------------- UTILS -------------------
 
     function _deployFortGlpStrategy(address _enabledAsset, address _assetVault) internal returns (address) {
         FortressGlpStrategy _fortGlpStrategy = new FortressGlpStrategy(_enabledAsset, _assetVault, platform, manager, fortGlp, FORTRESS_SWAP);
@@ -94,7 +167,7 @@ contract TestFortGlpStrategy is BaseTest {
         assertTrue(AssetVault(_assetVaultAddress).strategies(_strategy), "_executeFortGlpStrategy: E03");
 
         // TODO - we deposit only half of the amount to the strategy because GLP mint exceed max USDG (which means the contract can't take more of that asset)
-        bytes memory _configData = abi.encode(_asset, _amount / 2, 0);
+        bytes memory _configData = abi.encode(_asset, _amount / 10, 0);
         assetVaultBalanceBeforeStrategy = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy);
 
         vm.prank(manager);
@@ -121,7 +194,8 @@ contract TestFortGlpStrategy is BaseTest {
         // Fast forward 1 month
         skip(216000);
         
-        uint256 _rewards = GlpCompounder(fortGlp).harvest(manager, 0);
+        vm.rollFork(block.number + 1);
+        GlpCompounder(fortGlp).harvest(manager, 0);
         
         vm.prank(manager);
         uint256 _amountOut = IStrategy(_strategy).terminate(_configData);
