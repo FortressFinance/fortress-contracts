@@ -36,6 +36,11 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
+    /// @notice The description of the vault - whether it's a Crypto/Stable + Curve/Balancer
+    string public immutable description;
+
+    /// @notice The internal accounting of AUM.
+    uint256 internal totalAUM;
     /// @notice The internal accounting of the deposit limit. Denominated in shares.
     uint256 public depositCap;
     /// @notice The pool ID in LP Booster contract.
@@ -48,27 +53,23 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 public withdrawFeePercentage;
     /// @notice The last block number that the harvest function was executed.
     uint256 public lastHarvestBlock;
+    
     /// @notice The address of LP Booster contract.
     address public booster;
     /// @notice The address of LP staking rewards contract.
     address public crvRewards;
-    /// @notice Whether deposit for the pool is paused.
-    bool public pauseDeposit;
-    /// @notice Whether withdraw for the pool is paused.
-    bool public pauseWithdraw;
-    /// @notice The reward assets.
-    address[] public rewardAssets;
-    /// @notice The underlying assets.
-    address[] public underlyingAssets;
-    /// @notice The internal accounting of AUM.
-    uint256 internal totalAUM;
-    
     /// @notice The owner.
     address public owner;
     /// @notice The recipient of platform fee.
     address public platform;
     /// @notice The FortressSwap contract, used to swap tokens.
     address public swap;
+    
+    /// @notice Whether deposit for the pool is paused.
+    bool public pauseDeposit;
+    /// @notice Whether withdraw for the pool is paused.
+    bool public pauseWithdraw;
+    
     /// @notice The fee denominator.
     uint256 internal constant FEE_DENOMINATOR = 1e9;
     /// @notice The maximum withdrawal fee.
@@ -79,6 +80,11 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
     /// @notice The address representing ETH.
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+    /// @notice The reward assets
+    address[] public rewardAssets;
+    /// @notice The underlying assets
+    address[] public underlyingAssets;
     
     /********************************** Constructor **********************************/
 
@@ -86,6 +92,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
             ERC20 _asset,
             string memory _name,
             string memory _symbol,
+            string memory _description,
             address _owner,
             address _platform,
             address _swap,
@@ -97,6 +104,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         )
         ERC4626(_asset, _name, _symbol) {
         
+        description = _description;
         boosterPoolId = _boosterPoolId;
         platformFeePercentage = 50000000; // 5%,
         harvestBountyPercentage = 25000000; // 2.5%,
@@ -122,10 +130,28 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
     /********************************** View Functions **********************************/
 
-    /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset).
-    /// @return - The underlying assets.
+    /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset)
+    /// @return - The underlying assets
     function getUnderlyingAssets() external view returns (address[] memory) {
         return underlyingAssets;
+    }
+
+    /// @dev Get the name of the vault
+    /// @return - The name of the vault
+    function getName() external view returns (string memory) {
+        return name;
+    }
+
+    /// @dev Get the symbol of the vault
+    /// @return - The symbol of the vault
+    function getSymbol() external view returns (string memory) {
+        return symbol;
+    }
+
+    /// @dev Get the description of the vault
+    /// @return - The description of the vault
+    function getDescription() external view returns (string memory) {
+        return description;
     }
 
     /// @dev Indicates whether there are pending rewards to harvest.

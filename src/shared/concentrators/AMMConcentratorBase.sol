@@ -45,6 +45,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @notice Mapping from account address to user info.
     mapping(address => UserInfo) public userInfo;
 
+    /// @notice The description of the vault - whether it's a Crypto/Stable + Curve/Balancer
+    string public immutable description;
+
     /// @notice The accumulated reward per share, with 1e18 precision.
     uint256 public accRewardPerShare;
     /// @notice The pool ID in the Booster contract.
@@ -103,6 +106,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
             ERC20 _asset,
             string memory _name,
             string memory _symbol,
+            string memory _description,
             address _owner,
             address _platform,
             address _swap,
@@ -114,7 +118,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
             address _compounder
         )
         ERC4626(_asset, _name, _symbol) {
-        
+
+        description = _description;
         accRewardPerShare = 0;
         boosterPoolId = _boosterPoolId;
         platformFeePercentage = 50000000; // 5%,
@@ -149,8 +154,25 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     function pendingReward(address _account) public view returns (uint256) {
         UserInfo memory _userInfo = userInfo[_account];
         
-        // return _userInfo.rewards.add(accRewardPerShare.sub(_userInfo.rewardPerSharePaid).mul(balanceOf[_account]) / PRECISION);
         return _userInfo.rewards + (((accRewardPerShare - _userInfo.rewardPerSharePaid) * balanceOf[_account]) / PRECISION);
+    }
+
+    /// @dev Get the name of the vault
+    /// @return - The name of the vault
+    function getName() external view returns (string memory) {
+        return name;
+    }
+
+    /// @dev Get the symbol of the vault
+    /// @return - The symbol of the vault
+    function getSymbol() external view returns (string memory) {
+        return symbol;
+    }
+
+    /// @dev Get the description of the vault
+    /// @return - The description of the vault
+    function getDescription() external view returns (string memory) {
+        return description;
     }
 
     /// @dev Indicates whether there are pending rewards to harvest.
