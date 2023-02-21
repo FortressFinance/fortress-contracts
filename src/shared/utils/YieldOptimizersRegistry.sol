@@ -124,6 +124,17 @@ contract YieldOptimizersRegistry {
     /// @notice The mapping from Primary Asset to Balancer Crypto2 Concentrator Vault address
     mapping(address => address) public balancerCrypto2Concentrators;
 
+    // -------------- Settings --------------
+
+    /// @notice The addresses of the contract owners.
+    address[2] public owners;
+
+    // ********************* Constructor *********************
+
+    constructor(address _owner) {
+        owners[0] = _owner;
+    }
+
     // ********************* View Functions *********************
     
     // -----------------------------------------------------------
@@ -232,7 +243,7 @@ contract YieldOptimizersRegistry {
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
                 return curveCrypto2ConcentratorsPrimaryAssets;
             } else {
-                revert("Invalid Target Asset");
+                revert InvalidTargetAsset();
             }
         } else if (_ammType == AMMType.Balancer) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
@@ -244,7 +255,7 @@ contract YieldOptimizersRegistry {
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
                 return balancerCrypto2ConcentratorsPrimaryAssets;
             } else {
-                revert("Invalid Target Asset");
+                revert InvalidTargetAsset();
             }
         }
     }
@@ -263,7 +274,7 @@ contract YieldOptimizersRegistry {
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
                 return curveCrypto2Concentrators[_primaryAsset];
             } else {
-                revert("Invalid Target Asset");
+                revert InvalidTargetAsset();
             }
         } else if (_ammType == AMMType.Balancer) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
@@ -275,7 +286,7 @@ contract YieldOptimizersRegistry {
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
                 return balancerCrypto2Concentrators[_primaryAsset];
             } else {
-                revert("Invalid Target Asset");
+                revert InvalidTargetAsset();
             }
         }
     }
@@ -325,12 +336,12 @@ contract YieldOptimizersRegistry {
     /// @param _primaryAsset - The address of the Primary Asset
     function registerAmmCompounder(AMMType _ammType, address _compounder, address _primaryAsset) onlyOwner external {
         if (_ammType == AMMType.Curve) {
-            if (curveCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
+            if (curveCompounders[_primaryAsset] != address(0)) revert AlreadyRegistered();
 
             curveCompounders[_primaryAsset] = _compounder;
             curveCompoundersPrimaryAssets.push(_primaryAsset);
         } else {
-            if (balancerCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
+            if (balancerCompounders[_primaryAsset] != address(0)) revert AlreadyRegistered();
 
             balancerCompounders[_primaryAsset] = _compounder;
             balancerCompoundersPrimaryAssets.push(_primaryAsset);
@@ -343,7 +354,7 @@ contract YieldOptimizersRegistry {
     /// @param _compounder - The address of the Compounder
     /// @param _primaryAsset - The address of the Primary Asset
     function registerTokenCompounder(address _compounder, address _primaryAsset) onlyOwner external {
-        if (tokenCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
+        if (tokenCompounders[_primaryAsset] != address(0)) revert AlreadyRegistered();
 
         tokenCompounders[_primaryAsset] = _compounder;
         tokenCompoundersPrimaryAssets.push(_primaryAsset);
@@ -351,6 +362,11 @@ contract YieldOptimizersRegistry {
         emit RegisterTokenCompounder(_compounder, _primaryAsset);
     }
 
+    /// @dev Register a new Concentrator Vault
+    /// @param _ammType - The AMMType of the Concentrator
+    /// @param _concentrator - The address of the Concentrator
+    /// @param _targetAsset - The address of the Target Asset
+    /// @param _primaryAsset - The address of the Primary Asset
     function registerConcentrator(AMMType _ammType, address _concentrator, address _targetAsset, address _primaryAsset) onlyOwner external {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
         
@@ -382,7 +398,7 @@ contract YieldOptimizersRegistry {
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
                 if (balancerUsdConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
                 balancerUsdConcentrators[_primaryAsset] = _concentrator;
-                balancerUsdConcentrators
+                balancerUsdConcentratorsPrimaryAssets.push(_primaryAsset);
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto1) {
                 if (balancerCrypto1Concentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
                 balancerCrypto1Concentrators[_primaryAsset] = _concentrator;
@@ -422,18 +438,19 @@ contract YieldOptimizersRegistry {
         if(msg.sender != owners[0] && msg.sender != owners[1]) revert Unauthorized();
 
         owners[_index] = _owner;
+
+        emit UpdateOwner(_index, _owner);
     }
 
     /********************************** Events & Errors **********************************/
 
-    event RegisterCurveCompounder(address indexed _curveCompounder, address indexed _asset, string _symbol, string _name, address[] _underlyingAssets);
-    event RegisterBalancerCompounder(address indexed _balancerCompounder, address indexed _asset, string _symbol, string _name, address[] _underlyingAssets);
-    event RegisterTokenCompounder(address indexed _compounder, address indexed _asset, string _symbol, string _name);
-    event RegisterBalancerGlpConcentrator(address indexed _balancerConcentrator, address indexed _asset, string _symbol, string _name, address[] _underlyingAssets, address _compounder);
-    event RegisterBalancerEthConcentrator(address indexed _balancerConcentrator, address indexed _asset, string _symbol, string _name, address[] _underlyingAssets, address _compounder);
-    event RegisterCurveGlpConcentrator(address indexed _curveConcentrator, address indexed _asset, string _symbol, string _name, address[] _underlyingAssets, address _compounder);
-    event RegisterCurveEthConcentrator(address indexed _curveConcentrator, address indexed _asset, string _symbol, string _name, address[] _underlyingAssets, address _compounder);
-
+    event RegisterAMMCompounder(AMMType indexed _ammType, address _compounder, address _primaryAsset);
+    event RegisterTokenCompounder(address _compounder, address _primaryAsset);
+    event UpdateConcentratorsTargetAssets(address _fortETH, address _fortUSD, address _fortCrypto1, address _fortCrypto2);
+    event UpdateOwner(uint256 _index, address _owner);
+    
     error Unauthorized();
     error AlreadyRegistered();
+    error InvalidTargetAsset();
+    error InvalidAMMType();
 }
