@@ -251,29 +251,29 @@ contract YieldOptimizersRegistry {
 
     /// @dev Get the address of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
     /// @return - The address of the Concentrator Vault
-    function getConcentrator(AMMType _ammType, address _targetAsset, address _asset) public view returns (address) {
+    function getConcentrator(AMMType _ammType, address _targetAsset, address _primaryAsset) public view returns (address) {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
         if (_ammType == AMMType.Curve) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
-                return curveEthConcentrators[_asset];
+                return curveEthConcentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
-                return curveUsdConcentrators[_asset];
+                return curveUsdConcentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto1) {
-                return curveCrypto1Concentrators[_asset];
+                return curveCrypto1Concentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
-                return curveCrypto2Concentrators[_asset];
+                return curveCrypto2Concentrators[_primaryAsset];
             } else {
                 revert("Invalid Target Asset");
             }
         } else if (_ammType == AMMType.Balancer) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
-                return balancerEthConcentrators[_asset];
+                return balancerEthConcentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
-                return balancerUsdConcentrators[_asset];
+                return balancerUsdConcentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto1) {
-                return balancerCrypto1Concentrators[_asset];
+                return balancerCrypto1Concentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
-                return balancerCrypto2Concentrators[_asset];
+                return balancerCrypto2Concentrators[_primaryAsset];
             } else {
                 revert("Invalid Target Asset");
             }
@@ -319,34 +319,30 @@ contract YieldOptimizersRegistry {
 
     // ********************* Restricted Functions *********************
 
-    /// @dev Register a new Curve Compounder Vault
+    /// @dev Register a new AMM Compounder Vault
+    /// @param _ammType - The AMMType of the Compounder
     /// @param _compounder - The address of the Compounder
     /// @param _primaryAsset - The address of the Primary Asset
-    function registerCurveCompounder(address _compounder, address _primaryAsset) onlyOwner public {
-        if (curveCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
+    function registerAmmCompounder(AMMType _ammType, address _compounder, address _primaryAsset) onlyOwner external {
+        if (_ammType == AMMType.Curve) {
+            if (curveCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
 
-        curveCompounders[_primaryAsset] = _compounder;
-        curveCompoundersPrimaryAssets.push(_primaryAsset);
+            curveCompounders[_primaryAsset] = _compounder;
+            curveCompoundersPrimaryAssets.push(_primaryAsset);
+        } else {
+            if (balancerCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
 
-        emit RegisterCurveCompounder(_compounder, _primaryAsset);
-    }
-
-    /// @dev Register a new Balancer Compounder Vault
-    /// @param _compounder - The address of the Compounder
-    /// @param _primaryAsset - The address of the Primary Asset
-    function registerBalancerCompounder(address _compounder, address _primaryAsset) onlyOwner public {
-        if (balancerCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
-
-        balancerCompounders[_primaryAsset] = _compounder;
-        balancerCompoundersPrimaryAssets.push(_primaryAsset);
-
-        emit RegisterBalancerCompounder(_compounder, _primaryAsset);
+            balancerCompounders[_primaryAsset] = _compounder;
+            balancerCompoundersPrimaryAssets.push(_primaryAsset);
+        }
+        
+        emit RegisterAMMCompounder(_ammType, _compounder, _primaryAsset);
     }
 
     /// @dev Register a new Token Compounder Vault
     /// @param _compounder - The address of the Compounder
     /// @param _primaryAsset - The address of the Primary Asset
-    function registerTokenCompounder(address _compounder, address _primaryAsset) onlyOwner public {
+    function registerTokenCompounder(address _compounder, address _primaryAsset) onlyOwner external {
         if (tokenCompounders[_primaryAsset].compounder != address(0)) revert AlreadyRegistered();
 
         tokenCompounders[_primaryAsset] = _compounder;
@@ -355,14 +351,62 @@ contract YieldOptimizersRegistry {
         emit RegisterTokenCompounder(_compounder, _primaryAsset);
     }
 
+    function registerConcentrator(AMMType _ammType, address _concentrator, address _targetAsset, address _primaryAsset) onlyOwner external {
+        TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
+        
+        if (_ammType == AMMType.Curve) {
+            if (_targetAsset == _concentratorTargetAssets.fortETH) {
+                if (curveEthConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                curveEthConcentrators[_primaryAsset] = _concentrator;
+                curveEthConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
+                if (curveUsdConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                curveUsdConcentrators[_primaryAsset] = _concentrator;
+                curveUsdConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else if (_targetAsset == _concentratorTargetAssets.fortCrypto1) {
+                if (curveCrypto1Concentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                curveCrypto1Concentrators[_primaryAsset] = _concentrator;
+                curveCrypto1ConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
+                if (curveCrypto2Concentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                curveCrypto2Concentrators[_primaryAsset] = _concentrator;
+                curveCrypto2ConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else {
+                revert InvalidTargetAsset();
+            }
+        } else if (_ammType == AMMType.Balancer) {
+            if (_targetAsset == _concentratorTargetAssets.fortETH) {
+                if (balancerEthConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                balancerEthConcentrators[_primaryAsset] = _concentrator;
+                balancerEthConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
+                if (balancerUsdConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                balancerUsdConcentrators[_primaryAsset] = _concentrator;
+                balancerUsdConcentrators
+            } else if (_targetAsset == _concentratorTargetAssets.fortCrypto1) {
+                if (balancerCrypto1Concentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                balancerCrypto1Concentrators[_primaryAsset] = _concentrator;
+                balancerCrypto1ConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else if (_targetAsset == _concentratorTargetAssets.fortCrypto2) {
+                if (balancerCrypto2Concentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
+                balancerCrypto2Concentrators[_primaryAsset] = _concentrator;
+                balancerCrypto2ConcentratorsPrimaryAssets.push(_primaryAsset);
+            } else {
+                revert InvalidTargetAsset();
+            }
+        } else {
+            revert InvalidAMMType();
+        }
+    }
+
     /// @dev Update the addresses of the Concentrator's Target Asset Vaults
     /// @param _fortETH - The address of the Fortress Auto-Manager Vault for ETH
     /// @param _fortUSD - The address of the Fortress Auto-Manager Vault for USD
     /// @param _fortCrypto1 - The address of the Fortress Auto-Manager Vault for Market exposure
     /// @param _fortCrypto2 - The address of the Fortress Auto-Manager Vault for Market exposure
-    function updateConcentratorsTargetAssets(address _fortETH, address _fortUSD, address _fortCrypto1, address _fortCrypto2) onlyOwner public {
+    function updateConcentratorsTargetAssets(address _fortETH, address _fortUSD, address _fortCrypto1, address _fortCrypto2) onlyOwner external {
         TargetAsset storage _concentratorTargetAssets = concentratorTargetAssets;
-        
+
         _concentratorTargetAssets.fortETH = _fortETH;
         _concentratorTargetAssets.fortUSD = _fortUSD;
         _concentratorTargetAssets.fortCrypto1 = _fortCrypto1;
@@ -371,114 +415,10 @@ contract YieldOptimizersRegistry {
         emit UpdateConcentratorsTargetAssets(_fortETH, _fortUSD, _fortCrypto1, _fortCrypto2);
     }
 
-    // struct TargetAsset {
-    //     address fortETH;
-    //     address fortUSD;
-    //     address fortCrypto1; 
-    //     address fortCrypto2;
-    // }
-    
-    // // Concentrators Target Assets
-
-    // /// @notice The instance of Concentrator Target Assets
-    // TargetAsset public concentratorTargetAssets;
-
-    /// @dev Register a BalancerGlpConcentrator.
-    /// @param _concentrator - The address of the Concentrator.
-    /// @param _asset - The address of the asset.
-    /// @param _symbol - The symbol of the receipt token.
-    /// @param _name - The name of the receipt token.
-    /// @param _underlyingAssets - The addresses of the underlying assets.
-    /// @param _compounder - The address of the vault we concentrate the rewards into.
-    function registerBalancerGlpConcentrator(address _concentrator, address _asset, string memory _symbol, string memory _name, address[] memory _underlyingAssets, address _compounder) public {
-        if(msg.sender != owners[0] && msg.sender != owners[1]) revert Unauthorized();
-        if(balancerGlpConcentrators[_asset].concentrator != address(0)) revert AlreadyRegistered();
-
-        balancerGlpConcentrators[_asset] = AMMConcentrator({
-            symbol: _symbol,
-            name: _name,
-            concentrator: _concentrator,
-            compounder: _compounder,
-            underlyingAssets: _underlyingAssets
-        });
-        
-        balancerGlpConcentratorsList.push(_asset);
-        emit RegisterBalancerGlpConcentrator(_compounder, _asset, _symbol, _name, _underlyingAssets, _compounder);
-    }
-
-    /// @dev Register a BalancerEthConcentrator.
-    /// @param _concentrator - The address of the Concentrator.
-    /// @param _asset - The address of the asset.
-    /// @param _symbol - The symbol of the receipt token.
-    /// @param _name - The name of the receipt token.
-    /// @param _underlyingAssets - The addresses of the underlying assets.
-    /// @param _compounder - The address of the vault we concentrate the rewards into.
-    function registerBalancerEthConcentrator(address _concentrator, address _asset, string memory _symbol, string memory _name, address[] memory _underlyingAssets, address _compounder) public {
-        if(msg.sender != owners[0] && msg.sender != owners[1]) revert Unauthorized();
-        if(balancerEthConcentrators[_asset].concentrator != address(0)) revert AlreadyRegistered();
-
-        balancerEthConcentrators[_asset] = AMMConcentrator({
-            symbol: _symbol,
-            name: _name,
-            concentrator: _concentrator,
-            compounder: _compounder,
-            underlyingAssets: _underlyingAssets
-        });
-        
-        balancerEthConcentratorsList.push(_asset);
-        emit RegisterBalancerEthConcentrator(_compounder, _asset, _symbol, _name, _underlyingAssets, _compounder);
-    }
-
-    /// @dev Register a CurveConcentrator.
-    /// @param _concentrator - The address of the Concentrator.
-    /// @param _asset - The address of the asset.
-    /// @param _symbol - The symbol of the receipt token.
-    /// @param _name - The name of the receipt token.
-    /// @param _underlyingAssets - The addresses of the underlying assets.
-    /// @param _compounder - The address of the vault we concentrate the rewards into.
-    function registerCurveGlpConcentrator(address _concentrator, address _asset, string memory _symbol, string memory _name, address[] memory _underlyingAssets, address _compounder) public {
-        if(msg.sender != owners[0] && msg.sender != owners[1]) revert Unauthorized();
-        if(curveGlpConcentrators[_asset].concentrator != address(0)) revert AlreadyRegistered();
-
-        curveGlpConcentrators[_asset] = AMMConcentrator({
-            symbol: _symbol,
-            name: _name,
-            concentrator: _concentrator,
-            compounder: _compounder,
-            underlyingAssets: _underlyingAssets
-        });
-        
-        curveGlpConcentratorsList.push(_asset);
-        emit RegisterCurveGlpConcentrator(_compounder, _asset, _symbol, _name, _underlyingAssets, _compounder);
-    }
-
-    /// @dev Register a CurveConcentrator.
-    /// @param _concentrator - The address of the Concentrator.
-    /// @param _asset - The address of the asset.
-    /// @param _symbol - The symbol of the receipt token.
-    /// @param _name - The name of the receipt token.
-    /// @param _underlyingAssets - The addresses of the underlying assets.
-    /// @param _compounder - The address of the vault we concentrate the rewards into.
-    function registerCurveEthConcentrator(address _concentrator, address _asset, string memory _symbol, string memory _name, address[] memory _underlyingAssets, address _compounder) public {
-        if(msg.sender != owners[0] && msg.sender != owners[1]) revert Unauthorized();
-        if(curveEthConcentrators[_asset].concentrator != address(0)) revert AlreadyRegistered();
-
-        curveEthConcentrators[_asset] = AMMConcentrator({
-            symbol: _symbol,
-            name: _name,
-            concentrator: _concentrator,
-            compounder: _compounder,
-            underlyingAssets: _underlyingAssets
-        });
-        
-        curveEthConcentratorsList.push(_asset);
-        emit RegisterCurveEthConcentrator(_compounder, _asset, _symbol, _name, _underlyingAssets, _compounder);
-    }
-
     /// @dev Update the list of owners.
     /// @param _index - The slot on the list.
     /// @param _owner - The address of the new owner.
-    function updateOwner(uint256 _index, address _owner) public {
+    function updateOwner(uint256 _index, address _owner) onlyOwner external {
         if(msg.sender != owners[0] && msg.sender != owners[1]) revert Unauthorized();
 
         owners[_index] = _owner;
