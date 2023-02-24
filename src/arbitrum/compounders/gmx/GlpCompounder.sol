@@ -81,7 +81,8 @@ contract GlpCompounder is TokenCompounderBase {
     function depositUnderlying(address _underlyingAsset, uint256 _underlyingAmount, address _receiver, uint256 _minAmount) public payable nonReentrant returns (uint256 _shares) {
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
 
-        if (_underlyingAsset == ETH) {
+        if (msg.value > 0) {
+            if (_underlyingAsset != ETH) revert InvalidAsset();
             if (msg.value != _underlyingAmount) revert InvalidAmount();
 
             _underlyingAsset = WETH;
