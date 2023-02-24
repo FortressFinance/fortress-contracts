@@ -260,7 +260,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The receiver of minted shares.
     /// @param _minAmount - The minimum amount of asset to get for unwrapped asset.
     /// @return _shares - The amount of shares minted.
-    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual nonReentrant returns (uint256 _shares) {}
+    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual payable nonReentrant returns (uint256 _shares) {}
 
     /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value.
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver.

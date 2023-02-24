@@ -24,6 +24,7 @@ pragma solidity 0.8.17;
 
 import "src/shared/compounders/TokenCompounderBase.sol";
 
+import "src/shared/interfaces/IWETH.sol";
 import "src/shared/fortress-interfaces/IFortressSwap.sol";
 import "src/arbitrum/interfaces/IGlpRewardHandler.sol";
 import "src/arbitrum/interfaces/IGlpMinter.sol";
@@ -42,10 +43,12 @@ contract GlpCompounder is TokenCompounderBase {
     /// @notice The address of the contract that needs an approval before minting GLP.
     address public glpManager;
 
-    /// @notice The address of sGLP token.
+    /// @notice The address of sGLP token
     address public constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
-    /// @notice The address of WETH token.
+    /// @notice The address of WETH token
     address public constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    /// @notice The address representing ETH
+    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     
     /********************************** Constructor **********************************/
     
@@ -75,15 +78,22 @@ contract GlpCompounder is TokenCompounderBase {
     /********************************** Mutated Functions **********************************/
 
     /// @notice Extending the base function to enable deposit of any one of GLP's underlying assets.
-    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAssets, address _receiver, uint256 _minAmount) public nonReentrant returns (uint256 _shares) {
-        if (!(_underlyingAssets > 0)) revert ZeroAmount();
+    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAmount, address _receiver, uint256 _minAmount) public payable nonReentrant returns (uint256 _shares) {
+        if (!(_underlyingAmount > 0)) revert ZeroAmount();
 
-        IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAssets);
+        if (_underlyingAsset == ETH) {
+            if (msg.value != _underlyingAmount) revert InvalidAmount();
+
+            _underlyingAsset = WETH;
+            IWETH(WETH).deposit{value: _underlyingAmount}();
+        }
+
+        IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
         
         address _sGLP = sGLP;
         uint256 _before = IERC20(_sGLP).balanceOf(address(this));
-        _approve(_underlyingAsset, glpManager, _underlyingAssets);
-        IGlpMinter(glpHandler).mintAndStakeGlp(_underlyingAsset, _underlyingAssets, 0, 0);
+        _approve(_underlyingAsset, glpManager, _underlyingAmount);
+        IGlpMinter(glpHandler).mintAndStakeGlp(_underlyingAsset, _underlyingAmount, 0, 0);
         uint256 _assets = IERC20(_sGLP).balanceOf(address(this)) - _before;
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
 
@@ -113,8 +123,8 @@ contract GlpCompounder is TokenCompounderBase {
     }
 
     /// @notice See {TokenCompounderBase - depositUnderlying}
-    function depositUnderlying(uint256 _underlyingAssets, address _receiver, uint256 _minAmount) external override nonReentrant returns (uint256 _shares) {
-        return depositUnderlying(WETH, _underlyingAssets, _receiver, _minAmount);
+    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external override payable nonReentrant returns (uint256 _shares) {
+        return depositUnderlying(WETH, _underlyingAmount, _receiver, _minAmount);
     }
 
     /// @notice See {TokenCompounderBase - redeemUnderlying}
