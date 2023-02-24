@@ -1,5 +1,5 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity 0.8.17;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.17;
 
 // // ███████╗░█████╗░██████╗░████████╗██████╗░███████╗░██████╗░██████╗
 // // ██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔════╝██╔════╝██╔════╝
@@ -23,7 +23,7 @@
 
 // import "src/shared/concentrators/AMMConcentratorBase.sol";
 // import "src/mainnet/utils/BalancerOperations.sol";
-
+contract BalancerEthConcentrator {}
 // contract BalancerEthConcentrator is BalancerOperations, AMMConcentratorBase {
 
 //     using SafeERC20 for IERC20;

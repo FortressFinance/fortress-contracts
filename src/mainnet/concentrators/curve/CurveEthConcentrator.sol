@@ -1,5 +1,5 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity 0.8.17;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.17;
 
 // // ███████╗░█████╗░██████╗░████████╗██████╗░███████╗░██████╗░██████╗
 // // ██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔════╝██╔════╝██╔════╝
@@ -23,7 +23,7 @@
 
 // import "src/shared/concentrators/AMMConcentratorBase.sol";
 // import "src/mainnet/utils/CurveOperations.sol";
-
+contract CurveEthConcentrator {}
 // contract CurveEthConcentrator is CurveOperations, AMMConcentratorBase {
 
 //     using SafeERC20 for IERC20;
