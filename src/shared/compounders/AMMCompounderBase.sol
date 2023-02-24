@@ -277,7 +277,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Burns shares from owner and sends exact amount of assets to _receiver. If the owner is whitelisted, no withdrawal fee is applied
+    /// @dev Burns shares from owner and sends exact amount of assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _assets - The amount of assets to receive
     /// @param _receiver - The address of the receiver of assets
     /// @param _owner - The owner of shares
@@ -295,7 +295,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from owner and sends assets to _receiver. If the owner is whitelisted, no withdrawal fee is applied
+    /// @dev Burns exact amount of shares from owner and sends assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _shares - The amount of shares to burn.
     /// @param _receiver - The address of the receiver of assets.
     /// @param _owner - The owner of shares.
@@ -341,7 +341,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from the _owner and sends underlying assets to _receiver.
+    /// @dev Burns exact amount of shares from the _owner and sends underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _shares - The amount of shares to burn.
     /// @param _underlyingAsset - The address of underlying asset to redeem shares for.
     /// @param _receiver - The address of the receiver of underlying assets.

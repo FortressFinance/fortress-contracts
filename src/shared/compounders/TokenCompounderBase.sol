@@ -72,6 +72,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @notice The underlying assets
     address[] public underlyingAssets;
 
+    /// @notice The mapping of whitelisted feeless redeemers
+    mapping(address => bool) public feelessRedeemerWhitelist;
+
     /********************************** Constructor **********************************/
 
     constructor(
@@ -223,7 +226,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Burns shares from owner and sends exact assets of underlying assets to _receiver.
+    /// @dev Burns shares from owner and sends exact assets of underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _assets - The amount of underlying assets to receive.
     /// @param _receiver - The address of the receiver of underlying assets.
     /// @param _owner - The owner of shares.
@@ -231,7 +234,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     function withdraw(uint256 _assets, address _receiver, address _owner) external override nonReentrant returns (uint256 _shares) { 
         if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
 
-        _shares = previewWithdraw(_assets);
+        // If the _owner is whitelisted, we can skip the preview and just convert the assets to shares
+        _shares = feelessRedeemerWhitelist[_owner] ? convertToShares(_assets) : previewWithdraw(_assets);
+
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
         _withdrawStrategy(_assets, _receiver, true);
@@ -239,7 +244,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact shares from owner and sends assets of underlying tokens to _receiver.
+    /// @dev Burns exact shares from owner and sends assets of underlying tokens to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _shares - The shares to burn.
     /// @param _receiver - The address of the receiver of underlying assets.
     /// @param _owner - The owner of shares to burn.
@@ -247,7 +252,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     function redeem(uint256 _shares, address _receiver, address _owner) external override nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
-        _assets = previewRedeem(_shares);
+        // If the _owner is whitelisted, we can skip the preview and just convert the shares to assets
+        _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
+
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
         _withdrawStrategy(_assets, _receiver, true);
@@ -262,7 +269,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @return _shares - The amount of shares minted.
     function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual nonReentrant returns (uint256 _shares) {}
 
-    /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value.
+    /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value. If the _owner is whitelisted, no withdrawal fee is applied
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver.
     /// @param _shares - The shares to burn.
     /// @param _receiver - The address of the receiver of underlying assets.
@@ -284,6 +291,15 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /********************************** Restricted Functions **********************************/
+
+    /// @dev Updates the feelessRedeemerWhitelist
+    /// @param _address - The address to update
+    /// @param _whitelist - The new whitelist status
+    function updateFeelessRedeemerWhitelist(address _address, bool _whitelist) external {
+        if (msg.sender != owner) revert Unauthorized();
+
+        feelessRedeemerWhitelist[_address] = _whitelist;
+    }
 
     /// @dev Updates the vault fees.
     /// @param _withdrawFeePercentage - The new withdrawal fee percentage.
