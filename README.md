@@ -55,7 +55,7 @@ slither .
 ```
 ## 📜 Contract Addresses
 
- - [Deployed Addresses](https://docs.fortress.finance/resources/smart-contracts).
+[Deployed Addresses](https://docs.fortress.finance/resources/smart-contracts).
 
 ## 📖 Documentation
 
