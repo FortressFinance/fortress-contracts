@@ -280,6 +280,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The address of account to receive harvest bounty.
     /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
     function harvest(address _receiver, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
