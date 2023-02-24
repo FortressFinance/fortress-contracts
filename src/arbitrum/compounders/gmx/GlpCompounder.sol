@@ -53,7 +53,7 @@ contract GlpCompounder is TokenCompounderBase {
     /********************************** Constructor **********************************/
     
     constructor(string memory _description, address _owner, address _platform, address _swap, address[] memory _underlyingAssets)
-        TokenCompounderBase(ERC20(sGLP), "Fortress GLP", "fortGLP", _description, _owner, _platform, _swap, _underlyingAssets) {
+        TokenCompounderBase(ERC20(sGLP), "Fortress Compounding GLP", "fcGLP", _description, _owner, _platform, _swap, _underlyingAssets) {
         
         IERC20(WETH).safeApprove(_swap, type(uint256).max);
 
