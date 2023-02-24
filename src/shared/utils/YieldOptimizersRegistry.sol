@@ -14,11 +14,11 @@ pragma solidity 0.8.17;
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
 
-//  _____         _                   _____     _   _ _____         _     _           
-// |   __|___ ___| |_ ___ ___ ___ ___|  _  |___| |_|_| __  |___ ___|_|___| |_ ___ _ _ 
-// |   __| . |  _|  _|  _| -_|_ -|_ -|     |  _| . | |    -| -_| . | |_ -|  _|  _| | |
-// |__|  |___|_| |_| |_| |___|___|___|__|__|_| |___|_|__|__|___|_  |_|___|_| |_| |_  |
-//                                                             |___|             |___|
+//  __ __ _     _   _ _____     _   _       _                 _____         _     _           
+// |  |  |_|___| |_| |     |___| |_|_|_____|_|___ ___ ___ ___| __  |___ ___|_|___| |_ ___ _ _ 
+// |_   _| | -_| | . |  |  | . |  _| |     | |- _| -_|  _|_ -|    -| -_| . | |_ -|  _|  _| | |
+//   |_| |_|___|_|___|_____|  _|_| |_|_|_|_|_|___|___|_| |___|__|__|___|_  |_|___|_| |_| |_  |
+//                         |_|                                         |___|             |___|
 
 // Github - https://github.com/FortressFinance
 
@@ -142,8 +142,8 @@ contract YieldOptimizersRegistry {
     // -----------------------------------------------------------
 
     /// @dev Get the list of addresses of the Primary Assets of all Compounder vaults for a specific AMMType
-    /// @return - The list of addresses of Primary Assets
-    function getCompoundersPrimaryAssets(AMMType _ammType) external view returns (address[] memory) {
+    /// @return _primaryAssets - The list of addresses of the Primary Assets
+    function getCompoundersPrimaryAssets(AMMType _ammType) external view returns (address[] memory _primaryAssets) {
         if (_ammType == AMMType.Curve) {
             return curveCompoundersPrimaryAssets;
         } else if (_ammType == AMMType.Balancer) {
@@ -152,8 +152,8 @@ contract YieldOptimizersRegistry {
     }
 
     /// @dev Get the address of a Compounder Vault for a specific AMMType and Primary Asset
-    /// @return - The address of the Compounder Vault
-    function getCompounderVault(AMMType _ammType, address _asset) public view returns (address) {
+    /// @return _compounderVault - The address of the Compounder Vault
+    function getCompounderVault(AMMType _ammType, address _asset) public view returns (address _compounderVault) {
         if (_ammType == AMMType.Curve) {
             return curveCompounders[_asset];
         } else if (_ammType == AMMType.Balancer) {
@@ -230,8 +230,8 @@ contract YieldOptimizersRegistry {
     // -------------------------------------------------------------
 
     /// @dev Get the addresses of Primary Assets of all AMM Concentrator vaults for a specific AMMType and Target Asset
-    /// @return - The list of addresses of Primary Assets
-    function getConcentratorPrimaryAssets(AMMType _ammType, address _targetAsset) external view returns (address[] memory) {
+    /// @return _primaryAssets - The list of addresses of Primary Assets
+    function getConcentratorPrimaryAssets(AMMType _ammType, address _targetAsset) external view returns (address[] memory _primaryAssets) {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
         if (_ammType == AMMType.Curve) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
@@ -261,8 +261,8 @@ contract YieldOptimizersRegistry {
     }
 
     /// @dev Get the address of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
-    /// @return - The address of the Concentrator Vault
-    function getConcentrator(AMMType _ammType, address _targetAsset, address _primaryAsset) public view returns (address) {
+    /// @return _concentrator - The address of the Concentrator Vault
+    function getConcentrator(AMMType _ammType, address _targetAsset, address _primaryAsset) public view returns (address _concentrator) {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
         if (_ammType == AMMType.Curve) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {

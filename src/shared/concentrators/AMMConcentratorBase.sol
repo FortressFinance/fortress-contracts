@@ -35,6 +35,47 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
 
+    struct Fees {
+        /// @notice The percentage of fee to pay for platform on harvest
+        uint256 platformFeePercentage;
+        /// @notice The percentage of fee to pay for caller on harvest
+        uint256 harvestBountyPercentage;
+        /// @notice The percentage of fee to keep in vault on withdraw (distributed among vault participants)
+        uint256 withdrawFeePercentage;
+    }
+
+    struct Booster {
+        /// @notice The pool ID in LP Booster contract
+        uint256 boosterPoolId;
+        /// @notice The address of LP Booster contract
+        address booster;
+        /// @notice The address of LP staking rewards contract
+        address crvRewards;
+        /// @notice The reward assets
+        address[] rewardAssets;
+    }
+
+    struct Settings {
+        /// @notice The internal accounting of the deposit limit. Denominated in shares
+        uint256 depositCap;
+        /// @notice The address of the platform
+        address platform;
+        /// @notice The address of the FortressSwap contract
+        address swap;
+        /// @notice The address of the FortressSwap contract
+        address ammOperations;
+        /// @notice The address of the owner
+        address owner;
+        /// @notice The address of the vault we concentrate the rewards into
+        address compounder;
+        /// @notice Whether deposit for the pool is paused
+        bool pauseDeposit;
+        /// @notice Whether withdraw for the pool is paused
+        bool pauseWithdraw;
+        /// @notice Whether claim from vault is paused
+        bool pauseClaim;
+    }
+
     struct UserInfo {
         /// @notice The amount of current accrued rewards.
         uint256 rewards;
@@ -42,51 +83,28 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         uint256 rewardPerSharePaid;
     }
 
+    /// @notice The fees settings
+    Fees public fees;
+
+    /// @notice The LP booster settings
+    Booster public boosterData;
+
+    /// @notice The vault settings
+    Settings public settings;
+
     /// @notice Mapping from account address to user info.
     mapping(address => UserInfo) public userInfo;
 
     /// @notice The description of the vault - whether it's a Crypto/Stable + Curve/Balancer
-    string public immutable description;
+    string public description;
 
     /// @notice The accumulated reward per share, with 1e18 precision.
     uint256 public accRewardPerShare;
-    /// @notice The pool ID in the Booster contract.
-    uint256 public boosterPoolId;
-    /// @notice The percentage of fee to pay for the platform on harvest.
-    uint256 public platformFeePercentage;
-    /// @notice The percentage of fee to pay for the caller on harvest.
-    uint256 public harvestBountyPercentage;
-    /// @notice The percentage of fee to keep in the vault on withdraw.
-    uint256 public withdrawFeePercentage;
     /// @notice The last block number that the harvest function was executed.
     uint256 public lastHarvestBlock;
     /// @notice The internal accounting of AUM.
     uint256 public totalAUM;
-    /// @notice The address of the Booster contract.
-    address public booster;
-    /// @notice The address of the staking rewards contract.
-    address public crvRewards;
-    /// @notice Whether deposit from vault is paused.
-    bool public pauseDeposit;
-    /// @notice Whether withdraw from vault is paused.
-    bool public pauseWithdraw;
-    /// @notice Whether claim from vault is paused.
-    bool public pauseClaim;
-    /// @notice The list of addresses of booster reward assets.
-    address[] public rewardAssets;
-    /// @notice The list the pool's underlying assets.
-    address[] public underlyingAssets;
-    /// @notice The internal accounting of the deposit limit. Denominated in shares.
-    uint256 public depositCap;
 
-    /// @notice The address of the owner.
-    address public owner;
-    /// @notice The address of the recipient of platform fee.
-    address public platform;
-    /// @notice The address of FortressSwap contract, will be used to swap tokens.
-    address public swap;
-    /// @notice The address of the vault we concentrate the rewards into.
-    address public compounder;
     /// @notice The precision.
     uint256 internal constant PRECISION = 1e18;
     /// @notice The fee denominator.
@@ -99,51 +117,120 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
     /// @notice The address representing ETH.
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+    /// @notice The list the pool's underlying assets.
+    address[] public underlyingAssets;
     
     /********************************** Constructor **********************************/
+
+    // constructor(
+    //         ERC20 _asset,
+    //         string memory _name,
+    //         string memory _symbol,
+    //         string memory _description,
+    //         address _owner,
+    //         address _platform,
+    //         address _swap,
+    //         address _ammOperations,
+    //         address _booster,
+    //         address _rewardsDistributor,
+    //         uint256 _boosterPoolId,
+    //         address[] memory _rewardAssets,
+    //         address[] memory _underlyingAssets,
+    //         address _compounder
+    //     )
+    //     ERC4626(_asset, _name, _symbol) {
+
+    //         {
+    //             Fees storage _fees = fees;
+    //             _fees.platformFeePercentage = 50000000; // 5%
+    //             _fees.harvestBountyPercentage = 25000000; // 2.5%
+    //             _fees.withdrawFeePercentage = 2000000; // 0.2%
+
+    //             Booster storage _boosterData = boosterData;
+    //             _boosterData.boosterPoolId = _boosterPoolId;
+    //             _boosterData.booster = _booster;
+    //             _boosterData.crvRewards = _rewardsDistributor;
+    //             _boosterData.rewardAssets = _rewardAssets;
+
+    //             Settings storage _settings = settings;
+    //             _settings.depositCap = 0;
+    //             _settings.platform = _platform;
+    //             _settings.swap = _swap;
+    //             _settings.ammOperations = _ammOperations;
+    //             _settings.owner = _owner;
+    //             _settings.compounder = _compounder;
+    //             _settings.pauseDeposit = false;
+    //             _settings.pauseWithdraw = false;
+    //             _settings.pauseClaim = false;
+    //         }
+
+    //         description = _description;
+    //         accRewardPerShare = 0;
+    //         underlyingAssets = _underlyingAssets;   
+
+    //         for (uint256 i = 0; i < _rewardAssets.length; i++) {
+    //             IERC20(_rewardAssets[i]).safeApprove(_swap, type(uint256).max);
+    //         }
+
+    //         IERC20(address(_asset)).safeApprove(_booster, type(uint256).max);
+    // }
+
+    // ERC20 _asset,
+    // //         string memory _name,
+    // //         string memory _symbol,
+    // //         string memory _description,
+    // //         address _owner,
+    // //         address _platform,
+    // //         address _swap,
+    // //         address _ammOperations,
+    // //         address _booster,
+    // //         address _rewardsDistributor,
+    // //         uint256 _boosterPoolId,
+    // //         address[] memory _rewardAssets,
+    // //         address[] memory _underlyingAssets,
+    // //         address _compounder
+    // //     )
 
     constructor(
             ERC20 _asset,
             string memory _name,
             string memory _symbol,
-            string memory _description,
-            address _owner,
-            address _platform,
+            bytes memory _configData,
             address _swap,
             address _booster,
-            address _rewardsDistributor,
-            uint256 _boosterPoolId,
-            address[] memory _rewardAssets,
-            address[] memory _underlyingAssets,
-            address _compounder
+            address[] memory _rewardAssets
         )
         ERC4626(_asset, _name, _symbol) {
 
-        description = _description;
-        accRewardPerShare = 0;
-        boosterPoolId = _boosterPoolId;
-        platformFeePercentage = 50000000; // 5%,
-        harvestBountyPercentage = 25000000; // 2.5%,
-        withdrawFeePercentage = 2000000; // 0.2%,
-        booster = _booster;
-        crvRewards = _rewardsDistributor;
-        pauseDeposit = false;
-        pauseWithdraw = false;
-        pauseClaim = false;
-        rewardAssets = _rewardAssets;
-        underlyingAssets = _underlyingAssets;
+            {
+                Fees storage _fees = fees;
+                _fees.platformFeePercentage = 50000000; // 5%
+                _fees.harvestBountyPercentage = 25000000; // 2.5%
+                _fees.withdrawFeePercentage = 2000000; // 0.2%
 
-        for (uint256 i = 0; i < _rewardAssets.length; i++) {
-            IERC20(_rewardAssets[i]).safeApprove(_swap, type(uint256).max);
-        }
+                Booster storage _boosterData = boosterData;
+                _boosterData.booster = _booster;
+                _boosterData.rewardAssets = _rewardAssets;
 
-        IERC20(address(_asset)).safeApprove(_booster, type(uint256).max);
+                Settings storage _settings = settings;
+                _settings.depositCap = 0;
+                _settings.swap = _swap;
+                _settings.pauseDeposit = false;
+                _settings.pauseWithdraw = false;
+                _settings.pauseClaim = false;
 
-        owner = _owner;
-        platform = _platform;
-        swap = _swap;
-        compounder = _compounder;
-        depositCap = 0;
+                accRewardPerShare = 0;
+
+                (_boosterData.boosterPoolId, description, _settings.owner, _settings.platform, _settings.ammOperations, _settings.compounder, _boosterData.crvRewards, underlyingAssets)
+                = abi.decode(_configData, (uint256, string, address, address, address, address, address, address[]));
+            }
+
+            for (uint256 i = 0; i < _rewardAssets.length; i++) {
+                IERC20(_rewardAssets[i]).safeApprove(_swap, type(uint256).max);
+            }
+
+            IERC20(address(_asset)).safeApprove(_booster, type(uint256).max);
     }
 
     /********************************** View Functions **********************************/
@@ -178,7 +265,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @dev Indicates whether there are pending rewards to harvest.
     /// @return - True if there are pending rewards, false if otherwise.
     function isPendingRewards() external virtual view returns (bool) {
-        return IConvexBasicRewards(crvRewards).earned(address(this)) > 0;
+        return IConvexBasicRewards(boosterData.crvRewards).earned(address(this)) > 0;
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.
@@ -191,7 +278,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         uint256 _totalSupply = totalSupply;
 
         // Calculate a fee - zero if user is the last to withdraw
-        uint256 _fee = (_totalSupply == 0 || _totalSupply - _shares == 0) ? 0 : assets.mulDivDown(withdrawFeePercentage, FEE_DENOMINATOR);
+        uint256 _fee = (_totalSupply == 0 || _totalSupply - _shares == 0) ? 0 : assets.mulDivDown(fees.withdrawFeePercentage, FEE_DENOMINATOR);
 
         // Redeemable amount is the post-withdrawal-fee amount
         return assets - _fee;
@@ -207,7 +294,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         uint256 _totalSupply = totalSupply;
 
         // Factor in additional shares to fulfill withdrawal if user is not the last to withdraw
-        return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - withdrawFeePercentage);
+        return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - fees.withdrawFeePercentage);
     }
 
     /// @dev Returns the total amount of the assets that are managed by the vault.
@@ -218,13 +305,14 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
 
     /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
     function maxDeposit(address) public view override returns (uint256) {
-        uint256 _assetCap = convertToAssets(depositCap);
+        uint256 _assetCap = convertToAssets(settings.depositCap);
         return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
     }
 
     /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
     function maxMint(address) public view override returns (uint256) {
-        return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
+        uint256 _depositCap = settings.depositCap;
+        return _depositCap == 0 ? type(uint256).max : _depositCap - totalSupply;
     }
 
     /********************************** Mutated Functions **********************************/
@@ -365,7 +453,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The recipient of rewards.
     /// @return _rewards - The amount of compounder shares sent to the _receiver.
     function claim(address _receiver) public nonReentrant returns (uint256 _rewards) {
-        if (pauseClaim) revert ClaimPaused();
+        if (settings.pauseClaim) revert ClaimPaused();
 
         _updateRewards(msg.sender);
 
@@ -461,47 +549,54 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _platformFeePercentage - The new platform fee percentage.
     /// @param _harvestBountyPercentage - The new harvest bounty percentage.
     function updateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage) external {
-        if (msg.sender != owner) revert Unauthorized();
+        if (msg.sender != settings.owner) revert Unauthorized();
         if (_withdrawFeePercentage > MAX_WITHDRAW_FEE) revert InvalidAmount();
         if (_platformFeePercentage > MAX_PLATFORM_FEE) revert InvalidAmount();
         if (_harvestBountyPercentage > MAX_HARVEST_BOUNTY) revert InvalidAmount();
 
-        withdrawFeePercentage = _withdrawFeePercentage;
-        platformFeePercentage = _platformFeePercentage;
-        harvestBountyPercentage = _harvestBountyPercentage;
+        Fees storage _fees = fees;
+        _fees.withdrawFeePercentage = _withdrawFeePercentage;
+        _fees.platformFeePercentage = _platformFeePercentage;
+        _fees.harvestBountyPercentage = _harvestBountyPercentage;
 
         emit UpdateFees(_withdrawFeePercentage, _platformFeePercentage, _harvestBountyPercentage);
     }
 
-    /// @dev updates the vault external utils.
-    /// @param _rewardAssets - The new address list of reward assets.
-    /// @param _booster - The new booster address.
-    /// @param _crvRewards - The new crvRewards address.
-    function updateExternalUtils(address[] memory _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId) external {
-        if (msg.sender != owner) revert Unauthorized();
+    /// @dev updates the vault external utils
+    /// @param _rewardAssets - The new address list of reward assets
+    /// @param _booster - The new booster address
+    /// @param _crvRewards - The new crvRewards address
+    function updateBoosterData(address[] memory _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId) external {
+        if (msg.sender != settings.owner) revert Unauthorized();
 
-        rewardAssets = _rewardAssets;
-        booster = _booster;
-        crvRewards = _crvRewards;
-        boosterPoolId = _boosterPoolId;
+        Booster storage _boosterData = boosterData;
+        _boosterData.rewardAssets = _rewardAssets;
+        _boosterData.booster = _booster;
+        _boosterData.crvRewards = _crvRewards;
+        _boosterData.boosterPoolId = _boosterPoolId;
 
-        emit UpdateExternalUtils(_rewardAssets, _booster, _crvRewards);
+        emit UpdateBoosterData(_rewardAssets, _booster, _crvRewards, _boosterPoolId);
     }
 
-    /// @dev updates the vault internal utils.
-    /// @param _platform - The new platform address.
-    /// @param _swap - The new swap address.
-    /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _compounder, address _platform, address _swap, address _owner, uint256 _depositCap) external {
-        if (msg.sender != owner) revert Unauthorized();
+    /// @dev updates the vault internal utils
+    /// @param _compounder - The new compounder address
+    /// @param _platform - The new platform address
+    /// @param _swap - The new swap address
+    /// @param _ammOperations - The new ammOperations address
+    /// @param _owner - The address of the new owner
+    function updateSettings(address _compounder, address _platform, address _swap, address _ammOperations, address _owner, uint256 _depositCap) external {
+        Settings storage _settings = settings;
 
-        compounder = _compounder;
-        platform = _platform;
-        swap = _swap;
-        owner = _owner;
-        depositCap = _depositCap;
+        if (msg.sender != _settings.owner) revert Unauthorized();
 
-        emit UpdateInternalUtils(_compounder, _platform, _swap, _owner, _depositCap);
+        _settings.compounder = _compounder;
+        _settings.platform = _platform;
+        _settings.swap = _swap;
+        _settings.ammOperations = _ammOperations;
+        _settings.owner = _owner;
+        _settings.depositCap = _depositCap;
+
+        emit UpdateSettings(_compounder, _platform, _swap, _owner, _depositCap);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -509,11 +604,13 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _pauseWithdraw - The new withdraw status.
     /// @param _pauseWithdraw - The new claim status.
     function pauseInteractions(bool _pauseDeposit, bool _pauseWithdraw, bool _pauseClaim) external {
-        if (msg.sender != owner) revert Unauthorized();
+        Settings storage _settings = settings;
 
-        pauseDeposit = _pauseDeposit;
-        pauseWithdraw = _pauseWithdraw;
-        pauseClaim = _pauseClaim;
+        if (msg.sender != _settings.owner) revert Unauthorized();
+
+        _settings.pauseDeposit = _pauseDeposit;
+        _settings.pauseWithdraw = _pauseWithdraw;
+        _settings.pauseClaim = _pauseClaim;
 
         emit PauseInteractions(_pauseDeposit, _pauseWithdraw, _pauseClaim);
     }
@@ -529,7 +626,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     }
 
     function _deposit(address _caller, address _receiver, uint256 _assets, uint256 _shares) internal override {
-        if (pauseDeposit) revert DepositPaused();
+        if (settings.pauseDeposit) revert DepositPaused();
         if (_receiver == address(0)) revert ZeroAddress();
         if (!(_assets > 0)) revert ZeroAmount();
         if (!(_shares > 0)) revert ZeroAmount();
@@ -541,7 +638,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     }
 
     function _withdraw(address _caller, address _receiver, address _owner, uint256 _assets, uint256 _shares) internal override {
-        if (pauseWithdraw) revert WithdrawPaused();
+        if (settings.pauseWithdraw) revert WithdrawPaused();
         if (_receiver == address(0)) revert ZeroAddress();
         if (_owner == address(0)) revert ZeroAddress();
         if (!(_shares > 0)) revert ZeroAmount();
@@ -561,18 +658,19 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
 
     function _depositStrategy(uint256 _assets, bool _transfer) internal virtual {
         if (_transfer) IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
-        IConvexBooster(booster).deposit(boosterPoolId, _assets, true);
+        Booster memory _boosterData = boosterData;
+        IConvexBooster(_boosterData.booster).deposit(_boosterData.boosterPoolId, _assets, true);
     }
 
     function _withdrawStrategy(uint256 _assets, address _receiver, bool _transfer) internal virtual {
-        IConvexBasicRewards(crvRewards).withdrawAndUnwrap(_assets, false);
+        IConvexBasicRewards(boosterData.crvRewards).withdrawAndUnwrap(_assets, false);
         if (_transfer) IERC20(address(asset)).safeTransfer(_receiver, _assets);
     }
 
     function _claim(uint256 _rewards, address _receiver) internal {
         if (!(_rewards > 0)) revert ZeroAmount();
 
-        IERC20(compounder).safeTransfer(_receiver, _rewards);
+        IERC20(settings.compounder).safeTransfer(_receiver, _rewards);
         
         emit Claim(_receiver, _rewards);
     }
@@ -601,8 +699,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     event Harvest(address indexed _harvester, address indexed _receiver, uint256 _rewards, uint256 _platformFee);
     event Claim(address indexed _receiver, uint256 _rewards);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
-    event UpdateExternalUtils(address[] _rewardAssets, address _booster, address _crvRewards);
-    event UpdateInternalUtils(address compounder, address _platform, address _swap, address _owner, uint256 _depositCap);
+    event UpdateBoosterData(address[] _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId);
+    event UpdateSettings(address compounder, address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw, bool _pauseClaim);
     
     /********************************** Errors **********************************/

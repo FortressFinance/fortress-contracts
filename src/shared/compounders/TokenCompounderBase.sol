@@ -32,9 +32,6 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
-
-    /// @notice The description of the vault - whether it's a Crypto/Stable
-    string public immutable description;
     
     /// @notice Whether deposits are paused.
     bool public pauseDeposit = false;
@@ -52,6 +49,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 internal totalAUM;
     /// @notice The internal accounting of the deposit limit. Denominated in shares.
     uint256 public depositCap;
+
+    /// @notice The description of the vault - whether it's a Crypto/Stable
+    string public description;
 
     /// @notice The address of owner.
     address public owner;
@@ -302,19 +302,22 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         emit UpdateFees(_withdrawFeePercentage, _platformFeePercentage, _harvestBountyPercentage);
     }
 
-    /// @dev updates the vault internal utils.
-    /// @param _platform - The new platform address.
-    /// @param _swap - The new swap address.
-    /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap) external {
+    /// @dev updates the vault internal utils
+    /// @param _platform - The Fortress platform address
+    /// @param _swap - The Fortress swap address
+    /// @param _owner - The vault owner address
+    /// @param _depositCap - The deposit cap
+    /// @param _underlyingAssets - The underlying assets
+    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
         swap = _swap;
         owner = _owner;
         depositCap = _depositCap;
+        underlyingAssets = _underlyingAssets;
 
-        emit UpdateInternalUtils(_platform, _swap, _owner, _depositCap);
+        emit UpdateInternalUtils();
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -378,8 +381,8 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     event Withdraw(address indexed _caller, address indexed _receiver, address indexed _owner, uint256 _assets, uint256 _shares);
     event Harvest(address indexed _harvester, uint256 _amount);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
-    event UpdateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
+    event UpdateInternalUtils();
     
     /********************************** Errors **********************************/
 
