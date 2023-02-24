@@ -55,17 +55,16 @@ slither .
 ```
 ## 📜 Contract Addresses
 
- - For [Ethereum Mainnet](./docs/deployments/ethereum.md) - TODO.
- - For [Arbitrum One](./docs/deployments/rinkeby.md) - TODO.
+ - [Deployed Addresses](https://docs.fortress.finance/resources/smart-contracts).
 
 ## 📖 Documentation
 
-[Documentation](https://linktodocumentation) - TODO
+[Documentation](http://docs.fortress.finance/).
 
 
 ## 💗 Contributing
 
 Contributions are always welcome!
 
-Come say hey in our Discord server [TODO: discord].
+Come say hey in our [Discord server](https://discord.gg/HnD3JsDKGy).
 
