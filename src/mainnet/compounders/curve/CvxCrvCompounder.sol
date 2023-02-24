@@ -56,7 +56,9 @@ contract CvxCrvCompounder is TokenCompounderBase {
     
     /********************************** Constructor **********************************/
     
-    constructor(address _owner, address _platform, address _swap) TokenCompounderBase(ERC20(CVXCRV), "Fortress cvxCRV", "fort-cvxCRV", _owner, _platform, _swap) {
+    constructor(string memory _description, address _owner, address _platform, address _swap, address[] memory _underlyingAssets) 
+        TokenCompounderBase(ERC20(CVXCRV), "Fortress cvxCRV", "fort-cvxCRV", _description, _owner, _platform, _swap, _underlyingAssets) {
+        
         IERC20(CVXCRV).safeApprove(CVXCRV_STAKING, type(uint256).max);
         IERC20(THREE_CRV).safeApprove(THREE_CRV_POOL, type(uint256).max);
         IERC20(CVXCRV).safeApprove(_swap, type(uint256).max);
@@ -64,7 +66,7 @@ contract CvxCrvCompounder is TokenCompounderBase {
         IERC20(CVX).safeApprove(_swap, type(uint256).max);
         IERC20(USDT).safeApprove(_swap, type(uint256).max);
     }
-
+    
     /********************************** View Functions **********************************/
 
     /// @notice See {TokenCompounderBase - isPendingRewards}

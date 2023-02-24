@@ -60,7 +60,9 @@ contract AuraBalCompounder is BalancerOperations, TokenCompounderBase {
     
     /********************************** Constructor **********************************/
     
-    constructor(address _owner, address _platform, address _swap) TokenCompounderBase(ERC20(AURA_BAL), "Fortress AuraBAL", "fort-auraBAL", _owner, _platform, _swap) {
+    constructor(string memory _description, address _owner, address _platform, address _swap, address[] memory _underlyingAssets) 
+        TokenCompounderBase(ERC20(AURA_BAL), "Fortress AuraBAL", "fort-auraBAL", _description, _owner, _platform, _swap, _underlyingAssets) {
+        
         IERC20(AURA_BAL).safeApprove(auraBAL_STAKING, type(uint256).max);
         IERC20(AURA).safeApprove(BALANCER_VAULT, type(uint256).max);
         IERC20(BALANCER_WETHBAL).safeApprove(_swap, type(uint256).max);

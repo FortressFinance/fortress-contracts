@@ -40,6 +40,7 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
         ERC20 _asset,
         string memory _name,
         string memory _symbol,
+        string memory _description,
         address _owner,
         address _platform,
         address _swap,
@@ -52,6 +53,7 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
             _asset,
             _name,
             _symbol,
+            _description,
             _owner,
             _platform,
             _swap,
@@ -78,12 +80,14 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
     }
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal override returns (uint256 _rewards) {
-        
-        IConvexBasicRewards(crvRewards).getReward();
-        
+        Booster memory _boosterData = boosterData;
+
+        IConvexBasicRewards(_boosterData.crvRewards).getReward();
+
+        Settings memory _settings = settings;
         address _rewardAsset;
-        address _swap = swap;
-        address[] memory _rewardAssets = rewardAssets;
+        address _swap = _settings.swap;
+        address[] memory _rewardAssets = _boosterData.rewardAssets;
         for (uint256 i = 0; i < _rewardAssets.length; i++) {
             _rewardAsset = _rewardAssets[i];
             if (_rewardAsset != _underlyingAsset) {
@@ -107,14 +111,15 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
 
         if (_rewards > 0) {
             _rewards = _addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
-        
-            uint256 _platformFee = platformFeePercentage;
-            uint256 _harvestBounty = harvestBountyPercentage;
+
+            Fees memory _fees = fees;
+            uint256 _platformFee = _fees.platformFeePercentage;
+            uint256 _harvestBounty = _fees.harvestBountyPercentage;
             address _lpToken = address(asset);
             if (_platformFee > 0) {
                 _platformFee = (_platformFee * _rewards) / FEE_DENOMINATOR;
                 _rewards = _rewards - _platformFee;
-                IERC20(_lpToken).safeTransfer(platform, _platformFee);
+                IERC20(_lpToken).safeTransfer(_settings.platform, _platformFee);
             }
             if (_harvestBounty > 0) {
                 _harvestBounty = (_harvestBounty * _rewards) / FEE_DENOMINATOR;
@@ -123,7 +128,7 @@ contract CurveCompounder is CurveOperations, AMMCompounderBase {
                 IERC20(_lpToken).safeTransfer(_receiver, _harvestBounty);
             }
 
-            IConvexBooster(booster).deposit(boosterPoolId, _rewards, true);
+            IConvexBooster(_boosterData.booster).deposit(_boosterData.boosterPoolId, _rewards, true);
 
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 

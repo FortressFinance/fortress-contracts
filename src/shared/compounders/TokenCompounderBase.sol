@@ -50,12 +50,16 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @notice The internal accounting of the deposit limit. Denominated in shares.
     uint256 public depositCap;
 
+    /// @notice The description of the vault - whether it's a Crypto/Stable
+    string public description;
+
     /// @notice The address of owner.
     address public owner;
     /// @notice The address of recipient of platform fee.
     address public platform;
     /// @notice The address of swap contract, will be used to swap tokens.
     address public swap;
+    
     /// @notice The fee denominator.
     uint256 internal constant FEE_DENOMINATOR = 1e9;
     /// @notice The maximum withdrawal fee.
@@ -65,18 +69,24 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @notice The maximum harvest fee.
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
 
+    /// @notice The underlying assets
+    address[] public underlyingAssets;
+
     /********************************** Constructor **********************************/
 
     constructor(
             ERC20 _asset,
             string memory _name,
             string memory _symbol,
+            string memory _description,
             address _owner,
             address _platform,
-            address _swap
+            address _swap,
+            address[] memory _underlyingAssets
         )
         ERC4626(_asset, _name, _symbol) {
         
+        description = _description;
         platformFeePercentage = 50000000; // 5%,
         harvestBountyPercentage = 25000000; // 2.5%,
         withdrawFeePercentage = 2000000; // 0.2%,
@@ -84,9 +94,35 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         platform = _platform;
         swap = _swap;
         depositCap = 0;
+        underlyingAssets = _underlyingAssets;
     }
 
     /********************************** View Functions **********************************/
+
+    /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset)
+    /// @return - The underlying assets
+    // TODO
+    function getUnderlyingAssets() external view returns (address[] memory) {
+        return underlyingAssets;
+    }
+
+    /// @dev Get the name of the vault
+    /// @return - The name of the vault
+    function getName() external view returns (string memory) {
+        return name;
+    }
+
+    /// @dev Get the symbol of the vault
+    /// @return - The symbol of the vault
+    function getSymbol() external view returns (string memory) {
+        return symbol;
+    }
+
+    /// @dev Get the description of the vault
+    /// @return - The description of the vault
+    function getDescription() external view returns (string memory) {
+        return description;
+    }
 
     /// @dev Indicates whether there are pending rewards to harvest.
     /// @return - True if there's pending rewards, false if otherwise.
@@ -136,6 +172,20 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
     function maxMint(address) public view override returns (uint256) {
         return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
+    }
+
+    /// @dev Checks if a specific asset is an underlying asset
+    /// @param _asset - The address of the asset to check
+    /// @return - Whether the assets is an underlying asset
+    function _isUnderlyingAsset(address _asset) internal view returns (bool) {
+        address[] memory _underlyingAssets = underlyingAssets;
+
+        for (uint256 i = 0; i < _underlyingAssets.length; i++) {
+            if (_underlyingAssets[i] == _asset) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /********************************** Mutated Functions **********************************/
@@ -252,19 +302,22 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         emit UpdateFees(_withdrawFeePercentage, _platformFeePercentage, _harvestBountyPercentage);
     }
 
-    /// @dev updates the vault internal utils.
-    /// @param _platform - The new platform address.
-    /// @param _swap - The new swap address.
-    /// @param _owner - The address of the new owner.
-    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap) external {
+    /// @dev updates the vault internal utils
+    /// @param _platform - The Fortress platform address
+    /// @param _swap - The Fortress swap address
+    /// @param _owner - The vault owner address
+    /// @param _depositCap - The deposit cap
+    /// @param _underlyingAssets - The underlying assets
+    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
         swap = _swap;
         owner = _owner;
         depositCap = _depositCap;
+        underlyingAssets = _underlyingAssets;
 
-        emit UpdateInternalUtils(_platform, _swap, _owner, _depositCap);
+        emit UpdateInternalUtils();
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -328,8 +381,8 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     event Withdraw(address indexed _caller, address indexed _receiver, address indexed _owner, uint256 _assets, uint256 _shares);
     event Harvest(address indexed _harvester, uint256 _amount);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
-    event UpdateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
+    event UpdateInternalUtils();
     
     /********************************** Errors **********************************/
 

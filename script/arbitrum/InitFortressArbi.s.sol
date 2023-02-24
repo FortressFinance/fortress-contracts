@@ -36,10 +36,10 @@ contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders, InitCu
         console.log("GlpCompounder address: ", _GlpCompounder);
 
         // initialize Curve AMM Compounders Arbitrum
-        _initializeCurveCompounders(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform));
+        // _initializeCurveCompounders(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform));
 
         // initialize Curve GLP AMM Concentrators Arbitrum
-        _initializeCurveConcentrators(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform), address(_GlpCompounder));
+        // _initializeCurveConcentrators(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform), address(_GlpCompounder));
         
         string memory path = "script/arbitrum/utils/arbi-registry.txt";
         string memory data = string(abi.encodePacked(string(vm.toString(address(_fortressArbiRegistry)))));

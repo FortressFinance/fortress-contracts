@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "script/arbitrum/utils/concentrators/curve/InitTriCryptoGlp.sol";
-import "script/arbitrum/utils/concentrators/curve/InitFraxBPGlp.sol";
-
-contract InitCurveGlpConcentrators is InitTriCryptoGlp, InitFraxBPGlp {
+// import "script/arbitrum/utils/concentrators/curve/InitTriCryptoGlp.sol";
+// import "script/arbitrum/utils/concentrators/curve/InitFraxBPGlp.sol";
+contract InitCurveGlpConcentrators {}
+// contract InitCurveGlpConcentrators is InitTriCryptoGlp, InitFraxBPGlp {
     
-    function _initializeCurveConcentrators(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder) internal {
+//     function _initializeCurveConcentrators(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder) internal {
         
-        // ------------------------- TriCrypto -------------------------
+//         // ------------------------- TriCrypto -------------------------
         
-        _initializeTriCryptoGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
+//         _initializeTriCryptoGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
 
-        // ------------------------- FraxBP -------------------------
+//         // ------------------------- FraxBP -------------------------
 
-        _initializeFraxBPGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
-    }
-}
+//         _initializeFraxBPGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
+//     }
+// }
