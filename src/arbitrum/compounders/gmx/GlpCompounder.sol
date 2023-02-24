@@ -77,6 +77,7 @@ contract GlpCompounder is TokenCompounderBase {
     /// @notice Extending the base function to enable deposit of any one of GLP's underlying assets.
     function depositUnderlying(address _underlyingAsset, uint256 _underlyingAssets, address _receiver, uint256 _minAmount) public nonReentrant returns (uint256 _shares) {
         if (!(_underlyingAssets > 0)) revert ZeroAmount();
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 
         IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAssets);
         
