@@ -99,7 +99,10 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
     /// @notice The address representing ETH
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    
+
+    /// @notice The mapping of whitelisted feeless redeemers
+    mapping(address => bool) public feelessRedeemerWhitelist;
+
     /********************************** Constructor **********************************/
 
     constructor(
@@ -274,15 +277,16 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Burns shares from owner and sends exact amount of assets to _receiver.
-    /// @param _assets - The amount of assets to receive.
-    /// @param _receiver - The address of the receiver of assets.
-    /// @param _owner - The owner of shares.
-    /// @return _shares - The amount of shares burned.
+    /// @dev Burns shares from owner and sends exact amount of assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
+    /// @param _assets - The amount of assets to receive
+    /// @param _receiver - The address of the receiver of assets
+    /// @param _owner - The owner of shares
+    /// @return _shares - The amount of shares burned
     function withdraw(uint256 _assets, address _receiver, address _owner) external override nonReentrant returns (uint256 _shares) {
         if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
 
-        _shares = previewWithdraw(_assets);
+        // If the _owner is whitelisted, we can skip the preview and just convert the assets to shares
+        _shares = feelessRedeemerWhitelist[_owner] ? convertToShares(_assets) : previewWithdraw(_assets);
         
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
@@ -291,7 +295,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from owner and sends assets to _receiver.
+    /// @dev Burns exact amount of shares from owner and sends assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _shares - The amount of shares to burn.
     /// @param _receiver - The address of the receiver of assets.
     /// @param _owner - The owner of shares.
@@ -299,7 +303,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     function redeem(uint256 _shares, address _receiver, address _owner) external override nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
-        _assets = previewRedeem(_shares);
+        // If the _owner is whitelisted, we can skip the preview and just convert the shares to assets
+        _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
         
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
         
@@ -336,7 +341,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from the _owner and sends underlying assets to _receiver.
+    /// @dev Burns exact amount of shares from the _owner and sends underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _shares - The amount of shares to burn.
     /// @param _underlyingAsset - The address of underlying asset to redeem shares for.
     /// @param _receiver - The address of the receiver of underlying assets.
@@ -347,7 +352,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
-        uint256 _assets = previewRedeem(_shares);
+        uint256 _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
         _withdrawStrategy(_assets, _receiver, false);
@@ -381,6 +386,15 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /********************************** Restricted Functions **********************************/
+
+    /// @dev Updates the feelessRedeemerWhitelist
+    /// @param _address - The address to update
+    /// @param _whitelist - The new whitelist status
+    function updateFeelessRedeemerWhitelist(address _address, bool _whitelist) external {
+        if (msg.sender != settings.owner) revert Unauthorized();
+
+        feelessRedeemerWhitelist[_address] = _whitelist;
+    }
 
     /// @dev Updates the vault fees
     /// @param _withdrawFeePercentage - The new withdrawal fee percentage
@@ -526,4 +540,5 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     error InvalidAsset();
     error InsufficientAmountOut();
     error FailedToSendETH();
+    error NotWhitelisted();
 }

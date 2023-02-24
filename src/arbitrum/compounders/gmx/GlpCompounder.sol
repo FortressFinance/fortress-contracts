@@ -95,11 +95,13 @@ contract GlpCompounder is TokenCompounderBase {
         return _shares;
     }
 
-    /// @notice Extending the base function to enable withdrawal of any one of GLP's underlying assets.
+    /// @notice See {TokenCompounderBase - redeemUnderlying}
     function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAssets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
-        uint256 _assets = previewRedeem(_shares);
+        // If the _owner is whitelisted, we can skip the preview and just convert the shares to assets
+        uint256 _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
+
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
         uint256 _before = IERC20(_underlyingAsset).balanceOf(address(this));
