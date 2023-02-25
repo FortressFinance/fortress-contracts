@@ -104,7 +104,6 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset)
     /// @return - The underlying assets
-    // TODO
     function getUnderlyingAssets() external view returns (address[] memory) {
         return underlyingAssets;
     }
@@ -262,12 +261,12 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Mints Vault shares to receiver by depositing exact amount of unwrapped underlying assets.
-    /// @param _underlyingAmount - The amount of unwrapped underlying assets to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @param _minAmount - The minimum amount of asset to get for unwrapped asset.
-    /// @return _shares - The amount of shares minted.
-    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual payable nonReentrant returns (uint256 _shares) {}
+    /// @dev Mints Vault shares to receiver by depositing exact amount of unwrapped underlying assets
+    /// @param _underlyingAmount - The amount of unwrapped underlying assets to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @param _minAmount - The minimum amount of asset to get for unwrapped asset
+    /// @return _shares - The amount of shares minted
+    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual nonReentrant returns (uint256 _shares) {}
 
     /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value. If the _owner is whitelisted, no withdrawal fee is applied
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver.
@@ -281,6 +280,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _receiver - The address of account to receive harvest bounty.
     /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
     function harvest(address _receiver, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
@@ -414,4 +414,5 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     error DepositPaused();
     error WithdrawPaused();
     error NoPendingRewards();
+    error NotUnderlyingAsset();
 }
