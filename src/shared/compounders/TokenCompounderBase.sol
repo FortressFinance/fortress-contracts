@@ -261,26 +261,25 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Mints Vault shares to receiver by depositing exact amount of unwrapped underlying assets
-    /// @param _underlyingAmount - The amount of unwrapped underlying assets to deposit
-    /// @param _receiver - The receiver of minted shares
-    /// @param _minAmount - The minimum amount of asset to get for unwrapped asset
-    /// @return _shares - The amount of shares minted
-    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual nonReentrant returns (uint256 _shares) {}
+    /// @dev Mints Vault shares to receiver by depositing exact amount of unwrapped underlying assets.
+    /// @param _underlyingAmount - The amount of unwrapped underlying assets to deposit.
+    /// @param _receiver - The receiver of minted shares.
+    /// @param _minAmount - The minimum amount of asset to get for unwrapped asset.
+    /// @return _shares - The amount of shares minted.
+    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual payable nonReentrant returns (uint256 _shares) {}
 
     /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value. If the _owner is whitelisted, no withdrawal fee is applied
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver.
     /// @param _shares - The shares to burn.
     /// @param _receiver - The address of the receiver of underlying assets.
     /// @param _owner - The owner of shares to burn.
-    /// @return _assets - The amount of assets returned to the user.
-    function redeemUnderlying(uint256 _shares, address _receiver, address _owner, uint256 _minAmount) external virtual nonReentrant returns (uint256 _assets) {}
+    /// @return _underlyingAssets - The amount of assets returned to the user.
+    function redeemUnderlying(uint256 _shares, address _receiver, address _owner, uint256 _minAmount) external virtual nonReentrant returns (uint256 _underlyingAssets) {}
 
     /// @dev Harvest the pending rewards and convert to underlying token, then stake.
     /// @param _receiver - The address of account to receive harvest bounty.
     /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
     function harvest(address _receiver, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
-        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
