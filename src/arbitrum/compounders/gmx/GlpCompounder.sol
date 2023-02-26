@@ -88,9 +88,9 @@ contract GlpCompounder is TokenCompounderBase {
 
             _underlyingAsset = WETH;
             IWETH(WETH).deposit{value: _underlyingAmount}();
+        } else {
+            IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
         }
-
-        IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
 
         address _sGLP = sGLP;
         uint256 _before = IERC20(_sGLP).balanceOf(address(this));

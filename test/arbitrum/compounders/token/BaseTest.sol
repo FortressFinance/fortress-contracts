@@ -8,7 +8,8 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "src/arbitrum/utils/FortressArbiSwap.sol";
-import "src/arbitrum/utils/FortressArbiRegistry.sol";
+// import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/shared/utils/YieldOptimizersRegistry.sol";
 
 import "src/shared/interfaces/IWETH.sol";
 
@@ -35,7 +36,7 @@ contract BaseTest is Test {
 
     uint256 arbiFork;
     
-    FortressArbiRegistry fortressRegistry;
+    YieldOptimizersRegistry fortressRegistry;
     FortressArbiSwap fortressSwap;
 
     function _setUp() internal {
@@ -63,7 +64,7 @@ contract BaseTest is Test {
 
         vm.startPrank(owner);
         fortressSwap = new FortressArbiSwap(address(owner));
-        fortressRegistry = new FortressArbiRegistry(address(owner));
+        fortressRegistry = new YieldOptimizersRegistry(address(owner));
         vm.stopPrank();
     }
 
@@ -76,10 +77,9 @@ contract BaseTest is Test {
         IWETH(BASE_WETH).withdraw(_amount);
     }
 
-    // function _getAssetFromETH(address _owner, address _asset, uint256 _amount) internal returns (uint256 _assetOut) {
-    //     vm.prank(_owner);
-    //     _assetOut = fortressSwap.swap{ value: _amount }(ETH, _asset, _amount);
-        
-    //     assertApproxEqAbs(IERC20(_asset).balanceOf(_owner), _assetOut, 5, "_getAssetFromETH: E1");
-    // }
+    function _dealERC20(address _token, address _recipient, uint256 _amount) internal {
+        deal({ token: address(_token), to: _recipient, give: _amount});
+
+        assertEq(IERC20(_token).balanceOf(_recipient), _amount, "ERROR: dealERC20");
+    }
 }
