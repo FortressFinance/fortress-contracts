@@ -22,25 +22,25 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/shared/compounders/TokenCompounderBase.sol";
+import {TokenCompounderBase, ERC20, IERC20, SafeERC20} from "src/shared/compounders/TokenCompounderBase.sol";
 
-import "src/shared/interfaces/IWETH.sol";
-import "src/shared/fortress-interfaces/IFortressSwap.sol";
-import "src/arbitrum/interfaces/IGlpRewardHandler.sol";
-import "src/arbitrum/interfaces/IGlpMinter.sol";
-import "src/arbitrum/interfaces/IGlpRewardTracker.sol";
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
+import {IFortressSwap} from "src/shared/fortress-interfaces/IFortressSwap.sol";
+import {IGlpRewardHandler} from "src/arbitrum/interfaces/IGlpRewardHandler.sol";
+import {IGlpMinter} from "src/arbitrum/interfaces/IGlpMinter.sol";
+import {IGlpRewardTracker} from "src/arbitrum/interfaces/IGlpRewardTracker.sol";
 
 contract GlpCompounder is TokenCompounderBase {
 
     using SafeERC20 for IERC20;
 
-    /// @notice The address of the contract that handles rewards.
+    /// @notice The address of the contract that handles rewards
     address public rewardHandler;
-    /// @notice The address of the contract that trackes ETH rewards.
+    /// @notice The address of the contract that trackes ETH rewards
     address public rewardTracker;
-    /// @notice The address of the contract that mints and stakes GLP.
+    /// @notice The address of the contract that mints and stakes GLP
     address public glpHandler;
-    /// @notice The address of the contract that needs an approval before minting GLP.
+    /// @notice The address of the contract that needs an approval before minting GLP
     address public glpManager;
 
     /// @notice The address of sGLP token
@@ -65,7 +65,7 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** View Functions **********************************/
 
-    /// @notice Return the amount of ETH pending rewards (without accounting for other rewards).
+    /// @notice Return the amount of ETH pending rewards (without accounting for other rewards)
     function pendingRewards() public view returns (uint256) {
         return IGlpRewardTracker(rewardTracker).claimable(address(this));
     }
@@ -77,7 +77,7 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @notice Extending the base function to enable deposit of any one of GLP's underlying assets.
+    /// @notice Extending the base function to enable deposit of any one of GLP's underlying assets
     function depositUnderlying(address _underlyingAsset, uint256 _underlyingAmount, address _receiver, uint256 _minAmount) public payable nonReentrant returns (uint256 _shares) {
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
@@ -88,9 +88,9 @@ contract GlpCompounder is TokenCompounderBase {
 
             _underlyingAsset = WETH;
             IWETH(WETH).deposit{value: _underlyingAmount}();
+        } else {
+            IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
         }
-
-        IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
 
         address _sGLP = sGLP;
         uint256 _before = IERC20(_sGLP).balanceOf(address(this));
@@ -136,10 +136,10 @@ contract GlpCompounder is TokenCompounderBase {
         return redeemUnderlying(WETH, _shares, _receiver, _owner, _minAmount);
     }
 
-    /// @dev Adds the ability to choose the underlying asset to deposit to the base function.
-    /// @dev Harvest the pending rewards and convert to underlying token, then stake.
-    /// @param _receiver - The address of account to receive harvest bounty.
-    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    /// @dev Adds the ability to choose the underlying asset to deposit to the base function
+    /// @dev Harvest the pending rewards and convert to underlying token, then stake
+    /// @param _receiver - The address of account to receive harvest bounty
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get
     function harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
@@ -177,6 +177,8 @@ contract GlpCompounder is TokenCompounderBase {
         
         address _weth = WETH;
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
+        
+        require(_balance > 0, "No rewards to harvest");
         if (_underlyingAsset != _weth) {
             _balance = IFortressSwap(swap).swap(_weth, _underlyingAsset, _balance);
         }

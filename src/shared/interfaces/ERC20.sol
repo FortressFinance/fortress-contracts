@@ -83,7 +83,7 @@ abstract contract ERC20 {
         }
 
         emit Transfer(msg.sender, to, amount);
-
+        
         return true;
     }
 

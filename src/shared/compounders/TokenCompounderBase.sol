@@ -22,51 +22,51 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-import "src/shared/interfaces/ERC4626.sol";
+import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
 
 abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
     
-    /// @notice Whether deposits are paused.
+    /// @notice Whether deposits are paused
     bool public pauseDeposit = false;
-    /// @notice Whether withdrawals are paused.
+    /// @notice Whether withdrawals are paused
     bool public pauseWithdraw = false;
-    /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to all holders.
+    /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to all holders. Used as a mechanism to protect against mercenary capital
     uint256 public withdrawFeePercentage;
-    /// @notice The performance fee percentage to take for platform on harvest.
+    /// @notice The performance fee percentage to take for platform on harvest
     uint256 public platformFeePercentage;
-    /// @notice The fee percentage to take for caller on harvest.
+    /// @notice The fee percentage to take for caller on harvest
     uint256 public harvestBountyPercentage;
-    /// @notice The last block number that the harvest function was executed.
+    /// @notice The last block number that the harvest function was executed
     uint256 public lastHarvestBlock;
-    /// @notice The internal accounting of AUM.
+    /// @notice The internal accounting of AUM
     uint256 internal totalAUM;
-    /// @notice The internal accounting of the deposit limit. Denominated in shares.
+    /// @notice The internal accounting of the deposit limit. Denominated in shares
     uint256 public depositCap;
 
     /// @notice The description of the vault - whether it's a Crypto/Stable
     string public description;
 
-    /// @notice The address of owner.
+    /// @notice The address of owner
     address public owner;
-    /// @notice The address of recipient of platform fee.
+    /// @notice The address of recipient of platform fee
     address public platform;
-    /// @notice The address of swap contract, will be used to swap tokens.
+    /// @notice The address of swap contract, will be used to swap tokens
     address public swap;
     
-    /// @notice The fee denominator.
+    /// @notice The fee denominator
     uint256 internal constant FEE_DENOMINATOR = 1e9;
-    /// @notice The maximum withdrawal fee.
+    /// @notice The maximum withdrawal fee
     uint256 internal constant MAX_WITHDRAW_FEE = 1e8; // 10%
-    /// @notice The maximum platform fee.
+    /// @notice The maximum platform fee
     uint256 internal constant MAX_PLATFORM_FEE = 2e8; // 20%
-    /// @notice The maximum harvest fee.
+    /// @notice The maximum harvest fee
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
 
     /// @notice The underlying assets
@@ -90,9 +90,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         ERC4626(_asset, _name, _symbol) {
         
         description = _description;
-        platformFeePercentage = 50000000; // 5%,
-        harvestBountyPercentage = 25000000; // 2.5%,
-        withdrawFeePercentage = 2000000; // 0.2%,
+        platformFeePercentage = 50000000; // 5%
+        harvestBountyPercentage = 25000000; // 2.5%
+        withdrawFeePercentage = 2000000; // 0.2%
         owner = _owner;
         platform = _platform;
         swap = _swap;
@@ -126,13 +126,13 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return description;
     }
 
-    /// @dev Indicates whether there are pending rewards to harvest.
-    /// @return - True if there's pending rewards, false if otherwise.
+    /// @dev Indicates whether there are pending rewards to harvest
+    /// @return - True if there's pending rewards, false if otherwise
     function isPendingRewards() public view virtual returns (bool) {}
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.
-    /// @param _shares - The amount of _shares to redeem.
-    /// @return - The amount of _assets in return, after subtracting a withdrawal fee.
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions
+    /// @param _shares - The amount of _shares to redeem
+    /// @return - The amount of _assets in return, after subtracting a withdrawal fee
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
         // Calculate assets based on a user's % ownership of vault shares
         uint256 assets = convertToAssets(_shares);
@@ -146,9 +146,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return assets - _fee;
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.
-    /// @param _assets - The amount of _assets to withdraw.
-    /// @return - The amount of shares to burn, after subtracting a fee.
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions
+    /// @param _assets - The amount of _assets to withdraw
+    /// @return - The amount of shares to burn, after subtracting a fee
     function previewWithdraw(uint256 _assets) public view override returns (uint256) {
         // Calculate shares based on the specified assets' proportion of the pool
         uint256 _shares = convertToShares(_assets);
@@ -159,19 +159,19 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - withdrawFeePercentage);
     }
 
-    /// @dev Returns the total amount of assets that are managed by the vault.
-    /// @return - The total amount of managed assets.
+    /// @dev Returns the total amount of assets that are managed by the vault
+    /// @return - The total amount of managed assets
     function totalAssets() public view virtual override returns (uint256) {
         return totalAUM;
     }
 
-    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call
     function maxDeposit(address) public view override returns (uint256) {
         uint256 _assetCap = convertToAssets(depositCap);
         return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
     }
 
-    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
+    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call
     function maxMint(address) public view override returns (uint256) {
         return depositCap == 0 ? type(uint256).max : depositCap - totalSupply;
     }
@@ -192,10 +192,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @dev Mints Vault shares to _receiver by depositing exact amount of underlying assets.
-    /// @param _assets - The amount of assets to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @return _shares - The amount of shares minted.
+    /// @dev Mints Vault shares to _receiver by depositing exact amount of underlying assets
+    /// @param _assets - The amount of assets to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @return _shares - The amount of shares minted
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
 
@@ -208,10 +208,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Mints exact Vault shares to _receiver by depositing amount of underlying assets.
-    /// @param _shares - The shares to receive.
-    /// @param _receiver - The address of the receiver of shares.
-    /// @return _assets - The amount of underlying assets received.
+    /// @dev Mints exact Vault shares to _receiver by depositing amount of underlying assets
+    /// @param _shares - The shares to receive
+    /// @param _receiver - The address of the receiver of shares
+    /// @return _assets - The amount of underlying assets received
     // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
@@ -226,10 +226,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Burns shares from owner and sends exact assets of underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _assets - The amount of underlying assets to receive.
-    /// @param _receiver - The address of the receiver of underlying assets.
-    /// @param _owner - The owner of shares.
-    /// @return _shares - The amount of shares burned.
+    /// @param _assets - The amount of underlying assets to receive
+    /// @param _receiver - The address of the receiver of underlying assets
+    /// @param _owner - The owner of shares
+    /// @return _shares - The amount of shares burned
     function withdraw(uint256 _assets, address _receiver, address _owner) external override nonReentrant returns (uint256 _shares) { 
         if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
 
@@ -244,10 +244,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Burns exact shares from owner and sends assets of underlying tokens to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _shares - The shares to burn.
-    /// @param _receiver - The address of the receiver of underlying assets.
-    /// @param _owner - The owner of shares to burn.
-    /// @return _assets - The amount of assets returned to the user.
+    /// @param _shares - The shares to burn
+    /// @param _receiver - The address of the receiver of underlying assets
+    /// @param _owner - The owner of shares to burn
+    /// @return _assets - The amount of assets returned to the user
     function redeem(uint256 _shares, address _receiver, address _owner) external override nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
@@ -261,24 +261,24 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Mints Vault shares to receiver by depositing exact amount of unwrapped underlying assets.
-    /// @param _underlyingAmount - The amount of unwrapped underlying assets to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @param _minAmount - The minimum amount of asset to get for unwrapped asset.
-    /// @return _shares - The amount of shares minted.
+    /// @dev Mints Vault shares to receiver by depositing exact amount of unwrapped underlying assets
+    /// @param _underlyingAmount - The amount of unwrapped underlying assets to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @param _minAmount - The minimum amount of asset to get for unwrapped asset
+    /// @return _shares - The amount of shares minted
     function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external virtual payable nonReentrant returns (uint256 _shares) {}
 
     /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver.
-    /// @param _shares - The shares to burn.
-    /// @param _receiver - The address of the receiver of underlying assets.
-    /// @param _owner - The owner of shares to burn.
-    /// @return _underlyingAssets - The amount of assets returned to the user.
+    /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver
+    /// @param _shares - The shares to burn
+    /// @param _receiver - The address of the receiver of underlying assets
+    /// @param _owner - The owner of shares to burn
+    /// @return _underlyingAssets - The amount of assets returned to the user
     function redeemUnderlying(uint256 _shares, address _receiver, address _owner, uint256 _minAmount) external virtual nonReentrant returns (uint256 _underlyingAssets) {}
 
-    /// @dev Harvest the pending rewards and convert to underlying token, then stake.
-    /// @param _receiver - The address of account to receive harvest bounty.
-    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    /// @dev Harvest the pending rewards and convert to underlying token, then stake
+    /// @param _receiver - The address of account to receive harvest bounty
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get
     function harvest(address _receiver, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
@@ -300,10 +300,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         feelessRedeemerWhitelist[_address] = _whitelist;
     }
 
-    /// @dev Updates the vault fees.
-    /// @param _withdrawFeePercentage - The new withdrawal fee percentage.
-    /// @param _platformFeePercentage - The new platform fee percentage.
-    /// @param _harvestBountyPercentage - The new harvest fee percentage.
+    /// @dev Updates the vault fees
+    /// @param _withdrawFeePercentage - The new withdrawal fee percentage
+    /// @param _platformFeePercentage - The new platform fee percentage
+    /// @param _harvestBountyPercentage - The new harvest fee percentage
     function updateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage) external {
         if (msg.sender != owner) revert Unauthorized();
         if (_withdrawFeePercentage > MAX_WITHDRAW_FEE) revert InvalidAmount();
@@ -335,9 +335,9 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         emit UpdateInternalUtils();
     }
 
-    /// @dev Pauses deposits/withdrawals for the vault.
-    /// @param _pauseDeposit - The new deposit status.
-    /// @param _pauseWithdraw - The new withdraw status.
+    /// @dev Pauses deposits/withdrawals for the vault
+    /// @param _pauseDeposit - The new deposit status
+    /// @param _pauseWithdraw - The new withdraw status
     function pauseInteractions(bool _pauseDeposit, bool _pauseWithdraw) external {
         if (msg.sender != owner) revert Unauthorized();
 
