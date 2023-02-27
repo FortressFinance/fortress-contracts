@@ -27,11 +27,6 @@ import {IFortressConcentrator} from "src/shared/fortress-interfaces/IFortressCon
 
 contract YieldOptimizersRegistry {
 
-    enum AMMType {
-        Curve,
-        Balancer
-    }
-
     // -------------- Compounders --------------
 
     // Curve Compounders
@@ -141,48 +136,48 @@ contract YieldOptimizersRegistry {
     // --------------------- AMM Compounders ---------------------
     // -----------------------------------------------------------
 
-    /// @dev Get the list of addresses of the Primary Assets of all Compounder vaults for a specific AMMType
+    /// @dev Get the list of addresses of the Primary Assets of all Compounder vaults for a specific AMM
     /// @return _primaryAssets - The list of addresses of the Primary Assets
-    function getCompoundersPrimaryAssets(AMMType _ammType) external view returns (address[] memory _primaryAssets) {
-        if (_ammType == AMMType.Curve) {
+    function getAmmCompoundersPrimaryAssets(bool _isCurve) external view returns (address[] memory _primaryAssets) {
+        if (_isCurve) {
             return curveCompoundersPrimaryAssets;
-        } else if (_ammType == AMMType.Balancer) {
+        } else {
             return balancerCompoundersPrimaryAssets;
         }
     }
 
-    /// @dev Get the address of a Compounder Vault for a specific AMMType and Primary Asset
+    /// @dev Get the address of a Compounder Vault for a specific AMM and Primary Asset
     /// @return _compounderVault - The address of the Compounder Vault
-    function getCompounderVault(AMMType _ammType, address _asset) public view returns (address _compounderVault) {
-        if (_ammType == AMMType.Curve) {
+    function getAmmCompounderVault(bool _isCurve, address _asset) public view returns (address _compounderVault) {
+        if (_isCurve) {
             return curveCompounders[_asset];
-        } else if (_ammType == AMMType.Balancer) {
+        } else {
             return balancerCompounders[_asset];
         }
     }
 
-    /// @dev Get the address of all underlying assets for a specific Compounder Vault given AMMType and Primary Asset
+    /// @dev Get the address of all underlying assets for a specific AMM and Primary Asset
     /// @return - The list of addresses of underlying assets
-    function getCompounderUnderlyingAssets(AMMType _ammType, address _asset) external view returns (address[] memory) {
-        return IFortressCompounder(getCompounderVault(_ammType, _asset)).getUnderlyingAssets();
+    function getAmmCompounderUnderlyingAssets(bool _isCurve, address _asset) external view returns (address[] memory) {
+        return IFortressCompounder(getAmmCompounderVault(_isCurve, _asset)).getUnderlyingAssets();
     }
 
-    /// @dev Get the name of a Compounder Vault for a specific AMMType and Primary Asset
+    /// @dev Get the name of a Compounder Vault for a specific AMM and Primary Asset
     /// @return - The name of the Compounder Vault
-    function getCompounderName(AMMType _ammType, address _asset) external view returns (string memory) {
-        return IFortressCompounder(getCompounderVault(_ammType, _asset)).getName();
+    function getAmmCompounderName(bool _isCurve, address _asset) external view returns (string memory) {
+        return IFortressCompounder(getAmmCompounderVault(_isCurve, _asset)).getName();
     }
 
-    /// @dev Get the symbol of a Compounder Vault for a specific AMMType and Primary Asset
+    /// @dev Get the symbol of a Compounder Vault for a specific AMM and Primary Asset
     /// @return - The symbol of the Compounder Vault
-    function getCompounderSymbol(AMMType _ammType, address _asset) external view returns (string memory) {
-        return IFortressCompounder(getCompounderVault(_ammType, _asset)).getSymbol();
+    function getAmmCompounderSymbol(bool _isCurve, address _asset) external view returns (string memory) {
+        return IFortressCompounder(getAmmCompounderVault(_isCurve, _asset)).getSymbol();
     }
 
-    /// @dev Get the description of a Compounder Vault for a specific AMMType and Primary Asset
+    /// @dev Get the description of a Compounder Vault for a specific AMM and Primary Asset
     /// @return - The description of the Compounder Vault
-    function getCompounderDescription(AMMType _ammType, address _asset) external view returns (string memory) {
-        return IFortressCompounder(getCompounderVault(_ammType, _asset)).getDescription();
+    function getAmmCompounderDescription(bool _isCurve, address _asset) external view returns (string memory) {
+        return IFortressCompounder(getAmmCompounderVault(_isCurve, _asset)).getDescription();
     }
 
     // -------------------------------------------------------------
@@ -229,11 +224,11 @@ contract YieldOptimizersRegistry {
     // --------------------- AMM Concentrators ---------------------
     // -------------------------------------------------------------
 
-    /// @dev Get the addresses of Primary Assets of all AMM Concentrator vaults for a specific AMMType and Target Asset
+    /// @dev Get the addresses of Primary Assets of all AMM Concentrator vaults for a specific AMM and Target Asset
     /// @return _primaryAssets - The list of addresses of Primary Assets
-    function getConcentratorPrimaryAssets(AMMType _ammType, address _targetAsset) external view returns (address[] memory _primaryAssets) {
+    function getConcentratorPrimaryAssets(bool _isCurve, address _targetAsset) external view returns (address[] memory _primaryAssets) {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
-        if (_ammType == AMMType.Curve) {
+        if (_isCurve) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
                 return curveEthConcentratorsPrimaryAssets;
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
@@ -245,7 +240,7 @@ contract YieldOptimizersRegistry {
             } else {
                 revert InvalidTargetAsset();
             }
-        } else if (_ammType == AMMType.Balancer) {
+        } else {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
                 return balancerEthConcentratorsPrimaryAssets;
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
@@ -260,11 +255,11 @@ contract YieldOptimizersRegistry {
         }
     }
 
-    /// @dev Get the address of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
+    /// @dev Get the address of a Concentrator Vault for a specific AMM, Target Asset, and Primary Asset
     /// @return _concentrator - The address of the Concentrator Vault
-    function getConcentrator(AMMType _ammType, address _targetAsset, address _primaryAsset) public view returns (address _concentrator) {
+    function getConcentrator(bool _isCurve, address _targetAsset, address _primaryAsset) public view returns (address _concentrator) {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
-        if (_ammType == AMMType.Curve) {
+        if (_isCurve) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
                 return curveEthConcentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
@@ -276,7 +271,7 @@ contract YieldOptimizersRegistry {
             } else {
                 revert InvalidTargetAsset();
             }
-        } else if (_ammType == AMMType.Balancer) {
+        } else {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
                 return balancerEthConcentrators[_primaryAsset];
             } else if (_targetAsset == _concentratorTargetAssets.fortUSD) {
@@ -291,34 +286,34 @@ contract YieldOptimizersRegistry {
         }
     }
 
-    /// @dev Get the symbol of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
+    /// @dev Get the symbol of a Concentrator Vault for a specific AMM, Target Asset, and Primary Asset
     /// @return - The symbol of the Concentrator Vault
-    function getConcentratorSymbol(AMMType _ammType, address _targetAsset, address _asset) external view returns (string memory) {
-        return IFortressConcentrator(getConcentrator(_ammType, _targetAsset, _asset)).getSymbol();
+    function getConcentratorSymbol(bool _isCurve, address _targetAsset, address _asset) external view returns (string memory) {
+        return IFortressConcentrator(getConcentrator(_isCurve, _targetAsset, _asset)).getSymbol();
     }
 
-    /// @dev Get the name of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
+    /// @dev Get the name of a Concentrator Vault for a specific AMM, Target Asset, and Primary Asset
     /// @return - The name of the Concentrator Vault
-    function getConcentratorName(AMMType _ammType, address _targetAsset, address _asset) external view returns (string memory) {
-        return IFortressConcentrator(getConcentrator(_ammType, _targetAsset, _asset)).getName();
+    function getConcentratorName(bool _isCurve, address _targetAsset, address _asset) external view returns (string memory) {
+        return IFortressConcentrator(getConcentrator(_isCurve, _targetAsset, _asset)).getName();
     }
 
-    /// @dev Get the description of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
+    /// @dev Get the description of a Concentrator Vault for a specific AMM, Target Asset, and Primary Asset
     /// @return - The description of the Concentrator Vault
-    function getConcentratorDescription(AMMType _ammType, address _targetAsset, address _asset) external view returns (string memory) {
-        return IFortressConcentrator(getConcentrator(_ammType, _targetAsset, _asset)).getDescription();
+    function getConcentratorDescription(bool _isCurve, address _targetAsset, address _asset) external view returns (string memory) {
+        return IFortressConcentrator(getConcentrator(_isCurve, _targetAsset, _asset)).getDescription();
     }
 
-    /// @dev Get the underlying assets of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
+    /// @dev Get the underlying assets of a Concentrator Vault for a specific AMM, Target Asset, and Primary Asset
     /// @return - The list of addresses of underlying assets
-    function getConcentratorUnderlyingAssets(AMMType _ammType, address _targetAsset, address _asset) external view returns (address[] memory) {
-        return IFortressConcentrator(getConcentrator(_ammType, _targetAsset, _asset)).getUnderlyingAssets();
+    function getConcentratorUnderlyingAssets(bool _isCurve, address _targetAsset, address _asset) external view returns (address[] memory) {
+        return IFortressConcentrator(getConcentrator(_isCurve, _targetAsset, _asset)).getUnderlyingAssets();
     }
 
-    /// @dev Get the target asset of a Concentrator Vault for a specific AMMType, Target Asset, and Primary Asset
+    /// @dev Get the target asset of a Concentrator Vault for a specific AMM, Target Asset, and Primary Asset
     /// @return - The address of the target asset, which is a Fortress Compounder Vault
-    function getConcentratorTargetVault(AMMType _ammType, address _targetAsset, address _asset) external view returns (address) {
-        return IFortressConcentrator(getConcentrator(_ammType, _targetAsset, _asset)).getCompounder();
+    function getConcentratorTargetVault(bool _isCurve, address _targetAsset, address _asset) external view returns (address) {
+        return IFortressConcentrator(getConcentrator(_isCurve, _targetAsset, _asset)).getCompounder();
     }
 
     // ********************* Modifiers *********************
@@ -331,11 +326,11 @@ contract YieldOptimizersRegistry {
     // ********************* Restricted Functions *********************
 
     /// @dev Register a new AMM Compounder Vault
-    /// @param _ammType - The AMMType of the Compounder
+    /// @param _isCurve - The AMM Type of the Compounder, True for Curve, False for Balancer
     /// @param _compounder - The address of the Compounder
     /// @param _primaryAsset - The address of the Primary Asset
-    function registerAmmCompounder(AMMType _ammType, address _compounder, address _primaryAsset) onlyOwner external {
-        if (_ammType == AMMType.Curve) {
+    function registerAmmCompounder(bool _isCurve, address _compounder, address _primaryAsset) onlyOwner external {
+        if (_isCurve) {
             if (curveCompounders[_primaryAsset] != address(0)) revert AlreadyRegistered();
 
             curveCompounders[_primaryAsset] = _compounder;
@@ -347,7 +342,7 @@ contract YieldOptimizersRegistry {
             balancerCompoundersPrimaryAssets.push(_primaryAsset);
         }
         
-        emit RegisterAMMCompounder(_ammType, _compounder, _primaryAsset);
+        emit RegisterAMMCompounder(_isCurve, _compounder, _primaryAsset);
     }
 
     /// @dev Register a new Token Compounder Vault
@@ -363,14 +358,14 @@ contract YieldOptimizersRegistry {
     }
 
     /// @dev Register a new Concentrator Vault
-    /// @param _ammType - The AMMType of the Concentrator
+    /// @param _isCurve - The AMM Type of the Compounder, True for Curve, False for Balancer
     /// @param _concentrator - The address of the Concentrator
     /// @param _targetAsset - The address of the Target Asset
     /// @param _primaryAsset - The address of the Primary Asset
-    function registerConcentrator(AMMType _ammType, address _concentrator, address _targetAsset, address _primaryAsset) onlyOwner external {
+    function registerAmmConcentrator(bool _isCurve, address _concentrator, address _targetAsset, address _primaryAsset) onlyOwner external {
         TargetAsset memory _concentratorTargetAssets = concentratorTargetAssets;
         
-        if (_ammType == AMMType.Curve) {
+        if (_isCurve) {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
                 if (curveEthConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
                 curveEthConcentrators[_primaryAsset] = _concentrator;
@@ -390,7 +385,7 @@ contract YieldOptimizersRegistry {
             } else {
                 revert InvalidTargetAsset();
             }
-        } else if (_ammType == AMMType.Balancer) {
+        } else {
             if (_targetAsset == _concentratorTargetAssets.fortETH) {
                 if (balancerEthConcentrators[_primaryAsset] != address(0)) revert AlreadyRegistered();
                 balancerEthConcentrators[_primaryAsset] = _concentrator;
@@ -410,9 +405,9 @@ contract YieldOptimizersRegistry {
             } else {
                 revert InvalidTargetAsset();
             }
-        } else {
-            revert InvalidAMMType();
         }
+
+        emit RegisterAMMConcentrator(_isCurve, _concentrator, _targetAsset, _primaryAsset);
     }
 
     /// @dev Update the addresses of the Concentrator's Target Asset Vaults
@@ -444,7 +439,8 @@ contract YieldOptimizersRegistry {
 
     /********************************** Events & Errors **********************************/
 
-    event RegisterAMMCompounder(AMMType indexed _ammType, address _compounder, address _primaryAsset);
+    event RegisterAMMCompounder(bool indexed _isCurve, address _compounder, address _primaryAsset);
+    event RegisterAMMConcentrator(bool indexed _isCurve, address _concentrator, address _targetAsset, address _primaryAsset);
     event RegisterTokenCompounder(address _compounder, address _primaryAsset);
     event UpdateConcentratorsTargetAssets(address _fortETH, address _fortUSD, address _fortCrypto1, address _fortCrypto2);
     event UpdateOwner(uint256 _index, address _owner);

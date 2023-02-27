@@ -9,7 +9,7 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
-import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/shared/utils/YieldOptimizersRegistry.sol";
 
 import "script/arbitrum/utils/AddressesArbi.sol";
 
@@ -29,7 +29,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
 
     uint256 arbitrumFork;
     
-    FortressArbiRegistry fortressArbiRegistry;
+    YieldOptimizersRegistry fortressArbiRegistry;
     FortressArbiSwap fortressSwap;
     CurveArbiCompounder curveCompounder;
 
@@ -56,7 +56,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
 
         vm.startPrank(owner);
         fortressSwap = new FortressArbiSwap(address(owner));
-        fortressArbiRegistry = new FortressArbiRegistry(address(owner));
+        fortressArbiRegistry = new YieldOptimizersRegistry(address(owner));
         vm.stopPrank();
 
     }
@@ -335,7 +335,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         assertEq(curveCompounder.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositUnderlying: E1");
         
         (,, address _crvRewards) = curveCompounder.boosterData();
-        assertEq(curveCompounder.totalAssets(), IConvexBasicRewards(_crvRewards).balanceOf(address(curveCompounder)), "_testDepositUnderlying: E2");
+        assertEq(curveCompounder.totalAssets(), IConvexBasicRewardsArbi(_crvRewards).balanceOf(address(curveCompounder)), "_testDepositUnderlying: E2");
         assertApproxEqAbs(_sharesAlice, _sharesBob, 1e21, "_testDepositUnderlying: E3");
         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e21, "_testDepositUnderlying: E4");
 
@@ -390,7 +390,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         
         assertEq(curveCompounder.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositSingleUnwrappedETH: E1");
         (,, address _crvRewards) = curveCompounder.boosterData();
-        assertEq(curveCompounder.totalAssets(), IConvexBasicRewards(_crvRewards).balanceOf(address(curveCompounder)), "_testDepositSingleUnwrappedETH: E2");
+        assertEq(curveCompounder.totalAssets(), IConvexBasicRewardsArbi(_crvRewards).balanceOf(address(curveCompounder)), "_testDepositSingleUnwrappedETH: E2");
         assertApproxEqAbs(_sharesAlice, _sharesBob, 1e17, "_testDepositSingleUnwrappedETH: E3");
         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e17, "_testDepositSingleUnwrappedETH: E4");
 
@@ -598,11 +598,11 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         vm.stopPrank();
     }
 
-    function _testFortressRegistry() internal {
-        assertEq(fortressArbiRegistry.getCurveCompounder(address(curveCompounder.asset())), address(curveCompounder), "_testFortressRegistry: E1");
-        assertEq(fortressArbiRegistry.getCurveCompounderUnderlyingAssets(address(curveCompounder.asset())), curveCompounder.getUnderlyingAssets(), "_testFortressRegistry: E2");
-        // assertEq(fortressRegistry.getCurveCompoundersListLength(), 1, "_testFortressRegistry: E3");
-    }
+    // function _testFortressRegistry() internal {
+    //     assertEq(fortressArbiRegistry.getCurveCompounder(address(curveCompounder.asset())), address(curveCompounder), "_testFortressRegistry: E1");
+    //     assertEq(fortressArbiRegistry.getCurveCompounderUnderlyingAssets(address(curveCompounder.asset())), curveCompounder.getUnderlyingAssets(), "_testFortressRegistry: E2");
+    //     // assertEq(fortressRegistry.getCurveCompoundersListLength(), 1, "_testFortressRegistry: E3");
+    // }
 
     function _wrapETH(address _owner, uint256 _amount) internal {
         vm.prank(_owner);

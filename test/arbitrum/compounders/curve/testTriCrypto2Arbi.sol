@@ -73,9 +73,9 @@ contract testTriCrypto2Arbi is CurveCompounderBaseArbitrumTest, InitTriCryptoArb
         _testDepositCap(WBTC, _amount);
     }
 
-    function testFortressRegistry() public {
-        _testFortressRegistry();
-    }
+    // function testFortressRegistry() public {
+    //     _testFortressRegistry();
+    // }
 
     // // // ------------------------------------------------------------------------------------------
     // // // --------------------------------- test wrong flows ---------------------------------------

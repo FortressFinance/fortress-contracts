@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
-// import "src/arbitrum/utils/FortressArbiRegistry.sol";
 
 contract InitTriCryptoArbi is InitBaseArbi {
 
@@ -30,11 +29,11 @@ contract InitTriCryptoArbi is InitBaseArbi {
         _underlyingAssets[1] = WBTC;
         _underlyingAssets[2] = WETH;
 
-        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Curve TriCrypto", "fortTriCrypto", curveCryptoDescription, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding TriCrypto", "fcTriCrypto", curveCryptoDescription, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
 
         // ------------------------- init registry -------------------------
 
-        FortressArbiRegistry(_fortressArbiRegistry).registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
+        YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmCompounder(true, address(curveCompounder), address(_asset));
         
         return address(curveCompounder);
     }
