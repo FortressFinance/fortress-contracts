@@ -22,21 +22,21 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/shared/compounders/AMMCompounderBase.sol";
-import "src/arbitrum/utils/CurveArbiOperations.sol";
+import {AMMCompounderBase, SafeERC20, IERC20, ERC20, IFortressSwap} from "src/shared/compounders/AMMCompounderBase.sol";
+import {CurveArbiOperations} from "src/arbitrum/utils/CurveArbiOperations.sol";
 
-import "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
-import "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
+import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
+import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
 
 contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
     
     using SafeERC20 for IERC20;
 
-    /// @notice The address of the vault's Curve pool.
+    /// @notice The address of the vault's Curve pool
     address private immutable poolAddress;
-    /// @notice The internal type of pool, used in CurveOperations.
+    /// @notice The internal type of pool, used in CurveOperations
     uint256 private immutable poolType;
-    /// @notice The address of CRV token.
+    /// @notice The address of CRV token
     address private constant CRV = 0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978;
 
     /********************************** Constructor **********************************/

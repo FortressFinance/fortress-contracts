@@ -2,18 +2,20 @@
 pragma solidity 0.8.17;
 
 import "test/arbitrum/compounders/curve/CurveCompounderBaseArbitrumTest.sol";
-import "script/arbitrum/utils/compounders/curve/InitCurveBPArbi.sol";
+import "script/arbitrum/utils/compounders/curve/InitTriCryptoArbi.sol";
 
-contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
+contract testTriCrypto2Arbi is CurveCompounderBaseArbitrumTest, InitTriCryptoArbi {
+
+    // TriCrypto2 (https://curve.fi/tricrypto2)
 
     using SafeERC20 for IERC20;
-    
+
     function setUp() public {
         
         _setUp();
         
         vm.startPrank(owner);
-        address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
+        address _curveCompounder = _initializeTriCrypto(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
         vm.stopPrank();
         
         curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
@@ -23,16 +25,22 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
     // --------------------------------- test correct flow --------------------------------------
     // ------------------------------------------------------------------------------------------
     
+    function testSingleUnwrappedwBTC(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+
+        _testSingleUnwrapped(WBTC, _amount);
+    }
+
     function testSingleUnwrappedUSDT(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
         _testSingleUnwrapped(USDT, _amount);
     }
 
-    function testSingleUnwrappedUSDC(uint256 _amount) public {
+    function testSingleUnwrappedWETH(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
-        _testSingleUnwrapped(USDC, _amount);
+        _testSingleUnwrapped(WETH, _amount);
     }
 
     function testDeposit(uint256 _amount) public {
@@ -43,26 +51,26 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
 
     function testRedeem(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
-        
-        _testRedeem(USDC, _amount);
+
+        _testRedeem(WBTC, _amount);
     }
     
     function testWithdraw(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
-        _testWithdraw(USDC, _amount);
+        _testWithdraw(WBTC, _amount);
     }
 
     function testMint(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
  
-        _testMint(USDC, _amount);
+        _testMint(WBTC, _amount);
     }
 
     function testDepositCap(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testDepositCap(USDC, _amount);
+        _testDepositCap(WBTC, _amount);
     }
 
     // function testFortressRegistry() public {
@@ -84,23 +92,23 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
     function testNoSharesWithdraw(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testNoSharesWithdraw(_amount, USDC);
+        _testNoSharesWithdraw(_amount, USDT);
     }
 
     function testNoSharesRedeem(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testNoSharesRedeem(_amount, USDC);
+        _testNoSharesRedeem(_amount, USDT);
     }
 
     function testSingleUnwrappedDepositWrongAsset(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 99 ether);
         
-        _testSingleUnwrappedDepositWrongAsset(WETH, _amount);
+        _testSingleUnwrappedDepositWrongAsset(USDC, _amount);
     }
 
     function testHarvestNoBounty() public {
-        _testHarvestNoBounty(USDC);
+        _testHarvestNoBounty(WBTC);
 
     }
 }

@@ -22,14 +22,14 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-import "src/shared/interfaces/ERC4626.sol";
-import "src/shared/interfaces/IConvexBasicRewards.sol";
-import "src/shared/interfaces/IConvexBooster.sol";
-import "src/shared/fortress-interfaces/IFortressSwap.sol";
+import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
+import {IConvexBasicRewards} from "src/shared/interfaces/IConvexBasicRewards.sol";
+import {IConvexBooster} from "src/shared/interfaces/IConvexBooster.sol";
+import {IFortressSwap} from "src/shared/fortress-interfaces/IFortressSwap.sol";
 
 abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
   
@@ -244,10 +244,10 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @dev Mints vault shares to _receiver by depositing exact amount of assets.
-    /// @param _assets - The amount of assets to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @return _shares - The amount of shares minted.
+    /// @dev Mints vault shares to _receiver by depositing exact amount of assets
+    /// @param _assets - The amount of assets to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @return _shares - The amount of shares minted
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
 
@@ -260,10 +260,10 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Mints exact vault shares to _receiver by depositing assets.
-    /// @param _shares - The amount of shares to mint.
-    /// @param _receiver - The address of the receiver of shares.
-    /// @return _assets - The amount of assets deposited.
+    /// @dev Mints exact vault shares to _receiver by depositing assets
+    /// @param _shares - The amount of shares to mint
+    /// @param _receiver - The address of the receiver of shares
+    /// @return _assets - The amount of assets deposited
     // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
@@ -296,10 +296,10 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Burns exact amount of shares from owner and sends assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _shares - The amount of shares to burn.
-    /// @param _receiver - The address of the receiver of assets.
-    /// @param _owner - The owner of shares.
-    /// @return _assets - The amount of assets sent to the _receiver.
+    /// @param _shares - The amount of shares to burn
+    /// @param _receiver - The address of the receiver of assets
+    /// @param _owner - The owner of shares
+    /// @return _assets - The amount of assets sent to the _receiver
     function redeem(uint256 _shares, address _receiver, address _owner) external override nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
@@ -313,12 +313,12 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Mints vault shares to _receiver by depositing exact amount of underlying assets.
-    /// @param _underlyingAmount - The amount of underlying assets to deposit.
-    /// @param _underlyingAsset - The address of the underlying asset to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @param _minAmount - The minimum amount of assets (LP tokens) to receive.
-    /// @return _shares - The amount of shares minted.
+    /// @dev Mints vault shares to _receiver by depositing exact amount of underlying assets
+    /// @param _underlyingAmount - The amount of underlying assets to deposit
+    /// @param _underlyingAsset - The address of the underlying asset to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @param _minAmount - The minimum amount of assets (LP tokens) to receive
+    /// @return _shares - The amount of shares minted
     function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
@@ -342,12 +342,12 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Burns exact amount of shares from the _owner and sends underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _shares - The amount of shares to burn.
-    /// @param _underlyingAsset - The address of underlying asset to redeem shares for.
-    /// @param _receiver - The address of the receiver of underlying assets.
-    /// @param _owner - The owner of _shares.
-    /// @param _minAmount - The minimum amount of underlying assets to receive.
-    /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver.
+    /// @param _shares - The amount of shares to burn
+    /// @param _underlyingAsset - The address of underlying asset to redeem shares for
+    /// @param _receiver - The address of the receiver of underlying assets
+    /// @param _owner - The owner of _shares
+    /// @param _minAmount - The minimum amount of underlying assets to receive
+    /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver
     function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) external nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
@@ -369,11 +369,11 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _underlyingAmount;
     }
 
-    /// @dev Harvests the pending rewards and converts to assets, then re-stakes the assets.
-    /// @param _receiver - The address of receiver of harvest bounty.
-    /// @param _underlyingAsset - The address of underlying asset to convert rewards to, will then be deposited in the pool in return for assets (LP tokens). 
-    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
-    /// @return _rewards - The amount of rewards that were deposited back into the vault, denominated in the vault asset.
+    /// @dev Harvests the pending rewards and converts to assets, then re-stakes the assets
+    /// @param _receiver - The address of receiver of harvest bounty
+    /// @param _underlyingAsset - The address of underlying asset to convert rewards to, will then be deposited in the pool in return for assets (LP tokens) 
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get
+    /// @return _rewards - The amount of rewards that were deposited back into the vault, denominated in the vault asset
     function harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (lastHarvestBlock == block.number) revert HarvestAlreadyCalled();

@@ -1,107 +1,107 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-// import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
-// import "script/arbitrum/utils/InitBase.sol";
-// import "src/arbitrum/utils/FortressArbiSwap.sol";
-// import "src/arbitrum/utils/FortressArbiRegistry.sol";
-contract InitCurveBPArbi {}
-// contract InitCurveBPArbi is InitBaseArbi {
+import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
+import "script/arbitrum/utils/InitBase.sol";
+import "src/arbitrum/utils/FortressArbiSwap.sol";
+import "src/arbitrum/utils/FortressArbiRegistry.sol";
 
-//     function _initializeCurveBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) public returns (address) {
+contract InitCurveBPArbi is InitBaseArbi {
 
-//         _initSwap(_fortressSwap);
+    function _initializeCurveBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) public returns (address) {
+
+        _initSwap(_fortressSwap);
         
-//         // ------------------------- init TriCrypto compounder -------------------------
+        // ------------------------- init TriCrypto compounder -------------------------
         
-//         // vst/frax - 0
-//         // crvEURSUSD - 4
-//         uint256 _convexPid = 1;
-//         uint256 _poolType = 1; 
-//         address _asset = CRVBP_LP;
-//         string memory _symbol = "fortCurveBP";
-//         string memory _name = "Fortress Curve CurveBP";
+        // vst/frax - 0
+        // crvEURSUSD - 4
+        uint256 _convexPid = 1;
+        uint256 _poolType = 1; 
+        address _asset = CRVBP_LP;
+        // string memory _symbol = "fc2Pool";
+        // string memory _name = "Fortress Compounding 2Pool";
 
-//         address[] memory _rewardAssets = new address[](1);
-//         _rewardAssets[0] = CRV;
-//         // _rewardAssets[1] = CVX;
+        address[] memory _rewardAssets = new address[](1);
+        _rewardAssets[0] = CRV;
+        // _rewardAssets[1] = CVX;
 
-//         // NOTE - make sure the order of underlying assets is the same as in Curve contract (Backend requirment) 
-//         address[] memory _underlyingAssets = new address[](2);
-//         _underlyingAssets[0] = USDT;
-//         _underlyingAssets[1] = USDC;
+        // NOTE - make sure the order of underlying assets is the same as in Curve contract (Backend requirment) 
+        address[] memory _underlyingAssets = new address[](2);
+        _underlyingAssets[0] = USDT;
+        _underlyingAssets[1] = USDC;
 
-//         CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), _name, _symbol, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", curveStableDescription, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
         
-//         // ------------------------- init registry -------------------------
+        // ------------------------- init registry -------------------------
 
-//         FortressArbiRegistry(_fortressArbiRegistry).registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
+        YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmCompounder(true, address(curveCompounder), address(_asset));
         
-//         return address(curveCompounder);
-//     }
+        return address(curveCompounder);
+    }
 
-//     function _initSwap(address _fortressSwap) internal {
+    function _initSwap(address _fortressSwap) internal {
 
-//         FortressArbiSwap _swap = FortressArbiSwap(payable(_fortressSwap));
+        FortressArbiSwap _swap = FortressArbiSwap(payable(_fortressSwap));
 
-//         // CRV --> USDC 
-//         if (!(_swap.routeExists(CRV, USDC))) {
-//             _poolType2[0] = 0;
-//             _poolType2[1] = 0;
+        // CRV --> USDC 
+        if (!(_swap.routeExists(CRV, USDC))) {
+            _poolType2[0] = 0;
+            _poolType2[1] = 0;
             
-//             _poolAddress2[0] = UNIV3_CRVWETH;
-//             _poolAddress2[1] = UNIV3_USDCWETH;
+            _poolAddress2[0] = UNIV3_CRVWETH;
+            _poolAddress2[1] = UNIV3_USDCWETH;
             
-//             _fromList2[0] = CRV;
-//             _fromList2[1] = WETH;
+            _fromList2[0] = CRV;
+            _fromList2[1] = WETH;
             
-//             _toList2[0] = WETH;
-//             _toList2[1] = USDC;
+            _toList2[0] = WETH;
+            _toList2[1] = USDC;
 
-//             _swap.updateRoute(CRV, USDC, _poolType2, _poolAddress2, _fromList2, _toList2);
-//         }
+            _swap.updateRoute(CRV, USDC, _poolType2, _poolAddress2, _fromList2, _toList2);
+        }
 
-//         // CRV --> USDT
-//         if (!(_swap.routeExists(CRV, USDT))) {
-//             _poolType2[0] = 0;
-//             _poolType2[1] = 4;
+        // CRV --> USDT
+        if (!(_swap.routeExists(CRV, USDT))) {
+            _poolType2[0] = 0;
+            _poolType2[1] = 4;
 
-//             _poolAddress2[0] = UNIV3_CRVWETH;
-//             _poolAddress2[1] = CURVE_TRICRYPTO;
+            _poolAddress2[0] = UNIV3_CRVWETH;
+            _poolAddress2[1] = CURVE_TRICRYPTO;
 
-//             _fromList2[0] = CRV;
-//             _fromList2[1] = WETH;
+            _fromList2[0] = CRV;
+            _fromList2[1] = WETH;
             
-//             _toList2[0] = WETH;
-//             _toList2[1] = USDT;
+            _toList2[0] = WETH;
+            _toList2[1] = USDT;
 
-//             _swap.updateRoute(CRV, USDT, _poolType2, _poolAddress2, _fromList2, _toList2);
-//         }
+            _swap.updateRoute(CRV, USDT, _poolType2, _poolAddress2, _fromList2, _toList2);
+        }
 
-//         // ETH --> USDC
-//         if (!(_swap.routeExists(ETH, USDC))) {
-//             _poolType1[0] = 0;
+        // ETH --> USDC
+        if (!(_swap.routeExists(ETH, USDC))) {
+            _poolType1[0] = 0;
 
-//             _poolAddress1[0] = UNIV3_USDCWETH;
+            _poolAddress1[0] = UNIV3_USDCWETH;
             
-//             _fromList1[0] = ETH;
+            _fromList1[0] = ETH;
             
-//             _toList1[0] = USDC;
+            _toList1[0] = USDC;
 
-//             _swap.updateRoute(ETH, USDC, _poolType1, _poolAddress1, _fromList1, _toList1);
-//         }
+            _swap.updateRoute(ETH, USDC, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
 
-//         // ETH --> USDT
-//         if (!(_swap.routeExists(ETH, USDT))) {
-//             _poolType1[0] = 4;
+        // ETH --> USDT
+        if (!(_swap.routeExists(ETH, USDT))) {
+            _poolType1[0] = 4;
 
-//             _poolAddress1[0] = CURVE_TRICRYPTO;
+            _poolAddress1[0] = CURVE_TRICRYPTO;
             
-//             _fromList1[0] = ETH;
+            _fromList1[0] = ETH;
             
-//             _toList1[0] = USDT;
+            _toList1[0] = USDT;
 
-//             _swap.updateRoute(ETH, USDT, _poolType1, _poolAddress1, _fromList1, _toList1);
-//         }
-//     }
-// }
+            _swap.updateRoute(ETH, USDT, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+    }
+}
