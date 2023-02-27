@@ -385,6 +385,42 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _rewards;
     }
 
+    /// @dev Adds emitting of YbTokenTransfer event to the original function
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        balanceOf[msg.sender] -= amount;
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked {
+            balanceOf[to] += amount;
+        }
+
+        emit Transfer(msg.sender, to, amount);
+        emit YbTokenTransfer(msg.sender, to, amount, convertToAssets(amount));
+        
+        return true;
+    }
+
+    /// @dev Adds emitting of YbTokenTransfer event to the original function
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
+
+        if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
+
+        balanceOf[from] -= amount;
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked {
+            balanceOf[to] += amount;
+        }
+
+        emit Transfer(from, to, amount);
+        emit YbTokenTransfer(from, to, amount, convertToAssets(amount));
+
+        return true;
+    }
+
     /********************************** Restricted Functions **********************************/
 
     /// @dev Updates the feelessRedeemerWhitelist
@@ -517,6 +553,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
     event Deposit(address indexed _caller, address indexed _receiver, uint256 _assets, uint256 _shares);
     event Withdraw(address indexed _caller, address indexed _receiver, address indexed _owner, uint256 _assets, uint256 _shares);
+    event YbTokenTransfer(address indexed _caller, address indexed _receiver, uint256 _assets, uint256 _shares);
     event Harvest(address indexed _harvester, address indexed _receiver, uint256 _rewards, uint256 _platformFee);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
     event UpdateBoosterData(address[] _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId);
