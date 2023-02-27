@@ -159,6 +159,12 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return settings.underlyingAssets;
     }
 
+    /// @dev Get the address of the rewards distributor
+    /// @return - The address of the rewards distributor
+    function getCrvRewards() external view returns (address) {
+        return boosterData.crvRewards;
+    }
+
     /// @dev Get the name of the vault
     /// @return - The name of the vault
     function getName() external view returns (string memory) {
