@@ -15,7 +15,7 @@ contract InitCurveCompounders is InitTriCryptoArbi, InitCurveBPArbi, InitFraxBPA
 
         // // ------------------------- Crv BP -------------------------
 
-        // _initializeCurveBP(_owner, _fortressArbiRegistry, _fortressSwap, _platform);
+        _initializeCurveBP(_owner, _fortressArbiRegistry, _fortressSwap, _platform);
 
         // // ------------------------- Frax BP -------------------------
 
