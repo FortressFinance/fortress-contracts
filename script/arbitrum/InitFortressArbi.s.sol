@@ -18,7 +18,7 @@ contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders, InitCu
         
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address owner = vm.envAddress("OWNER");
-        address deployer = vm.envAddress("DEPLOYER");
+        // address deployer = vm.envAddress("DEPLOYER");
         // address platform = vm.envAddress("PLATFORM");
         address platform = owner;
 
@@ -45,9 +45,9 @@ contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders, InitCu
         // string memory data = string(abi.encodePacked(string(vm.toString(address(_fortressArbiRegistry)))));
         // vm.writeFile(path, data);
 
-        path = "script/arbitrum/utils/addresses.txt";
-        data = string(abi.encodePacked("!", "_yieldOptimizersRegistry=", string(vm.toString(address(_yieldOptimizersRegistry))), "!", "_fortressSwap=", string(vm.toString(address(_fortressSwap))), "!", "GlpCompounder=", string(vm.toString(address(_GlpCompounder))), "!"));
-        vm.writeFile(path, data);
+        // path = "script/arbitrum/utils/addresses.txt";
+        // data = string(abi.encodePacked("!", "_yieldOptimizersRegistry=", string(vm.toString(address(_yieldOptimizersRegistry))), "!", "_fortressSwap=", string(vm.toString(address(_fortressSwap))), "!", "GlpCompounder=", string(vm.toString(address(_GlpCompounder))), "!"));
+        // vm.writeFile(path, data);
 
         vm.stopBroadcast();
     }

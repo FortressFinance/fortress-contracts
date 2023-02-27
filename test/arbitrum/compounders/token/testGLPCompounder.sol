@@ -28,10 +28,22 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         glpCompounder = GlpCompounder(_compounder);
     }
 
+    function testWhitelistRedeem(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        (uint256 _accumulatedAmount, uint256 _accumulatedShares) = _depositNonEthUnderlying(_amount, WETH);
+
+        _harvest(_accumulatedAmount, _accumulatedShares);
+
+        _whitelistedRedeem(_accumulatedShares);
+    }
+
     function testCorrectFlowGLP(uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        (uint256 _accumulatedAmount, uint256 _accumulatedShares) = _deposit(_amount);
+        // TODO - depositing sGLP via `deposit` seems to not accrue ETH rewards, GMX dev team is looking into it https://discord.com/channels/837652500948713502/837652500948713506/1079720289736339466
+        // (uint256 _accumulatedAmount, uint256 _accumulatedShares) = _deposit(_amount);
+        (uint256 _accumulatedAmount, uint256 _accumulatedShares) = _depositNonEthUnderlying(_amount, WETH);
 
         _harvest(_accumulatedAmount, _accumulatedShares);
 
@@ -96,6 +108,12 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         _harvestUnderlying(USDC, _accumulatedAmount, _accumulatedShares);
 
         redeemNonEthUnderlying(_accumulatedShares);
+    }
+
+    function testMaxDeposit(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        _capDeposit(_amount);
     }
 
     // *********************** Wrong Flows ***********************
@@ -210,7 +228,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
     // *********************** Internal Functions ***********************
 
     function _deposit(uint256 _amount) internal returns (uint256, uint256) {
-        
+
         (uint256 accumulatedAmount, uint256 accumulatedShares) = _depositNonEthUnderlying(_amount, WETH);
 
         // ---------------- redeem to GLP ----------------
@@ -261,8 +279,11 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
         vm.startPrank(address(alice));
         IERC20(sGLP).safeApprove(address(glpCompounder), type(uint256).max);
-        uint256 _before = IERC20(sGLP).balanceOf(address(alice));
+        uint256 _before = IERC20(fsGLP).balanceOf(address(alice));
         uint256 aliceSharesOut = glpCompounder.deposit(_before, alice);
+
+        require (IERC20(sGLP).balanceOf(address(glpCompounder)) == _before, "testE46");
+        require (IERC20(fsGLP).balanceOf(address(glpCompounder)) == _before, "testE47");
         accumulatedShares = 0;
         accumulatedAmount = 0;
         accumulatedShares += aliceSharesOut;
@@ -301,6 +322,8 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         assertEq(IERC20(sGLP).balanceOf(address(charlie)), 0, "_deposit: E58");
         assertEq(glpCompounder.balanceOf(address(charlie)), charlieSharesOut, "_deposit: E59");
         assertEq(glpCompounder.totalAssets(), accumulatedAmount, "_deposit: E60");
+        assertEq(glpCompounder.totalAssets(), IERC20(sGLP).balanceOf(address(charlie)), "_deposit: E060");
+        assertEq(glpCompounder.totalAssets(), IERC20(fsGLP).balanceOf(address(charlie)), "_deposit: E0060");
         assertEq(glpCompounder.totalSupply(), accumulatedShares, "_deposit: E61");
         assertTrue(charlieSharesOut > 0, "_deposit: E62");
         vm.stopPrank();
@@ -524,5 +547,67 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
             // Fast forward 1 month
             skip(216000);
             assertEq(glpCompounder.isPendingRewards(), false, "_depositNonEthUnderlying: E46");
+    }
+
+    function _whitelistedRedeem(uint256 _accumulatedShares) internal {
+        
+        vm.startPrank(owner);
+        glpCompounder.updateFeelessRedeemerWhitelist(address(alice), true);
+        vm.stopPrank();
+
+        assertEq(glpCompounder.balanceOf(address(alice)), glpCompounder.balanceOf(address(bob)), "_whitelistedRedeem: E1");
+
+        shares = glpCompounder.balanceOf(address(alice)) / 2;
+        vm.prank(alice);
+        aliceAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(alice), address(alice), 0);
+        _accumulatedShares -= shares;
+
+        assertEq(IERC20(WETH).balanceOf(address(alice)), aliceAmountOut, "_whitelistedRedeem: E2");
+        assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_whitelistedRedeem: E3");
+
+        shares = glpCompounder.balanceOf(address(bob)) / 2;
+        vm.prank(bob);
+        bobAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(bob), address(bob), 0);
+        _accumulatedShares -= shares;
+
+        assertEq(IERC20(WETH).balanceOf(address(bob)), bobAmountOut, "_whitelistedRedeem: E4");
+        assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_whitelistedRedeem: E5");
+
+        assertTrue(aliceAmountOut > bobAmountOut, "_whitelistedRedeem: E6");
+
+        // ---
+
+        shares = glpCompounder.balanceOf(address(alice));
+        vm.prank(alice);
+        aliceAmountOut = glpCompounder.redeem(shares, address(alice), address(alice));
+        _accumulatedShares -= shares;
+
+        assertEq(IERC20(sGLP).balanceOf(address(alice)), aliceAmountOut, "_whitelistedRedeem: E7");
+        assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_whitelistedRedeem: E8");
+
+        shares = glpCompounder.balanceOf(address(bob));
+        vm.prank(bob);
+        bobAmountOut = glpCompounder.redeem(shares, address(bob), address(bob));
+        _accumulatedShares -= shares;
+
+        assertEq(IERC20(sGLP).balanceOf(address(bob)), bobAmountOut, "_whitelistedRedeem: E9");
+        assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_whitelistedRedeem: E10");
+
+        assertTrue(aliceAmountOut > bobAmountOut, "_whitelistedRedeem: E11");
+    }
+
+    function _capDeposit(uint256 _amount) internal {
+        vm.startPrank(owner);
+        glpCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), _amount, glpCompounder.getUnderlyingAssets());
+        vm.stopPrank();
+
+        assertEq(glpCompounder.maxMint(address(0)), _amount, "_capDeposit: E0");
+        assertEq(glpCompounder.maxDeposit(address(0)), glpCompounder.convertToAssets(_amount), "_capDeposit: E1");
+
+        uint256 _maxMintPerUser = glpCompounder.maxMint(address(0)) / 3;
+
+        uint256 _requiredAssets = glpCompounder.previewMint(_maxMintPerUser);
+        
+        assertApproxEqAbs(_requiredAssets * 3, glpCompounder.maxDeposit(address(0)), 1e15, "_capDeposit: E2");
     }
 }
