@@ -21,14 +21,14 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-import "src/shared/fortress-interfaces/IFortressSwap.sol";
-import "src/shared/interfaces/ERC4626.sol";
-import "src/shared/interfaces/IConvexBasicRewards.sol";
-import "src/shared/interfaces/IConvexBooster.sol";
+import {IFortressSwap} from "src/shared/fortress-interfaces/IFortressSwap.sol";
+import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
+import {IConvexBasicRewards} from "src/shared/interfaces/IConvexBasicRewards.sol";
+import {IConvexBooster} from "src/shared/interfaces/IConvexBooster.sol";
 
 abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
   
@@ -64,8 +64,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         address platform;
         /// @notice The address of the FortressSwap contract
         address swap;
-        /// @notice The address of the FortressSwap contract
-        address ammOperations;
+        // /// @notice The address of the FortressSwap contract
+        // address ammOperations;
         /// @notice The address of the owner
         address owner;
         /// @notice The address of the vault we concentrate the rewards into
@@ -104,6 +104,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @notice The internal accounting of AUM.
     uint256 public totalAUM;
 
+    /// @notice The address of the Fortress AMM Operations contract
+    address public ammOperations;
+
     /// @notice The precision.
     uint256 internal constant PRECISION = 1e18;
     /// @notice The fee denominator.
@@ -118,85 +121,17 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice The list the pool's underlying assets.
-        address[] public underlyingAssets;
+    address[] public underlyingAssets;
     
     /********************************** Constructor **********************************/
-
-    // constructor(
-    //         ERC20 _asset,
-    //         string memory _name,
-    //         string memory _symbol,
-    //         string memory _description,
-    //         address _owner,
-    //         address _platform,
-    //         address _swap,
-    //         address _ammOperations,
-    //         address _booster,
-    //         address _rewardsDistributor,
-    //         uint256 _boosterPoolId,
-    //         address[] memory _rewardAssets,
-    //         address[] memory _underlyingAssets,
-    //         address _compounder
-    //     )
-    //     ERC4626(_asset, _name, _symbol) {
-
-    //         {
-    //             Fees storage _fees = fees;
-    //             _fees.platformFeePercentage = 50000000; // 5%
-    //             _fees.harvestBountyPercentage = 25000000; // 2.5%
-    //             _fees.withdrawFeePercentage = 2000000; // 0.2%
-
-    //             Booster storage _boosterData = boosterData;
-    //             _boosterData.boosterPoolId = _boosterPoolId;
-    //             _boosterData.booster = _booster;
-    //             _boosterData.crvRewards = _rewardsDistributor;
-    //             _boosterData.rewardAssets = _rewardAssets;
-
-    //             Settings storage _settings = settings;
-    //             _settings.depositCap = 0;
-    //             _settings.platform = _platform;
-    //             _settings.swap = _swap;
-    //             _settings.ammOperations = _ammOperations;
-    //             _settings.owner = _owner;
-    //             _settings.compounder = _compounder;
-    //             _settings.pauseDeposit = false;
-    //             _settings.pauseWithdraw = false;
-    //             _settings.pauseClaim = false;
-    //         }
-
-    //         description = _description;
-    //         accRewardPerShare = 0;
-    //         underlyingAssets = _underlyingAssets;   
-
-    //         for (uint256 i = 0; i < _rewardAssets.length; i++) {
-    //             IERC20(_rewardAssets[i]).safeApprove(_swap, type(uint256).max);
-    //         }
-
-    //         IERC20(address(_asset)).safeApprove(_booster, type(uint256).max);
-    // }
-
-    // ERC20 _asset,
-    // //         string memory _name,
-    // //         string memory _symbol,
-    // //         string memory _description,
-    // //         address _owner,
-    // //         address _platform,
-    // //         address _swap,
-    // //         address _ammOperations,
-    // //         address _booster,
-    // //         address _rewardsDistributor,
-    // //         uint256 _boosterPoolId,
-    // //         address[] memory _rewardAssets,
-    // //         address[] memory _underlyingAssets,
-    // //         address _compounder
-    // //     )
 
     constructor(
             ERC20 _asset,
             string memory _name,
             string memory _symbol,
             bytes memory _settingsConfig,
-            bytes memory _boosterConfig
+            bytes memory _boosterConfig,
+            address _ammOperations
         )
         ERC4626(_asset, _name, _symbol) {
 
@@ -217,7 +152,6 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
                 _settings.pauseDeposit = false;
                 _settings.pauseWithdraw = false;
                 _settings.pauseClaim = false;
-                _settings.ammOperations = address(0); // TODO
             }
 
             {
@@ -228,6 +162,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
 
                 IERC20(address(_asset)).safeApprove(_boosterData.booster, type(uint256).max);
             }
+
+            ammOperations = _ammOperations;
     }
 
     /********************************** View Functions **********************************/
@@ -579,9 +515,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _compounder - The new compounder address
     /// @param _platform - The new platform address
     /// @param _swap - The new swap address
-    /// @param _ammOperations - The new ammOperations address
     /// @param _owner - The address of the new owner
-    function updateSettings(address _compounder, address _platform, address _swap, address _ammOperations, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
+    function updateSettings(address _compounder, address _platform, address _swap, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
         Settings storage _settings = settings;
 
         if (msg.sender != _settings.owner) revert Unauthorized();
@@ -589,7 +524,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _settings.compounder = _compounder;
         _settings.platform = _platform;
         _settings.swap = _swap;
-        _settings.ammOperations = _ammOperations;
+        // _settings.ammOperations = _ammOperations;
         _settings.owner = _owner;
         _settings.depositCap = _depositCap;
 

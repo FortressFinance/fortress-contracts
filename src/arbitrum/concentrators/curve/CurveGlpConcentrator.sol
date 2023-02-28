@@ -22,12 +22,12 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/shared/concentrators/AMMConcentratorBase.sol";
+import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
 
-import "src/shared/fortress-interfaces/ICurveOperations.sol";
-import "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
-import "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
-import "src/arbitrum/interfaces/IGlpMinter.sol";
+import {ICurveOperations} from "src/shared/fortress-interfaces/ICurveOperations.sol";
+import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
+import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
+import {IGlpMinter} from "src/arbitrum/interfaces/IGlpMinter.sol";
 
 contract CurveGlpConcentrator is AMMConcentratorBase {
 
@@ -54,40 +54,9 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
     address internal constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     
     /********************************** Constructor **********************************/
-    
-    // constructor (
-    //     ERC20 _asset,
-    //     string memory _name,
-    //     string memory _symbol,
-    //     bytes memory _configData,
-    //     address _swap,
-    //     address _booster,
-    //     address[] memory _rewardAssets,
-    //     uint256 _poolType
-    //     )
-    //     AMMConcentratorBase (
-    //         _asset,
-    //         _name,
-    //         _symbol,
-    //         _configData,
-    //         _swap,
-    //         address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
-    //         _rewardAssets
-    //     ) {
-    //         IERC20(sGLP).safeApprove(settings.compounder, type(uint256).max);
 
-    //         GmxSettings storage _gmxSettings = gmxSettings;
-
-    //         _gmxSettings.glpHandler = 0xB95DB5B167D75e6d04227CfFFA61069348d271F5;
-    //         _gmxSettings.glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
-
-    //         poolType = _poolType;
-    //         // poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
-    //         poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
-    //     }
-    
-    constructor (ERC20 _asset, string memory _name, string memory _symbol, bytes memory _settingsConfig, bytes memory _boosterConfig, uint256 _poolType)
-        AMMConcentratorBase (_asset, _name, _symbol, _settingsConfig, _boosterConfig) {
+    constructor (ERC20 _asset, string memory _name, string memory _symbol, bytes memory _settingsConfig, bytes memory _boosterConfig, address _ammOperations, uint256 _poolType)
+        AMMConcentratorBase (_asset, _name, _symbol, _settingsConfig, _boosterConfig, _ammOperations) {
             IERC20(sGLP).safeApprove(settings.compounder, type(uint256).max);
 
             GmxSettings storage _gmxSettings = gmxSettings;
@@ -96,8 +65,8 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
             _gmxSettings.glpManager = 0x3963FfC9dff443c2A94f21b129D429891E32ec18;
 
             poolType = _poolType;
-            // poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
-            poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
+            // poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset)); / todo
+            poolAddress = ICurveOperations(ammOperations).getPoolFromLpToken(address(_asset));
         }
     
     /********************************** View Functions **********************************/
@@ -149,12 +118,12 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
     }
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
-        _assets = ICurveOperations(settings.ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        _assets = ICurveOperations(ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
     }
 
     function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
-        _underlyingAmount = ICurveOperations(settings.ammOperations).removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
+        _underlyingAmount = ICurveOperations(ammOperations).removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
     }
 
