@@ -70,8 +70,17 @@ contract CurveArbiOperations {
     // 7 - Base3Pool
     // 8 - FraxCryptoMetaPool
     // 9 - sUSD 4Pool
-    function _addLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) internal returns (uint256) {
+    function addLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) external returns (uint256) {
         address _lpToken = metaRegistry.get_lp_token(_poolAddress);
+        
+        if (msg.value > 0) {
+            if (_token != ETH) revert InvalidAsset();
+            if (_amount > address(this).balance) revert InvalidAmount();
+        } else {
+            // todo
+        }
+        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+
         uint256 _before = IERC20(_lpToken).balanceOf(address(this));
         if (_poolType == 0) {
             _addLiquidity3AssetPool(_poolAddress, _token, _amount);
@@ -94,7 +103,11 @@ contract CurveArbiOperations {
         } else {
             revert InvalidPoolType();
         }
-        return (IERC20(_lpToken).balanceOf(address(this)) - _before);
+
+        _amount = IERC20(_lpToken).balanceOf(address(this)) - _before;
+        IERC20(_lpToken).transfer(msg.sender, _amount);
+
+        return _amount;
     }
 
     // ICurvesUSD4Pool
@@ -257,7 +270,7 @@ contract CurveArbiOperations {
     // 7 - Base3Pool
     // 8 - FraxCryptoMetaPool
     // 9 - sUSD 4Pool
-    function _removeLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) internal returns (uint256) {
+    function removeLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) external returns (uint256) {
         uint256 _before;
         if (_token == ETH) {
             _before = address(this).balance;

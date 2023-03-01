@@ -98,18 +98,22 @@ contract CurveArbiCompounder is AMMCompounderBase {
     }
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
-        // _assets = _addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         address _ammOperations = ammOperations;
-        _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
-        _assets = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        if (_underlyingAsset == ETH) {
+            _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        } else {
+            _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
+            _assets = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        }
+
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
     }
 
     function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
-        // _underlyingAmount = _removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         address _ammOperations = ammOperations;
         _approve(address(asset), _ammOperations, _assets);
         _underlyingAmount = ICurveOperations(_ammOperations).removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
+        
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
     }
 
