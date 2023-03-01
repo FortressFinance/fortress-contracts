@@ -31,6 +31,7 @@ contract InitCurveBPArbi is InitBaseArbi {
         _underlyingAssets[0] = USDT;
         _underlyingAssets[1] = USDC;
 
+        // TODO - fix CurveOperations contract to trasnferFrom and transfer tokens, then deploy and pass to constructor
         CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", curveStableDescription, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
         
         // ------------------------- init registry -------------------------

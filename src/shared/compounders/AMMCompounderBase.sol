@@ -99,6 +99,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
     /// @notice The address representing ETH
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    /// @notice The address of the Fortress AMM Operations contract
+    address public immutable ammOperations;
 
     /// @notice The mapping of whitelisted feeless redeemers
     mapping(address => bool) public feelessRedeemerWhitelist;
@@ -113,6 +115,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
             address _owner,
             address _platform,
             address _swap,
+            address _ammOperations,
             address _booster,
             address _rewardsDistributor,
             uint256 _boosterPoolId,
@@ -143,6 +146,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
             _settings.pauseWithdraw = false;
             _settings.underlyingAssets = _underlyingAssets;
         }
+
+        ammOperations = _ammOperations;
         
         for (uint256 i = 0; i < _rewardAssets.length; i++) {
             IERC20(_rewardAssets[i]).safeApprove(_swap, type(uint256).max);
@@ -545,9 +550,14 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal virtual returns (uint256 _assets) {}
 
-    function _swapToUnderlying(address _underlyingAsset, uint256 _amount, uint256 _minAmount) internal virtual returns (uint256) {}
+    function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal virtual returns (uint256) {}
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minimumOut) internal virtual returns (uint256) {}
+
+    function _approve(address _token, address _spender, uint256 _amount) internal {
+        IERC20(_token).safeApprove(_spender, 0);
+        IERC20(_token).safeApprove(_spender, _amount);
+    }
 
     /********************************** Events **********************************/
 
