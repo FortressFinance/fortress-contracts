@@ -43,17 +43,45 @@ contract CurveArbiCompounder is AMMCompounderBase {
 
     /********************************** Constructor **********************************/
 
+    // constructor(
+    //     ERC20 _asset,
+    //     string memory _name,
+    //     string memory _symbol,
+    //     string memory _description,
+    //     address _owner,
+    //     address _platform,
+    //     address _swap,
+    //     // address payable _ammOperations,
+    //     uint256 _boosterPoolId,
+    //     address[] memory _rewardAssets,
+    //     address[] memory _underlyingAssets,
+    //     uint256 _poolType
+    //     )
+    //     AMMCompounderBase(
+    //         _asset,
+    //         _name,
+    //         _symbol,
+    //         _description,
+    //         _owner,
+    //         _platform,
+    //         _swap,
+    //         // _ammOperations,
+    //         address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
+    //         IConvexBoosterArbi(0xF403C135812408BFbE8713b5A23a04b3D48AAE31).poolInfo(_boosterPoolId).rewards,
+    //         _boosterPoolId,
+    //         _rewardAssets,
+    //         _underlyingAssets
+    //     ) {
+    //         poolType = _poolType;
+    //         // poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
+    //         poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
+    // }
     constructor(
         ERC20 _asset,
         string memory _name,
         string memory _symbol,
-        string memory _description,
-        address _owner,
-        address _platform,
-        address _swap,
-        address _ammOperations,
-        uint256 _boosterPoolId,
-        address[] memory _rewardAssets,
+        bytes memory _settingsConfig,
+        bytes memory _boosterConfig,
         address[] memory _underlyingAssets,
         uint256 _poolType
         )
@@ -61,20 +89,13 @@ contract CurveArbiCompounder is AMMCompounderBase {
             _asset,
             _name,
             _symbol,
-            _description,
-            _owner,
-            _platform,
-            _swap,
-            _ammOperations,
-            address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
-            IConvexBoosterArbi(0xF403C135812408BFbE8713b5A23a04b3D48AAE31).poolInfo(_boosterPoolId).rewards,
-            _boosterPoolId,
-            _rewardAssets,
+            _settingsConfig,
+            _boosterConfig,
             _underlyingAssets
         ) {
             poolType = _poolType;
             // poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
-            poolAddress = ICurveOperations(_ammOperations).getPoolFromLpToken(address(_asset));
+            poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
     }
     
     /********************************** View Functions **********************************/
@@ -98,7 +119,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
     }
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
-        address _ammOperations = ammOperations;
+        address payable _ammOperations = settings.ammOperations;
         if (_underlyingAsset == ETH) {
             _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         } else {
@@ -110,7 +131,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
     }
 
     function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
-        address _ammOperations = ammOperations;
+        address _ammOperations = settings.ammOperations;
         _approve(address(asset), _ammOperations, _assets);
         _underlyingAmount = ICurveOperations(_ammOperations).removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
         
@@ -149,7 +170,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
         }
 
         if (_rewards > 0) {
-            address _ammOperations = ammOperations;
+            address _ammOperations = _settings.ammOperations;
             _approve(_underlyingAsset, _ammOperations, _rewards);
             _rewards = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
             // _rewards = _addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
