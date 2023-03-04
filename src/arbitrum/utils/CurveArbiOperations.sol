@@ -92,7 +92,7 @@ contract CurveArbiOperations {
         
         if (msg.value > 0) {
             if (_token != ETH) revert InvalidAsset();
-            if (address(this).balance >= _amount) revert InvalidAmount();
+            if (_amount > address(this).balance) revert InvalidAmount();
         } else {
             IERC20(_token).transferFrom(msg.sender, address(this), _amount);
         }
@@ -189,6 +189,12 @@ contract CurveArbiOperations {
         if (msg.sender != owner) revert OnlyOwner();
 
         whitelist[_vault] = _whitelisted;
+    }
+
+    function updateOwner(address _owner) external {
+        if (msg.sender != owner) revert OnlyOwner();
+
+        owner = _owner;
     }
 
     /********************************** Internal Functions **********************************/

@@ -1,106 +1,106 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity 0.8.17;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.17;
 
-// import "test/arbitrum/compounders/curve/CurveCompounderBaseArbitrumTest.sol";
-// import "script/arbitrum/utils/compounders/curve/InitCurveBPArbi.sol";
+import "test/arbitrum/compounders/curve/CurveCompounderBaseArbitrumTest.sol";
+import "script/arbitrum/utils/compounders/curve/InitCurveBPArbi.sol";
 
-// contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
+contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
 
-//     using SafeERC20 for IERC20;
+    using SafeERC20 for IERC20;
     
-//     function setUp() public {
+    function setUp() public {
         
-//         _setUp();
+        _setUp();
         
-//         vm.startPrank(owner);
-//         address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
-//         vm.stopPrank();
+        vm.startPrank(owner);
+        address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
+        vm.stopPrank();
         
-//         curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
-//     }
+        curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
+    }
 
-//     // ------------------------------------------------------------------------------------------
-//     // --------------------------------- test correct flow --------------------------------------
-//     // ------------------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------------------
+    // --------------------------------- test correct flow --------------------------------------
+    // ------------------------------------------------------------------------------------------
     
-//     function testSingleUnwrappedUSDT(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+    function testSingleUnwrappedUSDT(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
-//         _testSingleUnwrapped(USDT, _amount);
-//     }
+        _testSingleUnwrapped(USDT, _amount);
+    }
 
-//     function testSingleUnwrappedUSDC(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+    function testSingleUnwrappedUSDC(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
-//         _testSingleUnwrapped(USDC, _amount);
-//     }
+        _testSingleUnwrapped(USDC, _amount);
+    }
 
-//     function testDeposit(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+    function testDeposit(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
-//         _testDeposit(_amount);
-//     }
+        _testDeposit(_amount);
+    }
 
-//     function testRedeem(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function testRedeem(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
-//         _testRedeem(USDC, _amount);
-//     }
+        _testRedeem(USDC, _amount);
+    }
     
-//     function testWithdraw(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 1 ether);
+    function testWithdraw(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 1 ether);
 
-//         _testWithdraw(USDC, _amount);
-//     }
+        _testWithdraw(USDC, _amount);
+    }
 
-//     function testMint(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function testMint(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
  
-//         _testMint(USDC, _amount);
-//     }
+        _testMint(USDC, _amount);
+    }
 
-//     function testDepositCap(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function testDepositCap(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-//         _testDepositCap(USDC, _amount);
-//     }
+        _testDepositCap(USDC, _amount);
+    }
 
-//     // function testFortressRegistry() public {
-//     //     _testFortressRegistry();
-//     // }
+    // function testFortressRegistry() public {
+    //     _testFortressRegistry();
+    // }
 
-//     // // // ------------------------------------------------------------------------------------------
-//     // // // --------------------------------- test wrong flows ---------------------------------------
-//     // // // ------------------------------------------------------------------------------------------
+    // // // ------------------------------------------------------------------------------------------
+    // // // --------------------------------- test wrong flows ---------------------------------------
+    // // // ------------------------------------------------------------------------------------------
 
-//     function testNoAssetsDeposit(uint256 _amount) public {
-//         _testNoAssetsDeposit(_amount);
-//     }
+    function testNoAssetsDeposit(uint256 _amount) public {
+        _testNoAssetsDeposit(_amount);
+    }
 
-//     function testNoAssetsMint(uint256 _amount) public {
-//         _testNoAssetsMint(_amount);
-//     }
+    function testNoAssetsMint(uint256 _amount) public {
+        _testNoAssetsMint(_amount);
+    }
 
-//     function testNoSharesWithdraw(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function testNoSharesWithdraw(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-//         _testNoSharesWithdraw(_amount, USDC);
-//     }
+        _testNoSharesWithdraw(_amount, USDC);
+    }
 
-//     function testNoSharesRedeem(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function testNoSharesRedeem(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-//         _testNoSharesRedeem(_amount, USDC);
-//     }
+        _testNoSharesRedeem(_amount, USDC);
+    }
 
-//     function testSingleUnwrappedDepositWrongAsset(uint256 _amount) public {
-//         vm.assume(_amount > 0.01 ether && _amount < 99 ether);
+    function testSingleUnwrappedDepositWrongAsset(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 99 ether);
         
-//         _testSingleUnwrappedDepositWrongAsset(WETH, _amount);
-//     }
+        _testSingleUnwrappedDepositWrongAsset(WETH, _amount);
+    }
 
-//     function testHarvestNoBounty() public {
-//         _testHarvestNoBounty(USDC);
+    function testHarvestNoBounty() public {
+        _testHarvestNoBounty(USDC);
 
-//     }
-// }
+    }
+}
