@@ -51,6 +51,7 @@ contract InitCurveBPArbi is InitBaseArbi {
         bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
         // address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
         CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", _settingsConfig, _boosterConfig, _underlyingAssets, _poolType);
+        revert("TODO - fix CurveOperations contract to11 ");
         // CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", curveStableDescription, _owner, _platform, address(_fortressSwap), address(_ammOperations), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
         
         // ------------------------- init registry -------------------------

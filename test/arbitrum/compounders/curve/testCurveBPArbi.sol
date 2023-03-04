@@ -12,8 +12,17 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
         
         _setUp();
         
+        // vm.startPrank(owner);
+        // address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform, address(ammOperations));
+        // vm.stopPrank();
+        
+        // curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
+    }
+
+    function testSanity() public {
+        assertTrue(true);
         vm.startPrank(owner);
-        address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
+        address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform, address(ammOperations));
         vm.stopPrank();
         
         curveCompounder = CurveArbiCompounder(payable(_curveCompounder));

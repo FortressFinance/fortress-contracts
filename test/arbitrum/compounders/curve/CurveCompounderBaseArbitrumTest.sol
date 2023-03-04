@@ -9,6 +9,7 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 import "src/shared/utils/YieldOptimizersRegistry.sol";
 
 import "script/arbitrum/utils/AddressesArbi.sol";
@@ -31,6 +32,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
     
     YieldOptimizersRegistry fortressArbiRegistry;
     FortressArbiSwap fortressSwap;
+    CurveArbiOperations ammOperations;
     CurveArbiCompounder curveCompounder;
 
     function _setUp() internal {
@@ -55,6 +57,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         vm.deal(harvester, 100 ether);
 
         vm.startPrank(owner);
+        ammOperations = new CurveArbiOperations(address(owner));
         fortressSwap = new FortressArbiSwap(address(owner));
         fortressArbiRegistry = new YieldOptimizersRegistry(address(owner));
         vm.stopPrank();

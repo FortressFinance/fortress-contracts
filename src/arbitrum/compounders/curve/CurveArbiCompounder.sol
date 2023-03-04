@@ -95,6 +95,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
         ) {
             poolType = _poolType;
             // poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
+            // TODO - add this func
             poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
     }
     
