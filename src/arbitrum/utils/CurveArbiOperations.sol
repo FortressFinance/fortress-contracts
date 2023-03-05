@@ -72,6 +72,17 @@ contract CurveArbiOperations {
         owner = _owner;
     }
 
+    /********************************** View Functions **********************************/
+
+    function getPoolFromLpToken(address _lpToken) public view returns (address _pool) {
+        return metaRegistry.get_pool_from_lp_token(_lpToken);
+    }
+
+    function getLpTokenFromPool(address _pool) public view returns (address _lpToken) {
+        return metaRegistry.get_lp_token(_pool);
+    }
+
+
     /********************************** Restricted Functions **********************************/
 
     // The type of the pool:
@@ -88,7 +99,7 @@ contract CurveArbiOperations {
     function addLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) external payable returns (uint256 _assets) {
         if (!whitelist[msg.sender]) revert Unauthorized();
 
-        address _lpToken = metaRegistry.get_lp_token(_poolAddress);
+        address _lpToken = getLpTokenFromPool(_poolAddress);
         
         if (msg.value > 0) {
             if (_token != ETH) revert InvalidAsset();
@@ -372,8 +383,10 @@ contract CurveArbiOperations {
     function _removeLiquidity3AssetPool(address _poolAddress, address _token, uint256 _amount) internal {
         ICurve3Pool _pool = ICurve3Pool(_poolAddress);
         
+        bool _isEth = false;
         if (_token == ETH) {
             _token = WETH;
+            _isEth = true;
         }
 
         uint256 _before = IERC20(_token).balanceOf(address(this));
@@ -387,7 +400,7 @@ contract CurveArbiOperations {
             revert InvalidToken();
         }
 
-        if (_token == WETH) {
+        if (_isEth) {
             _unwrapETH(IERC20(_token).balanceOf(address(this)) - _before);
         }
     }

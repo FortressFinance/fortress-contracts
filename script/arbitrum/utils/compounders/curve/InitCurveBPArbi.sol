@@ -31,28 +31,12 @@ contract InitCurveBPArbi is InitBaseArbi {
         _underlyingAssets[0] = USDT;
         _underlyingAssets[1] = USDC;
 
-        // ERC20 _asset,
-        // string memory _name,
-        // string memory _symbol,
-        // bytes memory _settingsConfig,
-        // bytes memory _boosterConfig,
-        // address[] memory _underlyingAssets,
-        // uint256 _poolType
-
-        // TODO - fix CurveOperations contract to trasnferFrom and transfer tokens, then deploy and pass to constructor
-        // (_settings.description, _settings.owner, _settings.platform, _settings.swap, _settings.ammOperations)
-        //         = abi.decode(_settingsConfig, (string, address, address, address, address));
-
-        // (_boosterData.boosterPoolId, _boosterData.booster, _boosterData.crvRewards, _boosterData.rewardAssets)
-        //         = abi.decode(_boosterConfig, (uint256, address, address, address[]));
         address _booster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
-        address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_boosterPoolId).rewards;
+        address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_convexPid).rewards;
         bytes memory _settingsConfig = abi.encode(curveStableDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
         bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
-        // address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
+        
         CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", _settingsConfig, _boosterConfig, _underlyingAssets, _poolType);
-        revert("TODO - fix CurveOperations contract to11 ");
-        // CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", curveStableDescription, _owner, _platform, address(_fortressSwap), address(_ammOperations), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
         
         // ------------------------- init registry -------------------------
 

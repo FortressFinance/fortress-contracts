@@ -75,6 +75,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         // // ------------ Deposit ------------
 
         (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositSingleUnwrapped(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+        
         // ------------ Harvest rewards ------------
 
         _testHarvest(_asset, (_sharesAlice + _sharesBob + _sharesCharlie));
@@ -592,7 +593,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
 
         vm.startPrank(owner);
         // curveCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), curveCompounder.totalSupply());
-        curveCompounder.updateSettings("temp", address(platform), address(fortressSwap), address(owner), curveCompounder.totalSupply(), curveCompounder.getUnderlyingAssets());
+        curveCompounder.updateSettings("temp", address(platform), address(fortressSwap), address(ammOperations), address(owner), curveCompounder.totalSupply(), curveCompounder.getUnderlyingAssets());
         vm.stopPrank();
         
         (, _depositCap, _platform, _swap,, _owner,,) = curveCompounder.settings();
