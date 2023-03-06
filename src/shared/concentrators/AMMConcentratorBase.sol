@@ -94,6 +94,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @notice The vault settings
     Settings public settings;
 
+    /// @notice The address of the contract the can specify an owner when calling the claim function 
+    address public multiClaimer;
+
     /// @notice Mapping from account address to user info
     mapping(address => UserInfo) public userInfo;
 
@@ -415,6 +418,25 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _rewards;
     }
 
+    /// @dev Claims all rewards for _owner and sends them to receiver. Only callable by multiClaimer
+    /// @param _owner - The owner of rewards
+    /// @param _receiver - The recipient of rewards
+    /// @return _rewards - The amount of compounder shares sent to the _receiver
+    function claim(address _owner, address _receiver) public nonReentrant returns (uint256 _rewards) {
+        if (settings.pauseClaim) revert ClaimPaused();
+        if (msg.sender != multiClaimer) revert Unauthorized();
+
+        _updateRewards(_owner);
+
+        UserInfo storage _userInfo = userInfo[_owner];
+        _rewards = _userInfo.rewards;
+        _userInfo.rewards = 0;
+
+        _claim(_rewards, _receiver);
+
+        return _rewards;
+    }
+
     /// @dev Redeem shares and claim rewards in a single transaction
     /// @param _shares - The amount of shares to redeem
     /// @param _receiver - The receiver of assets and rewards
@@ -576,6 +598,14 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit UpdateSettings(_compounder, _platform, _swap, _ammOperations, _owner, _depositCap, _underlyingAssets);
     }
 
+    function updateMultiClaimer(address _multiClaimer) external {
+        if (msg.sender != settings.owner) revert Unauthorized();
+
+        multiClaimer = _multiClaimer;
+
+        emit UpdateMultiClaimer(_multiClaimer);
+    }
+
     /// @dev Pauses deposits/withdrawals for the vault
     /// @param _pauseDeposit - The new deposit status
     /// @param _pauseWithdraw - The new withdraw status
@@ -685,6 +715,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     event UpdateRewardAssets(address[] _rewardAssets);
     event UpdateSettings(address compounder, address _platform, address _swap, address ammOperations, address _owner, uint256 _depositCap, address[] _underlyingAssets);
     event UpdateFeelessRedeemerWhitelist(address _address, bool _whitelist);
+    event UpdateMultiClaimer(address _multiClaimer);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw, bool _pauseClaim);
     
     /********************************** Errors **********************************/
