@@ -65,7 +65,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         /// @notice The address of the FortressSwap contract
         address swap;
         /// @notice The address of the FortressSwap contract
-        address ammOperations;
+        address payable ammOperations;
         /// @notice The address of the owner
         address owner;
         /// @notice The address of the vault we concentrate the rewards into
@@ -181,6 +181,12 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         UserInfo memory _userInfo = userInfo[_account];
         
         return _userInfo.rewards + (((accRewardPerShare - _userInfo.rewardPerSharePaid) * balanceOf[_account]) / PRECISION);
+    }
+
+    /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset)
+    /// @return - The underlying assets
+    function getUnderlyingAssets() external view returns (address[] memory) {
+        return underlyingAssets;
     }
 
     /// @dev Get the name of the vault
@@ -561,7 +567,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _settings.compounder = _compounder;
         _settings.platform = _platform;
         _settings.swap = _swap;
-        _settings.ammOperations = _ammOperations;
+        _settings.ammOperations = payable(_ammOperations);
         _settings.owner = _owner;
         _settings.depositCap = _depositCap;
 

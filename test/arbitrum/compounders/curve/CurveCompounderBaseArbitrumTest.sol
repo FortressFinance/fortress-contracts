@@ -575,14 +575,6 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
     }
 
     function _testDepositCapInt(address _asset) internal {
-        // string description;
-        // uint256 depositCap;
-        // address platform;
-        // address swap;
-        // address payable ammOperations;
-        // address owner;
-        // bool pauseDeposit;
-        // bool pauseWithdraw;
         (, uint256 _depositCap, address _platform, address _swap,, address _owner,,) = curveCompounder.settings();
         assertEq(_depositCap, 0, "_testDepositCap: E1");
         assertEq(_platform, address(platform), "_testDepositCap: E2");
@@ -592,7 +584,6 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         assertEq(curveCompounder.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
 
         vm.startPrank(owner);
-        // curveCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), curveCompounder.totalSupply());
         curveCompounder.updateSettings("temp", address(platform), address(fortressSwap), address(ammOperations), address(owner), curveCompounder.totalSupply(), curveCompounder.getUnderlyingAssets());
         vm.stopPrank();
         
