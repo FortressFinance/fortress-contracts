@@ -79,9 +79,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     }
 
     struct UserInfo {
-        /// @notice The amount of current accrued rewards.
+        /// @notice The amount of current accrued rewards
         uint256 rewards;
-        /// @notice The reward per share already paid for the user, with 1e18 precision.
+        /// @notice The reward per share already paid for the user, with 1e18 precision
         uint256 rewardPerSharePaid;
     }
 
@@ -94,33 +94,33 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @notice The vault settings
     Settings public settings;
 
-    /// @notice Mapping from account address to user info.
+    /// @notice Mapping from account address to user info
     mapping(address => UserInfo) public userInfo;
 
-    /// @notice The accumulated reward per share, with 1e18 precision.
+    /// @notice The accumulated reward per share, with 1e18 precision
     uint256 public accRewardPerShare = 0;
-    /// @notice The last block number that the harvest function was executed.
+    /// @notice The last block number that the harvest function was executed
     uint256 public lastHarvestBlock;
-    /// @notice The internal accounting of AUM.
+    /// @notice The internal accounting of AUM
     uint256 public totalAUM;
 
-    /// @notice The precision.
+    /// @notice The precision
     uint256 internal constant PRECISION = 1e18;
-    /// @notice The fee denominator.
+    /// @notice The fee denominator
     uint256 internal constant FEE_DENOMINATOR = 1e9;
-    /// @notice The maximum withdrawal fee.
+    /// @notice The maximum withdrawal fee
     uint256 internal constant MAX_WITHDRAW_FEE = 1e8; // 10%
-    /// @notice The maximum platform fee.
+    /// @notice The maximum platform fee
     uint256 internal constant MAX_PLATFORM_FEE = 2e8; // 20%
-    /// @notice The maximum harvest fee.
+    /// @notice The maximum harvest fee
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
-    /// @notice The address representing ETH.
+    /// @notice The address representing ETH
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice The mapping of whitelisted feeless redeemers
     mapping(address => bool) public feelessRedeemerWhitelist;
 
-    /// @notice The list the pool's underlying assets.
+    /// @notice The list the pool's underlying assets
     address[] public underlyingAssets;
     
     /********************************** Constructor **********************************/
@@ -174,9 +174,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
 
     /********************************** View Functions **********************************/
 
-    /// @dev Return the amount of pending rewards for specific pool.
-    /// @param _account - The address of user.
-    /// @return - The amount of pending rewards.
+    /// @dev Return the amount of pending rewards for specific pool
+    /// @param _account - The address of user
+    /// @return - The amount of pending rewards
     function pendingReward(address _account) public view returns (uint256) {
         UserInfo memory _userInfo = userInfo[_account];
         
@@ -207,15 +207,15 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return settings.description;
     }
 
-    /// @dev Indicates whether there are pending rewards to harvest.
-    /// @return - True if there are pending rewards, false if otherwise.
+    /// @dev Indicates whether there are pending rewards to harvest
+    /// @return - True if there are pending rewards, false if otherwise
     function isPendingRewards() external virtual view returns (bool) {
         return IConvexBasicRewards(boosterData.crvRewards).earned(address(this)) > 0;
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.
-    /// @param _shares - The amount of _shares to redeem.
-    /// @return - The amount of _assets in return, after subtracting a withdrawal fee.
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions
+    /// @param _shares - The amount of _shares to redeem
+    /// @return - The amount of _assets in return, after subtracting a withdrawal fee
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
         // Calculate assets based on a user's % ownership of vault shares
         uint256 assets = convertToAssets(_shares);
@@ -229,9 +229,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return assets - _fee;
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.
-    /// @param _assets - The amount of _assets to withdraw.
-    /// @return - The amount of shares to burn, after subtracting a fee.
+    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions
+    /// @param _assets - The amount of _assets to withdraw
+    /// @return - The amount of shares to burn, after subtracting a fee
     function previewWithdraw(uint256 _assets) public view override returns (uint256) {
         // Calculate shares based on the specified assets' proportion of the pool
         uint256 _shares = convertToShares(_assets);
@@ -242,19 +242,19 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - fees.withdrawFeePercentage);
     }
 
-    /// @dev Returns the total amount of the assets that are managed by the vault.
-    /// @return - The total amount of managed assets.
+    /// @dev Returns the total amount of the assets that are managed by the vault
+    /// @return - The total amount of managed assets
     function totalAssets() public view override returns (uint256) {
         return totalAUM;
     }
 
-    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call.
+    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call
     function maxDeposit(address) public view override returns (uint256) {
         uint256 _assetCap = convertToAssets(settings.depositCap);
         return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
     }
 
-    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call.
+    /// @dev Returns the maximum amount of the Vault shares that can be minted for the receiver, through a mint call
     function maxMint(address) public view override returns (uint256) {
         uint256 _depositCap = settings.depositCap;
         return _depositCap == 0 ? type(uint256).max : _depositCap - totalSupply;
@@ -262,10 +262,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @dev Mints vault shares to _receiver by depositing exact amount of assets.
-    /// @param _assets - The amount of assets to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @return _shares - The amount of shares minted.
+    /// @dev Mints vault shares to _receiver by depositing exact amount of assets
+    /// @param _assets - The amount of assets to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @return _shares - The amount of shares minted
     function deposit(uint256 _assets, address _receiver) external override nonReentrant returns (uint256 _shares) {
         if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
 
@@ -279,10 +279,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Mints exact vault shares to _receiver by depositing assets.
-    /// @param _shares - The amount of shares to mint.
-    /// @param _receiver - The address of the receiver of shares.
-    /// @return _assets - The amount of assets deposited.
+    /// @dev Mints exact vault shares to _receiver by depositing assets
+    /// @param _shares - The amount of shares to mint
+    /// @param _receiver - The address of the receiver of shares
+    /// @return _assets - The amount of assets deposited
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
 
@@ -296,11 +296,11 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Burns shares from owner and sends exact amount of assets to _receiver.
-    /// @param _assets - The amount of assets to receive.
-    /// @param _receiver - The address of the receiver of assets.
-    /// @param _owner - The owner of shares.
-    /// @return _shares - The amount of shares burned.
+    /// @dev Burns shares from owner and sends exact amount of assets to _receiver
+    /// @param _assets - The amount of assets to receive
+    /// @param _receiver - The address of the receiver of assets
+    /// @param _owner - The owner of shares
+    /// @return _shares - The amount of shares burned
     function withdraw(uint256 _assets, address _receiver, address _owner) external override nonReentrant returns (uint256 _shares) {
         if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
 
@@ -316,11 +316,11 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from owner and sends assets to _receiver.
-    /// @param _shares - The amount of shares to burn.
-    /// @param _receiver - The address of the receiver of assets.
-    /// @param _owner - The owner of shares.
-    /// @return _assets - The amount of assets sent to the _receiver.
+    /// @dev Burns exact amount of shares from owner and sends assets to _receiver
+    /// @param _shares - The amount of shares to burn
+    /// @param _receiver - The address of the receiver of assets
+    /// @param _owner - The owner of shares
+    /// @return _assets - The amount of assets sent to the _receiver
     function redeem(uint256 _shares, address _receiver, address _owner) public override nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
@@ -336,12 +336,12 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Mints vault shares to _receiver by depositing exact amount of underlying assets.
-    /// @param _underlyingAmount - The amount of underlying assets to deposit.
-    /// @param _underlyingAsset - The address of underlying asset to deposit.
-    /// @param _receiver - The receiver of minted shares.
-    /// @param _minAmount - The minimum amount of assets (LP tokens) to receive.
-    /// @return _shares - The amount of shares minted.
+    /// @dev Mints vault shares to _receiver by depositing exact amount of underlying assets
+    /// @param _underlyingAmount - The amount of underlying assets to deposit
+    /// @param _underlyingAsset - The address of underlying asset to deposit
+    /// @param _receiver - The receiver of minted shares
+    /// @param _minAmount - The minimum amount of assets (LP tokens) to receive
+    /// @return _shares - The amount of shares minted
     // slither-disable-next-line reentrancy-no-eth
     function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
@@ -367,13 +367,13 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from the owner and sends underlying assets to _receiver.
-    /// @param _shares - The amount of shares to burn.
-    /// @param _underlyingAsset - The address of underlying asset to redeem shares for.
-    /// @param _receiver - The address of the receiver of underlying assets.
-    /// @param _owner - The owner of _shares.
-    /// @param _minAmount - The minimum amount of underlying assets to receive.
-    /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver.
+    /// @dev Burns exact amount of shares from the owner and sends underlying assets to _receiver
+    /// @param _shares - The amount of shares to burn
+    /// @param _underlyingAsset - The address of underlying asset to redeem shares for
+    /// @param _receiver - The address of the receiver of underlying assets
+    /// @param _owner - The owner of _shares
+    /// @param _minAmount - The minimum amount of underlying assets to receive
+    /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver
     // slither-disable-next-line reentrancy-no-eth
     function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
@@ -398,9 +398,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _underlyingAmount;
     }
 
-    /// @dev Claims all rewards for msg.sender and sends them to receiver.
-    /// @param _receiver - The recipient of rewards.
-    /// @return _rewards - The amount of compounder shares sent to the _receiver.
+    /// @dev Claims all rewards for msg.sender and sends them to receiver
+    /// @param _receiver - The recipient of rewards
+    /// @return _rewards - The amount of compounder shares sent to the _receiver
     function claim(address _receiver) public nonReentrant returns (uint256 _rewards) {
         if (settings.pauseClaim) revert ClaimPaused();
 
@@ -415,11 +415,11 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _rewards;
     }
 
-    /// @dev Redeem shares and claim rewards in a single transaction.
-    /// @param _shares - The amount of shares to redeem.
-    /// @param _receiver - The receiver of assets and rewards.
-    /// @return _assets - The amount of assets sent to _receiver.
-    /// @return _rewards - The amount of rewards sent to _receiver.
+    /// @dev Redeem shares and claim rewards in a single transaction
+    /// @param _shares - The amount of shares to redeem
+    /// @param _receiver - The receiver of assets and rewards
+    /// @return _assets - The amount of assets sent to _receiver
+    /// @return _rewards - The amount of rewards sent to _receiver
     // slither-disable-next-line reentrancy-eth
     function redeemAndClaim(uint256 _shares, address _receiver) external returns (uint256 _assets, uint256 _rewards) {
         _assets = redeem(_shares, _receiver, msg.sender);
@@ -428,13 +428,13 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return (_assets, _rewards);
     }
 
-    /// @dev Redeem to an underlying asset and claim rewards in a single transaction.
-    /// @param _shares - The amount of shares to redeem.
-    /// @param _underlyingAsset - The address of the underlying asset to redeem the shares to.
-    /// @param _receiver - The receiver of underlying assets and rewards.
-    /// @param _minAmount - The minimum amount of underlying assets to receive.
-    /// @return _underlyingAmount - The amount of underlying assets sent to _receiver.
-    /// @return _rewards - The amount of rewards sent to _receiver.
+    /// @dev Redeem to an underlying asset and claim rewards in a single transaction
+    /// @param _shares - The amount of shares to redeem
+    /// @param _underlyingAsset - The address of the underlying asset to redeem the shares to
+    /// @param _receiver - The receiver of underlying assets and rewards
+    /// @param _minAmount - The minimum amount of underlying assets to receive
+    /// @return _underlyingAmount - The amount of underlying assets sent to _receiver
+    /// @return _rewards - The amount of rewards sent to _receiver
     // slither-disable-next-line reentrancy-eth
     function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
         _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
@@ -443,10 +443,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return (_underlyingAmount, _rewards);
     }
 
-    /// @dev Harvests the pending rewards and converts to assets, then re-stakes the assets.
-    /// @param _receiver - The address of receiver of harvest bounty.
-    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
-    /// @return _rewards - The amount of rewards that were deposited back into the vault, denominated in the vault asset.
+    /// @dev Harvests the pending rewards and converts to assets, then re-stakes the assets
+    /// @param _receiver - The address of receiver of harvest bounty
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get
+    /// @return _rewards - The amount of rewards that were deposited back into the vault, denominated in the vault asset
     function harvest(address _receiver, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
@@ -457,7 +457,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _rewards;
     }
 
-    /// @dev Adds updating of rewards to the original function.
+    /// @dev Adds updating of rewards to the original function
     function transfer(address to, uint256 amount) public override returns (bool) {
         _updateRewards(msg.sender);
 
@@ -472,7 +472,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return true;
     }
 
-    /// @dev Adds updating of rewards to the original function.
+    /// @dev Adds updating of rewards to the original function
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
         uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
 
@@ -504,10 +504,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit UpdateFeelessRedeemerWhitelist(_address, _whitelist);
     }
 
-    /// @dev Updates vault fees.
-    /// @param _withdrawFeePercentage - The new withdrawal fee percentage.
-    /// @param _platformFeePercentage - The new platform fee percentage.
-    /// @param _harvestBountyPercentage - The new harvest bounty percentage.
+    /// @dev Updates vault fees
+    /// @param _withdrawFeePercentage - The new withdrawal fee percentage
+    /// @param _platformFeePercentage - The new platform fee percentage
+    /// @param _harvestBountyPercentage - The new harvest bounty percentage
     function updateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage) external {
         if (msg.sender != settings.owner) revert Unauthorized();
         if (_withdrawFeePercentage > MAX_WITHDRAW_FEE) revert InvalidAmount();
@@ -576,10 +576,10 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit UpdateSettings(_compounder, _platform, _swap, _ammOperations, _owner, _depositCap, _underlyingAssets);
     }
 
-    /// @dev Pauses deposits/withdrawals for the vault.
-    /// @param _pauseDeposit - The new deposit status.
-    /// @param _pauseWithdraw - The new withdraw status.
-    /// @param _pauseWithdraw - The new claim status.
+    /// @dev Pauses deposits/withdrawals for the vault
+    /// @param _pauseDeposit - The new deposit status
+    /// @param _pauseWithdraw - The new withdraw status
+    /// @param _pauseWithdraw - The new claim status
     function pauseInteractions(bool _pauseDeposit, bool _pauseWithdraw, bool _pauseClaim) external {
         Settings storage _settings = settings;
 

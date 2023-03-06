@@ -43,14 +43,14 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
     /// @notice The GMX platform settings
     GmxSettings public gmxSettings;
 
-    /// @notice The address of the underlying Curve pool.
+    /// @notice The address of the underlying Curve pool
     address private immutable poolAddress;
-    /// @notice The type of the pool, used in ammOperations.
+    /// @notice The type of the pool, used in ammOperations
     uint256 private immutable poolType;
 
-    /// @notice The address of sGLP token.
+    /// @notice The address of sGLP token
     address public constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
-    /// @notice The address of WETH token (Arbitrum).
+    /// @notice The address of WETH token (Arbitrum)
     address internal constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     
     /********************************** Constructor **********************************/
@@ -80,10 +80,10 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
     
     /********************************** Mutated Functions **********************************/
 
-    /// @dev Adds the ability to choose the underlying asset to deposit to the base function.
-    /// @dev Harvest the pending rewards and convert to underlying token, then stake.
-    /// @param _receiver - The address of account to receive harvest bounty.
-    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    /// @dev Adds the ability to choose the underlying asset to deposit to the base function
+    /// @dev Harvest the pending rewards and convert to underlying token, then stake
+    /// @param _receiver - The address of account to receive harvest bounty
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get
     function harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
@@ -155,12 +155,11 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
             if (_token != _underlyingAsset) {
                 uint256 _balance = IERC20(_token).balanceOf(address(this));
                 if (_balance > 0) {
-                    // _approve(_token, _swap, _balance);
                     IFortressSwap(_swap).swap(_token, _underlyingAsset, _balance);
                 }
             }
         }
-        
+
         _rewards = IERC20(_underlyingAsset).balanceOf(address(this));
 
         GmxSettings memory _gmxSettings = gmxSettings;
