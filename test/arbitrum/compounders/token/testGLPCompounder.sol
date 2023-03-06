@@ -60,6 +60,16 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         redeemNonEthUnderlying(_accumulatedShares);
     }
 
+    function testCorrectFlowRedeemETH(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        (uint256 _accumulatedAmount, uint256 _accumulatedShares) = _depositNonEthUnderlying(_amount, WETH);
+
+        _harvest(_accumulatedAmount, _accumulatedShares);
+
+        redeemEthUnderlying(_accumulatedShares);
+    }
+
     // function testCorrectFlowUSDC(uint256 _amount) public {
     //     vm.assume(_amount > 0.01 ether && _amount < 1 ether);
         
@@ -169,9 +179,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.stopPrank();
 
         vm.startPrank(bob);
-        vm.expectRevert();
-        bobAmountOut = glpCompounder.redeemUnderlying(_fakeShares, address(bob), address(bob), 0);
-
+        
         vm.expectRevert();
         bobAmountOut = glpCompounder.redeemUnderlying(WETH, _fakeShares, address(bob), address(bob), 0);
 
@@ -536,6 +544,53 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
             _accumulatedShares -= shares;
 
             assertEq(IERC20(WETH).balanceOf(address(charlie)), charlieAmountOut, "_depositNonEthUnderlying: E37");
+            assertEq(glpCompounder.balanceOf(address(charlie)), 0, "_depositNonEthUnderlying: E38");
+            assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_depositNonEthUnderlying: E40");
+
+            assertApproxEqAbs(aliceAmountOut, bobAmountOut, 1e19, "_depositNonEthUnderlying: E43");
+            assertApproxEqAbs(aliceAmountOut, charlieAmountOut, 1e19, "_depositNonEthUnderlying: E043");
+            assertEq(glpCompounder.totalAssets(), 0, "_depositNonEthUnderlying: E44");
+            assertEq(glpCompounder.totalSupply(), 0, "_depositNonEthUnderlying: E45");
+            
+            // Fast forward 1 month
+            skip(216000);
+            assertEq(glpCompounder.isPendingRewards(), false, "_depositNonEthUnderlying: E46");
+    }
+
+    function redeemEthUnderlying(uint256 _accumulatedShares) internal {
+
+            // ---------------- redeem ---------------
+
+            shares = glpCompounder.balanceOf(address(alice));
+            vm.prank(alice);
+            uint256 _balanceBefore = address(alice).balance;
+            aliceAmountOut = glpCompounder.redeemUnderlying(ETH, shares, address(alice), address(alice), 0);
+            uint256 _realAmountOut = address(alice).balance - _balanceBefore;
+            _accumulatedShares -= shares;
+
+            assertEq(_realAmountOut, aliceAmountOut, "_depositNonEthUnderlying: E29");
+            assertEq(glpCompounder.balanceOf(address(alice)), 0, "_depositNonEthUnderlying: E30");
+            assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_depositNonEthUnderlying: E32");
+
+            shares = glpCompounder.balanceOf(address(bob));
+            vm.prank(bob);
+            _balanceBefore = address(bob).balance;
+            bobAmountOut = glpCompounder.redeemUnderlying(ETH, shares, address(bob), address(bob), 0);
+            _realAmountOut = address(bob).balance - _balanceBefore;
+            _accumulatedShares -= shares;
+
+            assertEq(_realAmountOut, bobAmountOut, "_depositNonEthUnderlying: E33");
+            assertEq(glpCompounder.balanceOf(address(bob)), 0, "_depositNonEthUnderlying: E34");
+            assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_depositNonEthUnderlying: E36");
+
+            shares = glpCompounder.balanceOf(address(charlie));
+            vm.prank(charlie);
+            _balanceBefore = address(charlie).balance;
+            charlieAmountOut = glpCompounder.redeemUnderlying(ETH, shares, address(charlie), address(charlie), 0);
+            _realAmountOut = address(charlie).balance - _balanceBefore;
+            _accumulatedShares -= shares;
+
+            assertEq(_realAmountOut, charlieAmountOut, "_depositNonEthUnderlying: E37");
             assertEq(glpCompounder.balanceOf(address(charlie)), 0, "_depositNonEthUnderlying: E38");
             assertEq(glpCompounder.totalSupply(), _accumulatedShares, "_depositNonEthUnderlying: E40");
 

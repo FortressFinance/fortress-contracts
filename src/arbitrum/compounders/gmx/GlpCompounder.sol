@@ -65,7 +65,7 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** View Functions **********************************/
 
-    /// @notice Return the amount of ETH pending rewards (without accounting for other rewards)
+    /// @notice Returns the amount of ETH pending rewards (without accounting for other rewards)
     function pendingRewards() public view returns (uint256) {
         return IGlpRewardTracker(rewardTracker).claimable(address(this));
     }
@@ -77,8 +77,8 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @notice Extending the base function to enable deposit of any one of GLP's underlying assets
-    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAmount, address _receiver, uint256 _minAmount) public payable nonReentrant returns (uint256 _shares) {
+    /// @notice See {TokenCompounderBase - depositUnderlying}
+    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAmount, address _receiver, uint256 _minAmount) public override payable nonReentrant returns (uint256 _shares) {
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 
@@ -108,32 +108,23 @@ contract GlpCompounder is TokenCompounderBase {
     }
 
     /// @notice See {TokenCompounderBase - redeemUnderlying}
-    function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
+    function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAmount) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 
         // If the _owner is whitelisted, we can skip the preview and just convert the shares to assets
         uint256 _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
 
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        uint256 _before = IERC20(_underlyingAsset).balanceOf(address(this));
-        IGlpMinter(glpHandler).unstakeAndRedeemGlp(_underlyingAsset, _assets, 0, address(this));
-        _underlyingAmount = IERC20(_underlyingAsset).balanceOf(address(this)) - _before;
+        if (_underlyingAsset == ETH) {
+            _underlyingAmount = IGlpMinter(glpHandler).unstakeAndRedeemGlpETH(_assets, 0, payable(_receiver));
+        } else {
+            _underlyingAmount = IGlpMinter(glpHandler).unstakeAndRedeemGlp(_underlyingAsset, _assets, 0, _receiver);
+        }
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
 
-        IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAmount);
-
         return _underlyingAmount;
-    }
-
-    /// @notice See {TokenCompounderBase - depositUnderlying}
-    function depositUnderlying(uint256 _underlyingAmount, address _receiver, uint256 _minAmount) external override payable nonReentrant returns (uint256 _shares) {
-        return depositUnderlying(WETH, _underlyingAmount, _receiver, _minAmount);
-    }
-
-    /// @notice See {TokenCompounderBase - redeemUnderlying}
-    function redeemUnderlying(uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAssets) {
-        return redeemUnderlying(WETH, _shares, _receiver, _owner, _minAmount);
     }
 
     /// @dev Adds the ability to choose the underlying asset to deposit to the base function
