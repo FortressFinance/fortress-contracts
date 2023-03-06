@@ -401,30 +401,16 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _underlyingAmount;
     }
 
-    /// @dev Claims all rewards for msg.sender and sends them to receiver
-    /// @param _receiver - The recipient of rewards
-    /// @return _rewards - The amount of compounder shares sent to the _receiver
-    function claim(address _receiver) public nonReentrant returns (uint256 _rewards) {
-        if (settings.pauseClaim) revert ClaimPaused();
-
-        _updateRewards(msg.sender);
-
-        UserInfo storage _userInfo = userInfo[msg.sender];
-        _rewards = _userInfo.rewards;
-        _userInfo.rewards = 0;
-
-        _claim(_rewards, _receiver);
-
-        return _rewards;
-    }
-
-    /// @dev Claims all rewards for _owner and sends them to receiver. Only callable by multiClaimer
+    /// @dev Claims all rewards for _owner and sends them to _receiver
     /// @param _owner - The owner of rewards
     /// @param _receiver - The recipient of rewards
-    /// @return _rewards - The amount of compounder shares sent to the _receiver
+    /// @return _rewards - The amount of Compounder shares sent to the _receiver
     function claim(address _owner, address _receiver) public nonReentrant returns (uint256 _rewards) {
         if (settings.pauseClaim) revert ClaimPaused();
-        if (msg.sender != multiClaimer) revert Unauthorized();
+        
+        if (msg.sender != multiClaimer) {
+            _owner = msg.sender;
+        }
 
         _updateRewards(_owner);
 
@@ -445,7 +431,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     // slither-disable-next-line reentrancy-eth
     function redeemAndClaim(uint256 _shares, address _receiver) external returns (uint256 _assets, uint256 _rewards) {
         _assets = redeem(_shares, _receiver, msg.sender);
-        _rewards = claim(_receiver);
+        _rewards = claim(address(0), _receiver);
 
         return (_assets, _rewards);
     }
@@ -460,7 +446,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     // slither-disable-next-line reentrancy-eth
     function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
         _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
-        _rewards = claim(_receiver);
+        _rewards = claim(address(0), _receiver);
 
         return (_underlyingAmount, _rewards);
     }
