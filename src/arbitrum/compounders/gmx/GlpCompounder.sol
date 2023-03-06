@@ -116,12 +116,12 @@ contract GlpCompounder is TokenCompounderBase {
 
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        uint256 _before = IERC20(_underlyingAsset).balanceOf(address(this));
-        IGlpMinter(glpHandler).unstakeAndRedeemGlp(_underlyingAsset, _assets, 0, address(this));
-        _underlyingAmount = IERC20(_underlyingAsset).balanceOf(address(this)) - _before;
+        if (_underlyingAsset == ETH) {
+            _underlyingAmount = IGlpMinter(glpHandler).unstakeAndRedeemGlpETH(_assets, 0, payable(_receiver));
+        } else {
+            _underlyingAmount = IGlpMinter(glpHandler).unstakeAndRedeemGlp(_underlyingAsset, _assets, 0, _receiver);
+        }
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
-
-        IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAmount);
 
         return _underlyingAmount;
     }
