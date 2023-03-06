@@ -179,9 +179,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.stopPrank();
 
         vm.startPrank(bob);
-        vm.expectRevert();
-        bobAmountOut = glpCompounder.redeemUnderlying(_fakeShares, address(bob), address(bob), 0);
-
+        
         vm.expectRevert();
         bobAmountOut = glpCompounder.redeemUnderlying(WETH, _fakeShares, address(bob), address(bob), 0);
 
