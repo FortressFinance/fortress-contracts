@@ -94,7 +94,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @notice The vault settings
     Settings public settings;
 
-    /// @notice The address of the contract the can specify an owner when calling the claim function 
+    /// @notice The address of the contract that can specify an owner when calling the claim function 
     address public multiClaimer;
 
     /// @notice Mapping from account address to user info
