@@ -41,23 +41,49 @@ import "src/shared/interfaces/IWETH.sol";
 contract CurveArbiOperations {
 
     using SafeERC20 for IERC20;
-    
-    /// @notice The address of WETH token (Arbitrum).
-    address internal constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    /// @notice The address representing ETH in Curve V1.
-    address private constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    /// @notice The address of CRV_3_CRYPTO LP token (Curve BP Arbitrum).
-    // address internal constant CRV_3_CRYPTO = 0x8e0B8c8BB9db49a46697F3a5Bb8A308e744821D2
-     /// @notice The address of Curve Base Pool (https://curve.fi/3pool).
-    address internal constant CURVE_BP = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
-    /// @notice The address of Curve's Frax Base Pool (https://curve.fi/fraxusdc).
-    address internal constant FRAX_BP = 0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2;
-    /// @notice The address of crvFRAX LP token (Frax BP).
-    address internal constant CRV_FRAX = 0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC;
-    /// @notice The address of 3CRV LP token (Curve BP).
-    address internal constant TRI_CRV = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
-    /// @notice The address of Curve MetaRegistry.
+
+    /// @notice The address of Curve MetaRegistry
     ICurveMetaRegistry internal immutable metaRegistry = ICurveMetaRegistry(0x445FE580eF8d70FF569aB36e80c647af338db351);
+
+    /// @notice The address of the owner
+    address public owner;
+    
+    /// @notice The address of WETH token (Arbitrum)
+    address internal constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    /// @notice The address representing ETH in Curve V1
+    address private constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    /// @notice The address of CRV_3_CRYPTO LP token (Curve BP Arbitrum)
+    // address internal constant CRV_3_CRYPTO = 0x8e0B8c8BB9db49a46697F3a5Bb8A308e744821D2
+     /// @notice The address of Curve Base Pool (https://curve.fi/3pool)
+    address internal constant CURVE_BP = 0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7;
+    /// @notice The address of Curve's Frax Base Pool (https://curve.fi/fraxusdc)
+    address internal constant FRAX_BP = 0xDcEF968d416a41Cdac0ED8702fAC8128A64241A2;
+    /// @notice The address of crvFRAX LP token (Frax BP)
+    address internal constant CRV_FRAX = 0x3175Df0976dFA876431C2E9eE6Bc45b65d3473CC;
+    /// @notice The address of 3CRV LP token (Curve BP)
+    address internal constant TRI_CRV = 0x6c3F90f043a72FA612cbac8115EE7e52BDe6E490;
+
+    /// @notice The mapping of whitelisted addresses, which are Fortress Vaults
+    mapping(address => bool) public whitelist;
+
+    /********************************** Constructor **********************************/
+
+    constructor(address _owner) {
+        owner = _owner;
+    }
+
+    /********************************** View Functions **********************************/
+
+    function getPoolFromLpToken(address _lpToken) public view returns (address _pool) {
+        return metaRegistry.get_pool_from_lp_token(_lpToken);
+    }
+
+    function getLpTokenFromPool(address _pool) public view returns (address _lpToken) {
+        return metaRegistry.get_lp_token(_pool);
+    }
+
+
+    /********************************** Restricted Functions **********************************/
 
     // The type of the pool:
     // 0 - 3Pool
@@ -70,8 +96,18 @@ contract CurveArbiOperations {
     // 7 - Base3Pool
     // 8 - FraxCryptoMetaPool
     // 9 - sUSD 4Pool
-    function _addLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) internal returns (uint256) {
-        address _lpToken = metaRegistry.get_lp_token(_poolAddress);
+    function addLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) external payable returns (uint256 _assets) {
+        if (!whitelist[msg.sender]) revert Unauthorized();
+
+        address _lpToken = getLpTokenFromPool(_poolAddress);
+        
+        if (msg.value > 0) {
+            if (_token != ETH) revert InvalidAsset();
+            if (_amount > address(this).balance) revert InvalidAmount();
+        } else {
+            IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        }
+
         uint256 _before = IERC20(_lpToken).balanceOf(address(this));
         if (_poolType == 0) {
             _addLiquidity3AssetPool(_poolAddress, _token, _amount);
@@ -94,8 +130,85 @@ contract CurveArbiOperations {
         } else {
             revert InvalidPoolType();
         }
-        return (IERC20(_lpToken).balanceOf(address(this)) - _before);
+
+        _assets = IERC20(_lpToken).balanceOf(address(this)) - _before;
+        IERC20(_lpToken).transfer(msg.sender, _assets);
+
+        return _assets;
     }
+
+    // The type of the pool:
+    // 0 - 3Pool
+    // 1 - PlainPool
+    // 2 - CryptoV2Pool
+    // 3 - CrvMetaPool
+    // 4 - FraxMetaPool
+    // 5 - ETHPool
+    // 6 - ETHV2Pool
+    // 7 - Base3Pool
+    // 8 - FraxCryptoMetaPool
+    // 9 - sUSD 4Pool
+    function removeLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) external returns (uint256 _underlyingAmount) {
+        if (!whitelist[msg.sender]) revert Unauthorized();
+
+        uint256 _before;
+        if (_token == ETH) {
+            _before = address(this).balance;
+        } else {
+            _before = IERC20(_token).balanceOf(address(this));
+        }
+
+        address _lpToken = metaRegistry.get_lp_token(_poolAddress);
+        IERC20(_lpToken).safeTransferFrom(msg.sender, address(this), _amount);
+        
+        if (_poolType == 0) {
+            _removeLiquidity3AssetPool(_poolAddress, _token, _amount);
+        } else if (_poolType == 1 || _poolType == 5) {
+            _removeLiquidity2AssetPool(_poolAddress, _token, _amount);
+        } else if (_poolType == 2) {
+            _removeLiquidityCryptoV2Pool(_poolAddress, _token, _amount);
+        } else if (_poolType == 3) {
+            _removeLiquidityCrvMetaPool(_poolAddress, _token, _amount);
+        } else if (_poolType == 4) {
+            _removeLiquidityFraxMetaPool(_poolAddress, _token, _amount);
+        } else if (_poolType == 6) {
+            _removeLiquidityETHV2Pool(_poolAddress, _token, _amount);
+        } else if (_poolType == 7) {
+            _removeLiquidityBase3Pool(_poolAddress, _token, _amount);
+        } else if (_poolType == 8) {
+            _removeLiquidityFraxMetaCryptoPool(_poolAddress, _token, _amount);
+        } else if (_poolType == 9) {
+            _removeLiquiditysUSD4Pool(_poolAddress, _token, _amount);
+        } else {
+            revert InvalidPoolType();
+        }
+
+        if (_token == ETH) {
+            _underlyingAmount = address(this).balance - _before;
+            // slither-disable-next-line arbitrary-send-eth
+            (bool sent,) = msg.sender.call{value: _underlyingAmount}("");
+            if (!sent) revert FailedToSendETH();
+        } else {
+            _underlyingAmount = IERC20(_token).balanceOf(address(this)) - _before;
+            IERC20(_token).safeTransfer(msg.sender, _underlyingAmount);
+        }
+
+        return _underlyingAmount;
+    }
+
+    function updateWhitelist(address _vault, bool _whitelisted) external {
+        if (msg.sender != owner) revert OnlyOwner();
+
+        whitelist[_vault] = _whitelisted;
+    }
+
+    function updateOwner(address _owner) external {
+        if (msg.sender != owner) revert OnlyOwner();
+
+        owner = _owner;
+    }
+
+    /********************************** Internal Functions **********************************/
 
     // ICurvesUSD4Pool
     function _addLiquiditysUSD4Pool(address _poolAddress, address _token, uint256 _amount) internal {
@@ -246,54 +359,6 @@ contract CurveArbiOperations {
         }
     }
 
-    // The type of the pool:
-    // 0 - 3Pool
-    // 1 - PlainPool
-    // 2 - CryptoV2Pool
-    // 3 - CrvMetaPool
-    // 4 - FraxMetaPool
-    // 5 - ETHPool
-    // 6 - ETHV2Pool
-    // 7 - Base3Pool
-    // 8 - FraxCryptoMetaPool
-    // 9 - sUSD 4Pool
-    function _removeLiquidity(address _poolAddress, uint256 _poolType, address _token, uint256 _amount) internal returns (uint256) {
-        uint256 _before;
-        if (_token == ETH) {
-            _before = address(this).balance;
-        } else {
-            _before = IERC20(_token).balanceOf(address(this));
-        }
-        
-        if (_poolType == 0) {
-            _removeLiquidity3AssetPool(_poolAddress, _token, _amount);
-        } else if (_poolType == 1 || _poolType == 5) {
-            _removeLiquidity2AssetPool(_poolAddress, _token, _amount);
-        } else if (_poolType == 2) {
-            _removeLiquidityCryptoV2Pool(_poolAddress, _token, _amount);
-        } else if (_poolType == 3) {
-            _removeLiquidityCrvMetaPool(_poolAddress, _token, _amount);
-        } else if (_poolType == 4) {
-            _removeLiquidityFraxMetaPool(_poolAddress, _token, _amount);
-        } else if (_poolType == 6) {
-            _removeLiquidityETHV2Pool(_poolAddress, _token, _amount);
-        } else if (_poolType == 7) {
-            _removeLiquidityBase3Pool(_poolAddress, _token, _amount);
-        } else if (_poolType == 8) {
-            _removeLiquidityFraxMetaCryptoPool(_poolAddress, _token, _amount);
-        } else if (_poolType == 9) {
-            _removeLiquiditysUSD4Pool(_poolAddress, _token, _amount);
-        } else {
-            revert InvalidPoolType();
-        }
-
-        if (_token == ETH) {
-            return address(this).balance - _before;
-        } else {
-            return IERC20(_token).balanceOf(address(this)) - _before;
-        }
-    }
-
     // ICurvesUSD4Pool
     function _removeLiquiditysUSD4Pool(address _poolAddress, address _token, uint256 _amount) internal {
         ICurvesUSD4Pool _poolWrapper = ICurvesUSD4Pool(address(0xFCBa3E75865d2d561BE8D220616520c171F12851));
@@ -318,8 +383,10 @@ contract CurveArbiOperations {
     function _removeLiquidity3AssetPool(address _poolAddress, address _token, uint256 _amount) internal {
         ICurve3Pool _pool = ICurve3Pool(_poolAddress);
         
+        bool _isEth = false;
         if (_token == ETH) {
             _token = WETH;
+            _isEth = true;
         }
 
         uint256 _before = IERC20(_token).balanceOf(address(this));
@@ -333,7 +400,7 @@ contract CurveArbiOperations {
             revert InvalidToken();
         }
 
-        if (_token == WETH) {
+        if (_isEth) {
             _unwrapETH(IERC20(_token).balanceOf(address(this)) - _before);
         }
     }
@@ -448,5 +515,10 @@ contract CurveArbiOperations {
     /********************************** Errors **********************************/
 
     error InvalidToken();
+    error InvalidAsset();
+    error InvalidAmount();
     error InvalidPoolType();
+    error FailedToSendETH();
+    error OnlyOwner();
+    error Unauthorized();
 }

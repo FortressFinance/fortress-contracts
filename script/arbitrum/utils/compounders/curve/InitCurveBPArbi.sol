@@ -8,7 +8,7 @@ import "src/arbitrum/utils/FortressArbiRegistry.sol";
 
 contract InitCurveBPArbi is InitBaseArbi {
 
-    function _initializeCurveBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) public returns (address) {
+    function _initializeCurveBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _ammOperations) public returns (address) {
 
         _initSwap(_fortressSwap);
         
@@ -31,7 +31,12 @@ contract InitCurveBPArbi is InitBaseArbi {
         _underlyingAssets[0] = USDT;
         _underlyingAssets[1] = USDC;
 
-        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", curveStableDescription, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+        address _booster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+        address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_convexPid).rewards;
+        bytes memory _settingsConfig = abi.encode(curveStableDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
+        bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
+        
+        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", _settingsConfig, _boosterConfig, _underlyingAssets, _poolType);
         
         // ------------------------- init registry -------------------------
 

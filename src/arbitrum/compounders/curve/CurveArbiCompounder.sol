@@ -23,12 +23,12 @@ pragma solidity 0.8.17;
 // Github - https://github.com/FortressFinance
 
 import {AMMCompounderBase, SafeERC20, IERC20, ERC20, IFortressSwap} from "src/shared/compounders/AMMCompounderBase.sol";
-import {CurveArbiOperations} from "src/arbitrum/utils/CurveArbiOperations.sol";
 
+import {ICurveOperations} from "src/shared/fortress-interfaces/ICurveOperations.sol";
 import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
 import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
 
-contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
+contract CurveArbiCompounder is AMMCompounderBase {
     
     using SafeERC20 for IERC20;
 
@@ -45,12 +45,8 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
         ERC20 _asset,
         string memory _name,
         string memory _symbol,
-        string memory _description,
-        address _owner,
-        address _platform,
-        address _swap,
-        uint256 _boosterPoolId,
-        address[] memory _rewardAssets,
+        bytes memory _settingsConfig,
+        bytes memory _boosterConfig,
         address[] memory _underlyingAssets,
         uint256 _poolType
         )
@@ -58,20 +54,14 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
             _asset,
             _name,
             _symbol,
-            _description,
-            _owner,
-            _platform,
-            _swap,
-            address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31), // Convex Booster
-            IConvexBoosterArbi(0xF403C135812408BFbE8713b5A23a04b3D48AAE31).poolInfo(_boosterPoolId).rewards,
-            _boosterPoolId,
-            _rewardAssets,
+            _settingsConfig,
+            _boosterConfig,
             _underlyingAssets
         ) {
             poolType = _poolType;
-            poolAddress = metaRegistry.get_pool_from_lp_token(address(_asset));
+            poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
     }
-    
+
     /********************************** View Functions **********************************/
 
     /// @notice See {AMMConcentratorBase - isPendingRewards}
@@ -93,12 +83,22 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
     }
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
-        _assets = _addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        address payable _ammOperations = settings.ammOperations;
+        if (_underlyingAsset == ETH) {
+            _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        } else {
+            _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
+            _assets = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+        }
+
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
     }
 
     function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
-        _underlyingAmount = _removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
+        address _ammOperations = settings.ammOperations;
+        _approve(address(asset), _ammOperations, _assets);
+        _underlyingAmount = ICurveOperations(_ammOperations).removeLiquidity(poolAddress, poolType, _underlyingAsset, _assets);
+        
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
     }
 
@@ -134,8 +134,10 @@ contract CurveArbiCompounder is CurveArbiOperations, AMMCompounderBase {
         }
 
         if (_rewards > 0) {
-            _rewards = _addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
-            
+            address _ammOperations = _settings.ammOperations;
+            _approve(_underlyingAsset, _ammOperations, _rewards);
+            _rewards = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _rewards);
+
             Fees memory _fees = fees;
             uint256 _platformFee = _fees.platformFeePercentage;
             uint256 _harvestBounty = _fees.harvestBountyPercentage;

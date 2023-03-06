@@ -9,6 +9,7 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 import "src/shared/utils/YieldOptimizersRegistry.sol";
 
 import "script/arbitrum/utils/AddressesArbi.sol";
@@ -31,6 +32,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
     
     YieldOptimizersRegistry fortressArbiRegistry;
     FortressArbiSwap fortressSwap;
+    CurveArbiOperations ammOperations;
     CurveArbiCompounder curveCompounder;
 
     function _setUp() internal {
@@ -55,6 +57,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         vm.deal(harvester, 100 ether);
 
         vm.startPrank(owner);
+        ammOperations = new CurveArbiOperations(address(owner));
         fortressSwap = new FortressArbiSwap(address(owner));
         fortressArbiRegistry = new YieldOptimizersRegistry(address(owner));
         vm.stopPrank();
@@ -72,6 +75,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         // // ------------ Deposit ------------
 
         (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositSingleUnwrapped(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+        
         // ------------ Harvest rewards ------------
 
         _testHarvest(_asset, (_sharesAlice + _sharesBob + _sharesCharlie));
@@ -571,7 +575,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
     }
 
     function _testDepositCapInt(address _asset) internal {
-        (, uint256 _depositCap, address _platform, address _swap, address _owner,,) = curveCompounder.settings();
+        (, uint256 _depositCap, address _platform, address _swap,, address _owner,,) = curveCompounder.settings();
         assertEq(_depositCap, 0, "_testDepositCap: E1");
         assertEq(_platform, address(platform), "_testDepositCap: E2");
         assertEq(_swap, address(fortressSwap), "_testDepositCap: E3");
@@ -580,11 +584,10 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         assertEq(curveCompounder.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
 
         vm.startPrank(owner);
-        // curveCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), curveCompounder.totalSupply());
-        curveCompounder.updateSettings("temp", address(platform), address(fortressSwap), address(owner), curveCompounder.totalSupply(), curveCompounder.getUnderlyingAssets());
+        curveCompounder.updateSettings("temp", address(platform), address(fortressSwap), address(ammOperations), address(owner), curveCompounder.totalSupply(), curveCompounder.getUnderlyingAssets());
         vm.stopPrank();
         
-        (, _depositCap, _platform, _swap, _owner,,) = curveCompounder.settings();
+        (, _depositCap, _platform, _swap,, _owner,,) = curveCompounder.settings();
         assertEq(_depositCap, curveCompounder.totalSupply(), "_testDepositCap: E2");
         assertEq(curveCompounder.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
         assertEq(curveCompounder.maxMint(address(alice)), 0, "_testDepositCap: E4");

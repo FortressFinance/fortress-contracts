@@ -13,12 +13,16 @@ contract testTriCrypto2Arbi is CurveCompounderBaseArbitrumTest, InitTriCryptoArb
     function setUp() public {
         
         _setUp();
-        
+
         vm.startPrank(owner);
-        address _curveCompounder = _initializeTriCrypto(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
+        address _curveCompounder = _initializeTriCrypto(owner, address(fortressArbiRegistry), address(fortressSwap), platform, address(ammOperations));
         vm.stopPrank();
         
         curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
+
+        vm.startPrank(owner);
+        ammOperations.updateWhitelist(address(curveCompounder), true);
+        vm.stopPrank();
     }
 
     // ------------------------------------------------------------------------------------------

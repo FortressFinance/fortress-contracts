@@ -65,14 +65,14 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         address platform;
         /// @notice The address of the FortressSwap contract
         address swap;
+        /// @notice The address of the Fortress AMM Operations contract
+        address payable ammOperations;
         /// @notice The address of the owner
         address owner;
         /// @notice Whether deposit for the pool is paused
         bool pauseDeposit;
         /// @notice Whether withdraw for the pool is paused
         bool pauseWithdraw;
-        /// @notice The underlying assets
-        address[] underlyingAssets;
     }
 
     /// @notice The fees settings
@@ -99,9 +99,12 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     uint256 internal constant MAX_HARVEST_BOUNTY = 1e8; // 10%
     /// @notice The address representing ETH
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
+    
     /// @notice The mapping of whitelisted feeless redeemers
     mapping(address => bool) public feelessRedeemerWhitelist;
+
+    /// @notice The underlying assets
+    address[] public underlyingAssets;
 
     /********************************** Constructor **********************************/
 
@@ -109,46 +112,43 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
             ERC20 _asset,
             string memory _name,
             string memory _symbol,
-            string memory _description,
-            address _owner,
-            address _platform,
-            address _swap,
-            address _booster,
-            address _rewardsDistributor,
-            uint256 _boosterPoolId,
-            address[] memory _rewardAssets,
+            bytes memory _settingsConfig,
+            bytes memory _boosterConfig,
             address[] memory _underlyingAssets
         )
         ERC4626(_asset, _name, _symbol) {
-        
-        {
-            Fees storage _fees = fees;
-            _fees.platformFeePercentage = 50000000; // 5%
-            _fees.harvestBountyPercentage = 25000000; // 2.5%
-            _fees.withdrawFeePercentage = 2000000; // 0.2%
+            {
+                Fees storage _fees = fees;
+                _fees.platformFeePercentage = 50000000; // 5%
+                _fees.harvestBountyPercentage = 25000000; // 2.5%
+                _fees.withdrawFeePercentage = 2000000; // 0.2%
+            }
 
-            Booster storage _boosterData = boosterData;
-            _boosterData.boosterPoolId = _boosterPoolId;
-            _boosterData.booster = _booster;
-            _boosterData.crvRewards = _rewardsDistributor;
-            _boosterData.rewardAssets = _rewardAssets;
+            {
+                Settings storage _settings = settings;
 
-            Settings storage _settings = settings;
-            _settings.description = _description;
-            _settings.depositCap = 0;
-            _settings.platform = _platform;
-            _settings.swap = _swap;
-            _settings.owner = _owner;
-            _settings.pauseDeposit = false;
-            _settings.pauseWithdraw = false;
-            _settings.underlyingAssets = _underlyingAssets;
-        }
-        
-        for (uint256 i = 0; i < _rewardAssets.length; i++) {
-            IERC20(_rewardAssets[i]).safeApprove(_swap, type(uint256).max);
-        }
+                (_settings.description, _settings.owner, _settings.platform, _settings.swap, _settings.ammOperations)
+                = abi.decode(_settingsConfig, (string, address, address, address, address));
+                
+                _settings.depositCap = 0;
+                _settings.pauseDeposit = false;
+                _settings.pauseWithdraw = false;
+            }
 
-        IERC20(address(_asset)).safeApprove(_booster, type(uint256).max);
+            {
+                Booster storage _boosterData = boosterData;
+
+                (_boosterData.boosterPoolId, _boosterData.booster, _boosterData.crvRewards, _boosterData.rewardAssets)
+                = abi.decode(_boosterConfig, (uint256, address, address, address[]));
+
+                IERC20(address(_asset)).safeApprove(_boosterData.booster, type(uint256).max);
+
+                for (uint256 i = 0; i < _boosterData.rewardAssets.length; i++) {
+                    IERC20(_boosterData.rewardAssets[i]).safeApprove(settings.swap, type(uint256).max);
+                }
+            }
+
+            underlyingAssets = _underlyingAssets;
     }
 
     /********************************** View Functions **********************************/
@@ -156,7 +156,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset)
     /// @return - The underlying assets
     function getUnderlyingAssets() external view returns (address[] memory) {
-        return settings.underlyingAssets;
+        return underlyingAssets;
     }
 
     /// @dev Get the name of the vault
@@ -232,7 +232,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _asset - The address of the asset to check
     /// @return - Whether the assets is an underlying asset
     function _isUnderlyingAsset(address _asset) internal view returns (bool) {
-        address[] memory _underlyingAssets = settings.underlyingAssets;
+        address[] memory _underlyingAssets = underlyingAssets;
 
         for (uint256 i = 0; i < _underlyingAssets.length; i++) {
             if (_underlyingAssets[i] == _asset) {
@@ -360,10 +360,10 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         _underlyingAmount = _swapToUnderlying(_underlyingAsset, _assets, _minAmount);
         
         if (_underlyingAsset == ETH) {
-            (bool sent,) = msg.sender.call{value: _underlyingAmount}("");
+            (bool sent,) = _receiver.call{value: _underlyingAmount}("");
             if (!sent) revert FailedToSendETH();
         } else {
-            IERC20(_underlyingAsset).safeTransfer(msg.sender, _underlyingAmount);
+            IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAmount);
         }
 
         return _underlyingAmount;
@@ -430,6 +430,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         if (msg.sender != settings.owner) revert Unauthorized();
 
         feelessRedeemerWhitelist[_address] = _whitelist;
+
+        emit UpdateFeelessRedeemerWhitelist(_address, _whitelist);
     }
 
     /// @dev Updates the vault fees
@@ -451,26 +453,43 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev updates the vault external utils
-    /// @param _rewardAssets - The new address list of reward assets
     /// @param _booster - The new booster address
     /// @param _crvRewards - The new crvRewards address
-    function updateBoosterData(address[] memory _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId) external {
+    /// @param _boosterPoolId - The new booster pool id
+    function updateBoosterData(address _booster, address _crvRewards, uint256 _boosterPoolId) external {
         if (msg.sender != settings.owner) revert Unauthorized();
 
         Booster storage _boosterData = boosterData;
-        _boosterData.rewardAssets = _rewardAssets;
         _boosterData.booster = _booster;
         _boosterData.crvRewards = _crvRewards;
         _boosterData.boosterPoolId = _boosterPoolId;
 
-        emit UpdateBoosterData(_rewardAssets, _booster, _crvRewards, _boosterPoolId);
+        emit UpdateBoosterData(_booster, _crvRewards, _boosterPoolId);
+    }
+
+    /// @dev updates the reward assets
+    /// @param _rewardAssets - The new address list of reward assets
+    function updateRewardAssets(address[] memory _rewardAssets) external {
+        if (msg.sender != settings.owner) revert Unauthorized();
+
+        boosterData.rewardAssets = _rewardAssets;
+
+        for (uint256 i = 0; i < _rewardAssets.length; i++) {
+            _approve(_rewardAssets[i], settings.swap, type(uint256).max);
+        }
+
+        emit UpdateRewardAssets(_rewardAssets);
     }
 
     /// @dev updates the vault internal utils
+    /// @param _description - The new description
     /// @param _platform - The new platform address
     /// @param _swap - The new swap address
+    /// @param _ammOperations - The new ammOperations address
     /// @param _owner - The address of the new owner
-    function updateSettings(string memory _description, address _platform, address _swap, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
+    /// @param _depositCap - The new deposit cap
+    /// @param _underlyingAssets - The new address list of underlying assets
+    function updateSettings(string memory _description, address _platform, address _swap, address _ammOperations, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
         Settings storage _settings = settings;
 
         if (msg.sender != _settings.owner) revert Unauthorized();
@@ -478,11 +497,13 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         _settings.description = _description;
         _settings.platform = _platform;
         _settings.swap = _swap;
+        _settings.ammOperations = payable(_ammOperations);
         _settings.owner = _owner;
         _settings.depositCap = _depositCap;
-        _settings.underlyingAssets = _underlyingAssets;
 
-        emit UpdateSettings(_platform, _swap, _owner, _depositCap, _underlyingAssets);
+        underlyingAssets = _underlyingAssets;
+
+        emit UpdateSettings(_platform, _swap, _ammOperations, _owner, _depositCap, _underlyingAssets);
     }
 
     /// @dev Pauses deposits/withdrawals for the vault.
@@ -545,9 +566,14 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal virtual returns (uint256 _assets) {}
 
-    function _swapToUnderlying(address _underlyingAsset, uint256 _amount, uint256 _minAmount) internal virtual returns (uint256) {}
+    function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal virtual returns (uint256) {}
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minimumOut) internal virtual returns (uint256) {}
+
+    function _approve(address _token, address _spender, uint256 _amount) internal {
+        IERC20(_token).safeApprove(_spender, 0);
+        IERC20(_token).safeApprove(_spender, _amount);
+    }
 
     /********************************** Events **********************************/
 
@@ -556,8 +582,10 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     event YbTokenTransfer(address indexed _caller, address indexed _receiver, uint256 _assets, uint256 _shares);
     event Harvest(address indexed _harvester, address indexed _receiver, uint256 _rewards, uint256 _platformFee);
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
-    event UpdateBoosterData(address[] _rewardAssets, address _booster, address _crvRewards, uint256 _boosterPoolId);
-    event UpdateSettings(address _platform, address _swap, address _owner, uint256 _depositCap, address[] _underlyingAssets);
+    event UpdateBoosterData(address _booster, address _crvRewards, uint256 _boosterPoolId);
+    event UpdateRewardAssets(address[] _rewardAssets);
+    event UpdateSettings(address _platform, address _swap, address _ammOperations, address _owner, uint256 _depositCap, address[] _underlyingAssets);
+    event UpdateFeelessRedeemerWhitelist(address _address, bool _whitelist);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
     
     /********************************** Errors **********************************/

@@ -121,7 +121,7 @@ contract YieldOptimizersRegistry {
 
     // -------------- Settings --------------
 
-    /// @notice The addresses of the contract owners.
+    /// @notice The addresses of the contract owners
     address[2] public owners;
 
     // ********************* Constructor *********************

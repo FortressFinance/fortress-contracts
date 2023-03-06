@@ -4,15 +4,16 @@ pragma solidity 0.8.17;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "src/arbitrum/utils/FortressArbiSwap.sol";
-import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import {CurveArbiOperations} from "src/arbitrum/utils/CurveArbiOperations.sol";
+import {FortressArbiSwap} from "src/arbitrum/utils/FortressArbiSwap.sol";
+import {YieldOptimizersRegistry} from "src/shared/utils/YieldOptimizersRegistry.sol";
 
-import "script/arbitrum/utils/AddressesArbi.sol";
+import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 
-import "src/shared/interfaces/IWETH.sol";
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
 
 abstract contract BaseTest is Test, AddressesArbi {
 
@@ -25,6 +26,7 @@ abstract contract BaseTest is Test, AddressesArbi {
     address yossi;
     address harvester;
     address platform;
+    address compounder;
 
     uint256 arbitrumFork;
 
@@ -32,8 +34,9 @@ abstract contract BaseTest is Test, AddressesArbi {
     uint256 harvestBountyPercentage = 25000000; // 2.5%
     uint256 withdrawFeePercentage = 1000000; // 0.1%
 
+    CurveArbiOperations ammOperations;
     FortressArbiSwap fortressSwap;
-    FortressArbiRegistry fortressRegistry;
+    YieldOptimizersRegistry fortressRegistry;
     
     function _setUp() internal {
         
@@ -63,8 +66,10 @@ abstract contract BaseTest is Test, AddressesArbi {
         vm.deal(harvester, 100 ether);
 
         vm.startPrank(owner);
+        ammOperations = new CurveArbiOperations(address(owner));
+        
         fortressSwap = new FortressArbiSwap(address(owner));
-        fortressRegistry = new FortressArbiRegistry(address(owner));
+        fortressRegistry = new YieldOptimizersRegistry(address(owner));
         vm.stopPrank();
     }
 
