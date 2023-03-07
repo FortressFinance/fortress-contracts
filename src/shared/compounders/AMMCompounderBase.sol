@@ -25,6 +25,7 @@ pragma solidity 0.8.17;
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
 import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
 import {IConvexBasicRewards} from "src/shared/interfaces/IConvexBasicRewards.sol";
@@ -35,6 +36,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
   
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     struct Fees {
         /// @notice The percentage of fee to pay for platform on harvest
@@ -360,9 +362,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         _underlyingAmount = _swapToUnderlying(_underlyingAsset, _assets, _minAmount);
         
         if (_underlyingAsset == ETH) {
-            // TODO - Address.sol
-            (bool sent,) = _receiver.call{value: _underlyingAmount}("");
-            if (!sent) revert FailedToSendETH();
+            payable(_receiver).sendValue(_underlyingAmount);
         } else {
             IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAmount);
         }

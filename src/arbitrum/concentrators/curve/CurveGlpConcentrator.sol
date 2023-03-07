@@ -22,7 +22,7 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
+import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, Address, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
 
 import {ICurveOperations} from "src/shared/fortress-interfaces/ICurveOperations.sol";
 import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
@@ -32,6 +32,7 @@ import {IGlpMinter} from "src/arbitrum/interfaces/IGlpMinter.sol";
 contract CurveGlpConcentrator is AMMConcentratorBase {
 
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     struct GmxSettings {
         /// @notice The address of the contract that mints and stakes GLP
@@ -120,8 +121,13 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
         address payable _ammOperations = settings.ammOperations;
         if (_underlyingAsset == ETH) {
-            // TODO - Address.sol
             _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+
+            // (bytes memory result) = _ammOperations.functionCallWithValue(
+            //     abi.encodeWithSignature("addLiquidity(address,uint256,address,uint256)", poolAddress, poolType, _underlyingAsset, _underlyingAmount),
+            //     _underlyingAmount
+            // );
+            // _assets = abi.decode(result, (uint256));
         } else {
             _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
             _assets = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);

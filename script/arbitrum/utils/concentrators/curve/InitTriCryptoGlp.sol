@@ -21,9 +21,10 @@ contract InitTriCryptoGlp is InitBaseArbi {
         _symbol = "fctrTriCrypto-fcGLP";
         _name = "Fortress Concentrator Curve TriCrypto to fcGLP";
 
-        _underlyingAssets3[0] = USDT;
-        _underlyingAssets3[1] = WBTC;
-        _underlyingAssets3[2] = WETH;
+        _underlyingAssets4[0] = USDT;
+        _underlyingAssets4[1] = WBTC;
+        _underlyingAssets4[2] = WETH;
+        _underlyingAssets4[3] = ETH;
 
         _rewardAssets1[0] = CRV;
 
@@ -32,7 +33,7 @@ contract InitTriCryptoGlp is InitBaseArbi {
         bytes memory _settingsConfig = abi.encode(curveCryptoDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
         bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets1);
 
-        CurveGlpConcentrator curveGlpConcentrator = new CurveGlpConcentrator(ERC20(_asset), _name, _symbol, _settingsConfig, _boosterConfig, _compounder, _underlyingAssets3, _poolType);
+        CurveGlpConcentrator curveGlpConcentrator = new CurveGlpConcentrator(ERC20(_asset), _name, _symbol, _settingsConfig, _boosterConfig, _compounder, _underlyingAssets4, _poolType);
         
         // ------------------------- init registry -------------------------
 

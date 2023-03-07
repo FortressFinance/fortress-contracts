@@ -20,10 +20,20 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
         // ------------ Get _asset ------------
-        
-        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
-        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
-        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+
+        uint256 _underlyingAlice;
+        uint256 _underlyingBob;
+        uint256 _underlyingCharlie;
+
+        if (_asset == ETH) {
+            _underlyingAlice = address(alice).balance / 100;
+            _underlyingBob = address(bob).balance / 100;
+            _underlyingCharlie = address(charlie).balance / 100;
+        } else {
+            _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+            _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+            _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+        }
 
         // ------------ Deposit ------------
 
