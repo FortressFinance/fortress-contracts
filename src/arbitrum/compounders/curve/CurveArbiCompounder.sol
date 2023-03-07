@@ -85,6 +85,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
         address payable _ammOperations = settings.ammOperations;
         if (_underlyingAsset == ETH) {
+            // TODO - Address.sol
             _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
         } else {
             _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
@@ -117,6 +118,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
             if (_rewardAsset != _underlyingAsset) {
                 if (_rewardAsset == ETH) {
                     // slither-disable-next-line arbitrary-send-eth
+                    // TODO - Address.sol   
                     IFortressSwap(_swap).swap{ value: address(this).balance }(_rewardAsset, _underlyingAsset, address(this).balance);
                 } else {
                     uint256 _balance = IERC20(_rewardAsset).balanceOf(address(this));

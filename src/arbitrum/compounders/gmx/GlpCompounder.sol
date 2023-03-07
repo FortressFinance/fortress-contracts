@@ -87,6 +87,7 @@ contract GlpCompounder is TokenCompounderBase {
             if (msg.value != _underlyingAmount) revert InvalidAmount();
 
             _underlyingAsset = WETH;
+            // TODO - Address.sol
             IWETH(WETH).deposit{value: _underlyingAmount}();
         } else {
             IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
