@@ -12,4 +12,6 @@ interface IFortressConcentrator {
     function getDescription() external view returns (string memory);
 
     function getCompounder() external view returns (address);
+
+    function claim(address _owner, address _receiver) external returns (uint256 _rewards);
 }

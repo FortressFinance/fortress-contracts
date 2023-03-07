@@ -379,7 +379,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         uint256 _totalRewards = IERC20(compounder).balanceOf(address(_localConcentrator));
         
         vm.prank(alice);
-        uint256 _rewardsOutAlice = _localConcentrator.claim(address(alice));
+        uint256 _rewardsOutAlice = _localConcentrator.claim(address(0), address(alice));
         _totalRewards -= _rewardsOutAlice;
 
         assertEq(_rewardsOutAlice, IERC20(compounder).balanceOf(address(alice)), "_testClaim: E1");
@@ -387,7 +387,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertEq(IERC20(compounder).balanceOf(address(_localConcentrator)), _totalRewards, "_testClaim: E007");
 
         vm.prank(bob);
-        uint256 _rewardsOutBob = _localConcentrator.claim(address(bob));
+        uint256 _rewardsOutBob = _localConcentrator.claim(address(0), address(bob));
         _totalRewards -= _rewardsOutBob;
 
         assertApproxEqAbs(_rewardsOutBob, IERC20(compounder).balanceOf(address(alice)), 1e17, "_testClaim: E3");
@@ -395,7 +395,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertEq(IERC20(compounder).balanceOf(address(_localConcentrator)), _totalRewards, "_testClaim: E004");
 
         vm.prank(charlie);
-        uint256 _rewardsOutCharlie = _localConcentrator.claim(address(charlie));
+        uint256 _rewardsOutCharlie = _localConcentrator.claim(address(0), address(charlie));
         _totalRewards -= _rewardsOutCharlie;
 
         assertApproxEqAbs(_rewardsOutCharlie, IERC20(compounder).balanceOf(address(alice)), 1e17, "_testClaim: E5");

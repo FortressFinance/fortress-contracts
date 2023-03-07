@@ -94,6 +94,9 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @notice The vault settings
     Settings public settings;
 
+    /// @notice The address of the contract that can specify an owner when calling the claim function 
+    address public multiClaimer;
+
     /// @notice Mapping from account address to user info
     mapping(address => UserInfo) public userInfo;
 
@@ -398,15 +401,20 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _underlyingAmount;
     }
 
-    /// @dev Claims all rewards for msg.sender and sends them to receiver
+    /// @dev Claims all rewards for _owner and sends them to _receiver
+    /// @param _owner - The owner of rewards
     /// @param _receiver - The recipient of rewards
-    /// @return _rewards - The amount of compounder shares sent to the _receiver
-    function claim(address _receiver) public nonReentrant returns (uint256 _rewards) {
+    /// @return _rewards - The amount of Compounder shares sent to the _receiver
+    function claim(address _owner, address _receiver) public nonReentrant returns (uint256 _rewards) {
         if (settings.pauseClaim) revert ClaimPaused();
+        
+        if (msg.sender != multiClaimer) {
+            _owner = msg.sender;
+        }
 
-        _updateRewards(msg.sender);
+        _updateRewards(_owner);
 
-        UserInfo storage _userInfo = userInfo[msg.sender];
+        UserInfo storage _userInfo = userInfo[_owner];
         _rewards = _userInfo.rewards;
         _userInfo.rewards = 0;
 
@@ -423,7 +431,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     // slither-disable-next-line reentrancy-eth
     function redeemAndClaim(uint256 _shares, address _receiver) external returns (uint256 _assets, uint256 _rewards) {
         _assets = redeem(_shares, _receiver, msg.sender);
-        _rewards = claim(_receiver);
+        _rewards = claim(address(0), _receiver);
 
         return (_assets, _rewards);
     }
@@ -438,7 +446,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     // slither-disable-next-line reentrancy-eth
     function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
         _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
-        _rewards = claim(_receiver);
+        _rewards = claim(address(0), _receiver);
 
         return (_underlyingAmount, _rewards);
     }
@@ -576,6 +584,14 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         emit UpdateSettings(_compounder, _platform, _swap, _ammOperations, _owner, _depositCap, _underlyingAssets);
     }
 
+    function updateMultiClaimer(address _multiClaimer) external {
+        if (msg.sender != settings.owner) revert Unauthorized();
+
+        multiClaimer = _multiClaimer;
+
+        emit UpdateMultiClaimer(_multiClaimer);
+    }
+
     /// @dev Pauses deposits/withdrawals for the vault
     /// @param _pauseDeposit - The new deposit status
     /// @param _pauseWithdraw - The new withdraw status
@@ -685,6 +701,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     event UpdateRewardAssets(address[] _rewardAssets);
     event UpdateSettings(address compounder, address _platform, address _swap, address ammOperations, address _owner, uint256 _depositCap, address[] _underlyingAssets);
     event UpdateFeelessRedeemerWhitelist(address _address, bool _whitelist);
+    event UpdateMultiClaimer(address _multiClaimer);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw, bool _pauseClaim);
     
     /********************************** Errors **********************************/
