@@ -5,6 +5,7 @@ import "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitTriCryptoGlp is InitBaseArbi {
     
@@ -19,7 +20,7 @@ contract InitTriCryptoGlp is InitBaseArbi {
 
         _asset = TRICRYPTO_LP;
         _symbol = "fctrTriCrypto-fcGLP";
-        _name = "Fortress Concentrator Curve TriCrypto to fcGLP";
+        _name = "Fortress Curve TriCrypto Concentrating to fcGLP";
 
         _underlyingAssets4[0] = USDT;
         _underlyingAssets4[1] = WBTC;
@@ -38,6 +39,10 @@ contract InitTriCryptoGlp is InitBaseArbi {
         // ------------------------- init registry -------------------------
 
         YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmConcentrator(true, address(curveGlpConcentrator), address(_compounder), address(_asset));
+
+        // ------------------------- whitelist in ammOperations -------------------------
+
+        CurveArbiOperations(payable(_ammOperations)).updateWhitelist(address(curveGlpConcentrator), true);
 
         return address(curveGlpConcentrator);
     }

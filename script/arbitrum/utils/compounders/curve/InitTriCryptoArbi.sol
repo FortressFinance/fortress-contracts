@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitTriCryptoArbi is InitBaseArbi {
 
@@ -22,11 +23,11 @@ contract InitTriCryptoArbi is InitBaseArbi {
         // _rewardAssets[1] = CVX;
 
         // NOTE - make sure the order of underlying assets is the same as in Curve contract (Backend requirment)
-        // TODO - add ETH + tests 
-        address[] memory _underlyingAssets = new address[](3);
+        address[] memory _underlyingAssets = new address[](4);
         _underlyingAssets[0] = USDT;
         _underlyingAssets[1] = WBTC;
         _underlyingAssets[2] = WETH;
+        _underlyingAssets[3] = ETH;
 
         address _booster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
         address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_convexPid).rewards;
@@ -38,6 +39,10 @@ contract InitTriCryptoArbi is InitBaseArbi {
         // ------------------------- init registry -------------------------
 
         YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmCompounder(true, address(curveCompounder), address(_asset));
+
+        // ------------------------- whitelist in ammOperations -------------------------
+
+        CurveArbiOperations(payable(_ammOperations)).updateWhitelist(address(curveCompounder), true);
         
         return address(curveCompounder);
     }

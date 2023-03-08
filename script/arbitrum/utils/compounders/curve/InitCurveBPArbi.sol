@@ -5,6 +5,7 @@ import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitCurveBPArbi is InitBaseArbi {
 
@@ -41,6 +42,10 @@ contract InitCurveBPArbi is InitBaseArbi {
         // ------------------------- init registry -------------------------
 
         YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmCompounder(true, address(curveCompounder), address(_asset));
+
+        // ------------------------- whitelist in ammOperations -------------------------
+
+        CurveArbiOperations(payable(_ammOperations)).updateWhitelist(address(curveCompounder), true);
         
         return address(curveCompounder);
     }
