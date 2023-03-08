@@ -121,13 +121,11 @@ contract CurveGlpConcentrator is AMMConcentratorBase {
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
         address payable _ammOperations = settings.ammOperations;
         if (_underlyingAsset == ETH) {
-            _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
-
-            // (bytes memory result) = _ammOperations.functionCallWithValue(
-            //     abi.encodeWithSignature("addLiquidity(address,uint256,address,uint256)", poolAddress, poolType, _underlyingAsset, _underlyingAmount),
-            //     _underlyingAmount
-            // );
-            // _assets = abi.decode(result, (uint256));
+            (bytes memory result) = _ammOperations.functionCallWithValue(
+                abi.encodeWithSignature("addLiquidity(address,uint256,address,uint256)", poolAddress, poolType, _underlyingAsset, _underlyingAmount),
+                _underlyingAmount
+            );
+            _assets = abi.decode(result, (uint256));
         } else {
             _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
             _assets = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);

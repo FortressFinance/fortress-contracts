@@ -22,36 +22,38 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {SafeCast} from "lib/openzeppelin-contracts/contracts/utils/math/SafeCast.sol";
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
-import "src/shared/fortress-interfaces/IFortressSwap.sol";
+import {IFortressSwap} from "src/shared/fortress-interfaces/IFortressSwap.sol";
 
-import "src/arbitrum/interfaces/IUniswapV3RouterArbi.sol";
-import "src/arbitrum/interfaces/IGMXRouter.sol";
-import "src/shared/interfaces/IWETH.sol";
-import "src/shared/interfaces/ICurvePool.sol";
-import "src/shared/interfaces/ICurveCryptoETHV2Pool.sol";
-import "src/shared/interfaces/ICurveSBTCPool.sol";
-import "src/shared/interfaces/ICurveCryptoV2Pool.sol";
-import "src/shared/interfaces/ICurve3Pool.sol";
-import "src/shared/interfaces/ICurvesUSD4Pool.sol";
-import "src/shared/interfaces/ICurveBase3Pool.sol";
-import "src/shared/interfaces/ICurvePlainPool.sol";
-import "src/shared/interfaces/ICurveCRVMeta.sol";
-import "src/shared/interfaces/ICurveFraxMeta.sol";
-import "src/shared/interfaces/ICurveFraxCryptoMeta.sol";
-import "src/shared/interfaces/IUniswapV3Pool.sol";
-import "src/shared/interfaces/IUniswapV2Router.sol";
-import "src/shared/interfaces/IBalancerVault.sol";
-import "src/shared/interfaces/IBalancerPool.sol";
+import {IUniswapV3RouterArbi} from "src/arbitrum/interfaces/IUniswapV3RouterArbi.sol";
+import {IGMXRouter} from "src/arbitrum/interfaces/IGMXRouter.sol";
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
+import {ICurvePool} from "src/shared/interfaces/ICurvePool.sol";
+import {ICurveCryptoETHV2Pool} from "src/shared/interfaces/ICurveCryptoETHV2Pool.sol";
+import {ICurveSBTCPool} from "src/shared/interfaces/ICurveSBTCPool.sol";
+import {ICurveCryptoV2Pool} from "src/shared/interfaces/ICurveCryptoV2Pool.sol";
+import {ICurve3Pool} from "src/shared/interfaces/ICurve3Pool.sol";
+import {ICurvesUSD4Pool} from "src/shared/interfaces/ICurvesUSD4Pool.sol";
+import {ICurveBase3Pool} from "src/shared/interfaces/ICurveBase3Pool.sol";
+import {ICurvePlainPool} from "src/shared/interfaces/ICurvePlainPool.sol";
+import {ICurveCRVMeta} from "src/shared/interfaces/ICurveCRVMeta.sol";
+import {ICurveFraxMeta} from "src/shared/interfaces/ICurveFraxMeta.sol";
+import {ICurveFraxCryptoMeta} from "src/shared/interfaces/ICurveFraxCryptoMeta.sol";
+import {IUniswapV3Pool} from "src/shared/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV2Router} from "src/shared/interfaces/IUniswapV2Router.sol";
+import {IBalancerVault} from "src/shared/interfaces/IBalancerVault.sol";
+import {IBalancerPool} from "src/shared/interfaces/IBalancerPool.sol";
 
 contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
 
     using SafeERC20 for IERC20;
     using SafeCast for int256;
+    using Address for address payable;
 
     /// @notice The address of WETH token (Arbitrum)
     address private constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -179,9 +181,7 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
         }
         
         if (_toToken == ETH) {
-            // slither-disable-next-line arbitrary-send-eth
-            (bool sent,) = msg.sender.call{value: _amount}("");
-            if (!sent) revert FailedToSendETH();
+            payable(msg.sender).sendValue(_amount);
         } else {
             IERC20(_toToken).safeTransfer(msg.sender, _amount);
         }
@@ -255,9 +255,8 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
     function rescueETH(address _recipient) external {
         if (msg.sender != owner) revert Unauthorized();
         if (_recipient == address(0)) revert ZeroInput();
-
-        (bool sent,) = _recipient.call{value: address(this).balance}("");
-        if (!sent) revert FailedToSendETH();
+        
+        payable(_recipient).sendValue(address(this).balance);
 
         emit RescueETH(_recipient);
     }
@@ -422,7 +421,7 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
         uint256 _before = _toToken == ETH ? address(this).balance : IERC20(_toToken).balanceOf(address(this));
 
         if (_fromToken == ETH) {
-            _pool.exchange{ value: _amount }(_from, _to, _amount, 0);    
+            payable(address(_pool)).functionCallWithValue(abi.encodeWithSignature("exchange(address,address,uint256,uint256)", _from, _to, _amount, 0), _amount);
         } else {
             _approve(_fromToken, _poolAddress, _amount);
             _pool.exchange(_from, _to, _amount, 0);
@@ -449,7 +448,7 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
         uint256 _before = _toToken == ETH ? address(this).balance : IERC20(_toToken).balanceOf(address(this));
 
         if (_pool.coins(_from) == ETH) {
-            _pool.exchange{ value: _amount }(_from, _to, _amount, 0);    
+            payable(address(_pool)).functionCallWithValue(abi.encodeWithSignature("exchange(address,address,uint256,uint256)", _from, _to, _amount, 0), _amount);
         } else {
             _approve(_fromToken, _poolAddress, _amount);
             _pool.exchange(_from, _to, _amount, 0);
@@ -628,7 +627,7 @@ contract FortressArbiSwap is ReentrancyGuard, IFortressSwap {
     }
 
     function _wrapETH(uint256 _amount) internal {
-        IWETH(WETH).deposit{ value: _amount }();
+        payable(WETH).functionCallWithValue(abi.encodeWithSignature("deposit()"), _amount);
     }
 
     function _unwrapETH(uint256 _amount) internal {

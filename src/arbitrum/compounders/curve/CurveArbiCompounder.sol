@@ -13,7 +13,7 @@ pragma solidity 0.8.17;
 // ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-                             
+
 //  _____                 _____     _   _ _____                             _         
 // |     |_ _ ___ _ _ ___|  _  |___| |_|_|     |___ _____ ___ ___ _ _ ___ _| |___ ___ 
 // |   --| | |  _| | | -_|     |  _| . | |   --| . |     | . | . | | |   | . | -_|  _|
@@ -22,7 +22,7 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import {AMMCompounderBase, SafeERC20, IERC20, ERC20, IFortressSwap} from "src/shared/compounders/AMMCompounderBase.sol";
+import {AMMCompounderBase, SafeERC20, IERC20, ERC20, Address, IFortressSwap} from "src/shared/compounders/AMMCompounderBase.sol";
 
 import {ICurveOperations} from "src/shared/fortress-interfaces/ICurveOperations.sol";
 import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
@@ -31,6 +31,7 @@ import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewar
 contract CurveArbiCompounder is AMMCompounderBase {
     
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     /// @notice The address of the vault's Curve pool
     address private immutable poolAddress;
@@ -85,8 +86,11 @@ contract CurveArbiCompounder is AMMCompounderBase {
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
         address payable _ammOperations = settings.ammOperations;
         if (_underlyingAsset == ETH) {
-            // TODO - Address.sol
-            _assets = ICurveOperations(_ammOperations).addLiquidity{value: _underlyingAmount}(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
+            (bytes memory _result) = _ammOperations.functionCallWithValue(
+                abi.encodeWithSignature("addLiquidity(address,uint256,address,uint256)", poolAddress, poolType, _underlyingAsset, _underlyingAmount),
+                _underlyingAmount
+            );
+            _assets = abi.decode(_result, (uint256));
         } else {
             _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
             _assets = ICurveOperations(_ammOperations).addLiquidity(poolAddress, poolType, _underlyingAsset, _underlyingAmount);
@@ -118,8 +122,7 @@ contract CurveArbiCompounder is AMMCompounderBase {
             if (_rewardAsset != _underlyingAsset) {
                 if (_rewardAsset == ETH) {
                     // slither-disable-next-line arbitrary-send-eth
-                    // TODO - Address.sol   
-                    IFortressSwap(_swap).swap{ value: address(this).balance }(_rewardAsset, _underlyingAsset, address(this).balance);
+                    payable(_swap).functionCallWithValue(abi.encodeWithSignature("swap(address,address,uint256)", _rewardAsset, _underlyingAsset, address(this).balance), address(this).balance);
                 } else {
                     uint256 _balance = IERC20(_rewardAsset).balanceOf(address(this));
                     if (_balance > 0) {

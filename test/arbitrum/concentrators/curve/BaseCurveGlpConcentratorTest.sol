@@ -324,24 +324,42 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
 
         assertEq(_localConcentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testRedeemUnderlying: E01");
 
+        uint256 _balanceBefore = address(alice).balance;
         vm.prank(alice);
         uint256 _tokenOutAlice = _localConcentrator.redeemSingleUnderlying(_sharesAlice, _asset, address(alice), address(alice), 0);
+
+        if (_asset == ETH) {
+            assertEq(_tokenOutAlice, address(alice).balance - _balanceBefore, "_testWithdrawUnderlying: E01");
+        } else {
+            assertEq(_tokenOutAlice, IERC20(_asset).balanceOf(address(alice)), "_testWithdrawUnderlying: E1");
+        }
         
-        assertEq(_tokenOutAlice, IERC20(_asset).balanceOf(address(alice)), "_testWithdrawUnderlying: E1");
         assertEq(_localConcentrator.balanceOf(address(alice)), 0, "_testWithdrawUnderlying: E2");
         assertEq(_localConcentrator.totalSupply(), (_sharesBob + _sharesCharlie), "_testRedeemUnderlying: E02");
         
+        _balanceBefore = address(bob).balance;
         vm.prank(bob);
         uint256 _tokenOutBob = _localConcentrator.redeemSingleUnderlying(_sharesBob, _asset, address(bob), address(bob), 0);
         
-        assertEq(_tokenOutBob, IERC20(_asset).balanceOf(address(bob)), "_testWithdrawUnderlying: E3");
+        if (_asset == ETH) {
+            assertEq(_tokenOutBob, address(bob).balance - _balanceBefore, "_testWithdrawUnderlying: E03");
+        } else {
+            assertEq(_tokenOutBob, IERC20(_asset).balanceOf(address(bob)), "_testWithdrawUnderlying: E3");
+        }
+
         assertEq(_localConcentrator.balanceOf(address(bob)), 0, "_testWithdrawUnderlying: E4");
         assertEq(_localConcentrator.totalSupply(), _sharesCharlie, "_testRedeemUnderlying: E04");
 
+        _balanceBefore = address(charlie).balance;
         vm.prank(charlie);
         uint256 _tokenOutCharlie = _localConcentrator.redeemSingleUnderlying(_sharesCharlie, _asset, address(charlie), address(charlie), 0);
         
-        assertEq(_tokenOutCharlie, IERC20(_asset).balanceOf(address(charlie)), "_testWithdrawUnderlying: E5");
+        if (_asset == ETH) {
+            assertEq(_tokenOutCharlie, address(charlie).balance - _balanceBefore, "_testWithdrawUnderlying: E005");
+        } else {
+            assertEq(_tokenOutCharlie, IERC20(_asset).balanceOf(address(charlie)), "_testWithdrawUnderlying: E05");
+        }
+
         assertEq(_localConcentrator.balanceOf(address(charlie)), 0, "_testWithdrawUnderlying: E6");
 
         assertEq(_localConcentrator.totalAssets(), 0, "_testWithdrawUnderlying: E7");
