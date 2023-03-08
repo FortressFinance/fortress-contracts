@@ -348,7 +348,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _minAmount - The minimum amount of assets (LP tokens) to receive
     /// @return _shares - The amount of shares minted
     // slither-disable-next-line reentrancy-no-eth
-    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
+    function depositUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         
@@ -380,7 +380,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _minAmount - The minimum amount of underlying assets to receive
     /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver
     // slither-disable-next-line reentrancy-no-eth
-    function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
+    function redeemUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
         
@@ -446,7 +446,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @return _rewards - The amount of rewards sent to _receiver
     // slither-disable-next-line reentrancy-eth
     function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
-        _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
+        _underlyingAmount = redeemUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
         _rewards = claim(address(0), _receiver);
 
         return (_underlyingAmount, _rewards);
