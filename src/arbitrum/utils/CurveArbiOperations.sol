@@ -22,25 +22,27 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
-import "src/shared/interfaces/ICurvePool.sol";
-import "src/shared/interfaces/ICurve3Pool.sol";
-import "src/shared/interfaces/ICurvesUSD4Pool.sol";
-import "src/shared/interfaces/ICurveETHPool.sol";
-import "src/shared/interfaces/ICurveCryptoETHV2Pool.sol";
-import "src/shared/interfaces/ICurveCRVMeta.sol";
-import "src/shared/interfaces/ICurveFraxMeta.sol";
-import "src/shared/interfaces/ICurveBase3Pool.sol";
-import "src/shared/interfaces/ICurveFraxCryptoMeta.sol";
-import "src/shared/interfaces/ICurveCryptoV2Pool.sol";
-import "src/shared/interfaces/ICurveMetaRegistry.sol";
-import "src/shared/interfaces/IWETH.sol";
+import {ICurvePool} from "src/shared/interfaces/ICurvePool.sol";
+import {ICurve3Pool} from "src/shared/interfaces/ICurve3Pool.sol";
+import {ICurvesUSD4Pool} from "src/shared/interfaces/ICurvesUSD4Pool.sol";
+import {ICurveETHPool} from "src/shared/interfaces/ICurveETHPool.sol";
+import {ICurveCryptoETHV2Pool} from "src/shared/interfaces/ICurveCryptoETHV2Pool.sol";
+import {ICurveCRVMeta} from "src/shared/interfaces/ICurveCRVMeta.sol";
+import {ICurveFraxMeta} from "src/shared/interfaces/ICurveFraxMeta.sol";
+import {ICurveBase3Pool} from "src/shared/interfaces/ICurveBase3Pool.sol";
+import {ICurveFraxCryptoMeta} from "src/shared/interfaces/ICurveFraxCryptoMeta.sol";
+import {ICurveCryptoV2Pool} from "src/shared/interfaces/ICurveCryptoV2Pool.sol";
+import {ICurveMetaRegistry} from "src/shared/interfaces/ICurveMetaRegistry.sol";
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
 
 contract CurveArbiOperations {
 
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     /// @notice The address of Curve MetaRegistry
     ICurveMetaRegistry internal immutable metaRegistry = ICurveMetaRegistry(0x445FE580eF8d70FF569aB36e80c647af338db351);
@@ -186,8 +188,7 @@ contract CurveArbiOperations {
         if (_token == ETH) {
             _underlyingAmount = address(this).balance - _before;
             // slither-disable-next-line arbitrary-send-eth
-            (bool sent,) = msg.sender.call{value: _underlyingAmount}("");
-            if (!sent) revert FailedToSendETH();
+            payable(msg.sender).sendValue(_underlyingAmount);
         } else {
             _underlyingAmount = IERC20(_token).balanceOf(address(this)) - _before;
             IERC20(_token).safeTransfer(msg.sender, _underlyingAmount);
@@ -333,7 +334,7 @@ contract CurveArbiOperations {
         ICurveETHPool _pool = ICurveETHPool(_poolAddress);
 
         if (_pool.coins(0) == _token) {
-            _pool.add_liquidity{ value: _amount }([_amount, 0], 0);
+            payable(address(_pool)).functionCallWithValue(abi.encodeWithSignature("add_liquidity(uint256[2],uint256)", [_amount, 0], 0), _amount);
         } else if (_pool.coins(1) == _token) {
             _approveOperations(_token, _poolAddress, _amount);
             _pool.add_liquidity([0, _amount], 0);
@@ -347,7 +348,7 @@ contract CurveArbiOperations {
         ICurveCryptoETHV2Pool _pool = ICurveCryptoETHV2Pool(_poolAddress);
 
         if (_token == ETH) {
-            _pool.add_liquidity{ value: _amount }([_amount, 0], 0, true);
+            payable(address(_pool)).functionCallWithValue(abi.encodeWithSignature("add_liquidity(uint256[2],uint256,bool)", [_amount, 0], 0, true), _amount);
         } else if (_token == _pool.coins(0)) {
             _approveOperations(_token, _poolAddress, _amount);
             _pool.add_liquidity([_amount, 0], 0, false);
@@ -500,7 +501,7 @@ contract CurveArbiOperations {
     }
 
     function _wrapETH(uint256 _amount) internal {
-        IWETH(WETH).deposit{ value: _amount }();
+        payable(WETH).functionCallWithValue(abi.encodeWithSignature("deposit()"), _amount);
     }
 
     function _unwrapETH(uint256 _amount) internal {
@@ -511,6 +512,8 @@ contract CurveArbiOperations {
         IERC20(_token).safeApprove(_spender, 0);
         IERC20(_token).safeApprove(_spender, _amount);
     }
+
+    receive() external payable {}
 
     /********************************** Errors **********************************/
 

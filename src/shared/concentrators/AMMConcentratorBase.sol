@@ -24,6 +24,7 @@ pragma solidity 0.8.17;
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
 import {IFortressSwap} from "src/shared/fortress-interfaces/IFortressSwap.sol";
 import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
@@ -34,6 +35,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
   
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     struct Fees {
         /// @notice The percentage of fee to pay for platform on harvest
@@ -346,7 +348,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _minAmount - The minimum amount of assets (LP tokens) to receive
     /// @return _shares - The amount of shares minted
     // slither-disable-next-line reentrancy-no-eth
-    function depositSingleUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
+    function depositUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         
@@ -378,7 +380,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @param _minAmount - The minimum amount of underlying assets to receive
     /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver
     // slither-disable-next-line reentrancy-no-eth
-    function redeemSingleUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
+    function redeemUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
         
@@ -392,8 +394,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _underlyingAmount = _swapToUnderlying(_underlyingAsset, _assets, _minAmount);
         
         if (_underlyingAsset == ETH) {
-            (bool sent,) = _receiver.call{value: _underlyingAmount}("");
-            if (!sent) revert FailedToSendETH();
+            payable(_receiver).sendValue(_underlyingAmount);
         } else {
             IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAmount);
         }
@@ -445,7 +446,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     /// @return _rewards - The amount of rewards sent to _receiver
     // slither-disable-next-line reentrancy-eth
     function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
-        _underlyingAmount = redeemSingleUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
+        _underlyingAmount = redeemUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
         _rewards = claim(address(0), _receiver);
 
         return (_underlyingAmount, _rewards);

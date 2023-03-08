@@ -39,6 +39,7 @@ contract InitBaseArbi is AddressesArbi {
 
     address[] _underlyingAssets2 = new address[](2);
     address[] _underlyingAssets3 = new address[](3);
+    address[] _underlyingAssets4 = new address[](4);
     address[] _underlyingAssets5 = new address[](5);
     address[] _underlyingAssets6 = new address[](6);
 

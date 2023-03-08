@@ -37,6 +37,10 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
         (,,,,,, compounder,,,) = AMMConcentratorBase(address(glpConcentrator)).settings();
     }
 
+    function testCorrectFlowETH(uint256 _amount) public {
+        _testCorrectFlow(ETH, _amount, address(glpConcentrator));
+    }
+
     function testCorrectFlowUSDT(uint256 _amount) public {
         _testCorrectFlow(USDT, _amount, address(glpConcentrator));
     }

@@ -22,6 +22,8 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
+
 import {TokenCompounderBase, ERC20, IERC20, SafeERC20} from "src/shared/compounders/TokenCompounderBase.sol";
 
 import {IWETH} from "src/shared/interfaces/IWETH.sol";
@@ -33,6 +35,7 @@ import {IGlpRewardTracker} from "src/arbitrum/interfaces/IGlpRewardTracker.sol";
 contract GlpCompounder is TokenCompounderBase {
 
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
     /// @notice The address of the contract that handles rewards
     address public rewardHandler;
@@ -87,7 +90,7 @@ contract GlpCompounder is TokenCompounderBase {
             if (msg.value != _underlyingAmount) revert InvalidAmount();
 
             _underlyingAsset = WETH;
-            IWETH(WETH).deposit{value: _underlyingAmount}();
+            payable(_underlyingAsset).functionCallWithValue(abi.encodeWithSignature("deposit()"), _underlyingAmount);
         } else {
             IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
         }
