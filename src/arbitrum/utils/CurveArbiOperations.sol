@@ -107,7 +107,7 @@ contract CurveArbiOperations {
             if (_token != ETH) revert InvalidAsset();
             if (_amount > address(this).balance) revert InvalidAmount();
         } else {
-            IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+            IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
         }
 
         uint256 _before = IERC20(_lpToken).balanceOf(address(this));
@@ -134,7 +134,7 @@ contract CurveArbiOperations {
         }
 
         _assets = IERC20(_lpToken).balanceOf(address(this)) - _before;
-        IERC20(_lpToken).transfer(msg.sender, _assets);
+        IERC20(_lpToken).safeTransfer(msg.sender, _assets);
 
         return _assets;
     }
@@ -187,7 +187,6 @@ contract CurveArbiOperations {
 
         if (_token == ETH) {
             _underlyingAmount = address(this).balance - _before;
-            // slither-disable-next-line arbitrary-send-eth
             payable(msg.sender).sendValue(_underlyingAmount);
         } else {
             _underlyingAmount = IERC20(_token).balanceOf(address(this)) - _before;

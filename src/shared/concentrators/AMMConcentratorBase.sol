@@ -42,7 +42,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         uint256 platformFeePercentage;
         /// @notice The percentage of fee to pay for caller on harvest
         uint256 harvestBountyPercentage;
-        /// @notice The percentage of fee to keep in vault on withdraw (distributed among vault participants)
+        /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to vault participants. Used as a mechanism to protect against mercenary capital
         uint256 withdrawFeePercentage;
     }
 
@@ -58,7 +58,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     }
 
     struct Settings {
-        /// @notice The description of the vault - whether it's a Crypto/Stable + Curve/Balancer
+        /// @notice The description of the vault
         string description;
         /// @notice The internal accounting of the deposit limit. Denominated in shares
         uint256 depositCap;
@@ -66,7 +66,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         address platform;
         /// @notice The address of the FortressSwap contract
         address swap;
-        /// @notice The address of the FortressSwap contract
+        /// @notice The address of the AMM Operations contract
         address payable ammOperations;
         /// @notice The address of the owner
         address owner;
@@ -103,7 +103,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     mapping(address => UserInfo) public userInfo;
 
     /// @notice The accumulated reward per share, with 1e18 precision
-    uint256 public accRewardPerShare = 0;
+    uint256 public accRewardPerShare;
     /// @notice The last block number that the harvest function was executed
     uint256 public lastHarvestBlock;
     /// @notice The internal accounting of AUM
@@ -301,7 +301,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _assets;
     }
 
-    /// @dev Burns shares from owner and sends exact amount of assets to _receiver
+    /// @dev Burns shares from owner and sends exact amount of assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _assets - The amount of assets to receive
     /// @param _receiver - The address of the receiver of assets
     /// @param _owner - The owner of shares
@@ -321,7 +321,7 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from owner and sends assets to _receiver
+    /// @dev Burns exact amount of shares from owner and sends assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
     /// @param _shares - The amount of shares to burn
     /// @param _receiver - The address of the receiver of assets
     /// @param _owner - The owner of shares
@@ -544,6 +544,8 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         _boosterData.booster = _booster;
         _boosterData.crvRewards = _crvRewards;
         _boosterData.boosterPoolId = _boosterPoolId;
+
+        _approve(address(asset), _boosterData.booster, type(uint256).max);
 
         emit UpdateBoosterData(_booster, _crvRewards, _boosterPoolId);
     }

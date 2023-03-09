@@ -43,7 +43,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         uint256 platformFeePercentage;
         /// @notice The percentage of fee to pay for caller on harvest
         uint256 harvestBountyPercentage;
-        /// @notice The percentage of fee to keep in vault on withdraw (distributed among vault participants)
+        /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to vault participants. Used as a mechanism to protect against mercenary capital
         uint256 withdrawFeePercentage;
     }
 
@@ -59,7 +59,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     struct Settings {
-        /// @notice The description of the vault - whether it's a Crypto/Stable + Curve/Balancer
+        /// @notice The description of the vault
         string description;
         /// @notice The internal accounting of the deposit limit. Denominated in shares
         uint256 depositCap;
@@ -266,7 +266,6 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _shares - The amount of shares to mint
     /// @param _receiver - The address of the receiver of shares
     /// @return _assets - The amount of assets deposited
-    // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
 
@@ -343,7 +342,7 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value
+    /// @notice This function is vulnerable to a frontrunning attacke if called without asserting the returned value
     /// @notice If the _owner is whitelisted, no withdrawal fee is applied
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver
     /// @param _underlyingAsset - The address of underlying asset to redeem shares for
@@ -466,6 +465,8 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         _boosterData.booster = _booster;
         _boosterData.crvRewards = _crvRewards;
         _boosterData.boosterPoolId = _boosterPoolId;
+
+        _approve(address(asset), _boosterData.booster, type(uint256).max);
 
         emit UpdateBoosterData(_booster, _crvRewards, _boosterPoolId);
     }

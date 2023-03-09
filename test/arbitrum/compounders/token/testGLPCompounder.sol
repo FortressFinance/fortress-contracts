@@ -653,7 +653,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
     function _capDeposit(uint256 _amount) internal {
         vm.startPrank(owner);
-        glpCompounder.updateInternalUtils(address(platform), address(fortressSwap), address(owner), _amount, glpCompounder.getUnderlyingAssets());
+        glpCompounder.updateSettings(address(platform), address(fortressSwap), address(owner), _amount, glpCompounder.getUnderlyingAssets());
         vm.stopPrank();
 
         assertEq(glpCompounder.maxMint(address(0)), _amount, "_capDeposit: E0");

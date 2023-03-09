@@ -172,7 +172,6 @@ contract GlpCompounder is TokenCompounderBase {
         address _weth = WETH;
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
         
-        require(_balance > 0, "No rewards to harvest");
         if (_underlyingAsset != _weth) {
             _balance = IFortressSwap(swap).swap(_weth, _underlyingAsset, _balance);
         }

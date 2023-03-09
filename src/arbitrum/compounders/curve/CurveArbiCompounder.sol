@@ -121,7 +121,6 @@ contract CurveArbiCompounder is AMMCompounderBase {
             
             if (_rewardAsset != _underlyingAsset) {
                 if (_rewardAsset == ETH) {
-                    // slither-disable-next-line arbitrary-send-eth
                     payable(_swap).functionCallWithValue(abi.encodeWithSignature("swap(address,address,uint256)", _rewardAsset, _underlyingAsset, address(this).balance), address(this).balance);
                 } else {
                     uint256 _balance = IERC20(_rewardAsset).balanceOf(address(this));

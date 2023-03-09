@@ -33,11 +33,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
     
-    /// @notice Whether deposits are paused
-    bool public pauseDeposit = false;
-    /// @notice Whether withdrawals are paused
-    bool public pauseWithdraw = false;
-    /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to all holders. Used as a mechanism to protect against mercenary capital
+    /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to vault participants. Used as a mechanism to protect against mercenary capital
     uint256 public withdrawFeePercentage;
     /// @notice The performance fee percentage to take for platform on harvest
     uint256 public platformFeePercentage;
@@ -50,16 +46,21 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @notice The internal accounting of the deposit limit. Denominated in shares
     uint256 public depositCap;
 
-    /// @notice The description of the vault - whether it's a Crypto/Stable
+    /// @notice The description of the vault
     string public description;
 
     /// @notice The address of owner
     address public owner;
     /// @notice The address of recipient of platform fee
     address public platform;
-    /// @notice The address of swap contract, will be used to swap tokens
+    /// @notice The address of FortressSwap contract
     address public swap;
-    
+
+    /// @notice Whether deposits are paused
+    bool public pauseDeposit = false;
+    /// @notice Whether withdrawals are paused
+    bool public pauseWithdraw = false;
+
     /// @notice The fee denominator
     uint256 internal constant FEE_DENOMINATOR = 1e9;
     /// @notice The maximum withdrawal fee
@@ -212,7 +213,6 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @param _shares - The shares to receive
     /// @param _receiver - The address of the receiver of shares
     /// @return _assets - The amount of underlying assets received
-    // slither-disable-next-line reentrancy-no-eth
     function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
         if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
 
@@ -269,7 +269,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     /// @return _shares - The amount of shares minted
     function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) external virtual payable nonReentrant returns (uint256 _shares) {}
 
-    /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value
+    /// @notice that this function is vulnerable to a frontrunning attack if called without asserting the returned value
     /// @notice If the _owner is whitelisted, no withdrawal fee is applied
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver
     /// @param _underlyingAsset - The address of the underlying asset to withdraw
@@ -357,13 +357,13 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         emit UpdateFees(_withdrawFeePercentage, _platformFeePercentage, _harvestBountyPercentage);
     }
 
-    /// @dev updates the vault internal utils
+    /// @dev updates the vault settings
     /// @param _platform - The Fortress platform address
     /// @param _swap - The Fortress swap address
     /// @param _owner - The vault owner address
     /// @param _depositCap - The deposit cap
     /// @param _underlyingAssets - The underlying assets
-    function updateInternalUtils(address _platform, address _swap, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
+    function updateSettings(address _platform, address _swap, address _owner, uint256 _depositCap, address[] memory _underlyingAssets) external {
         if (msg.sender != owner) revert Unauthorized();
 
         platform = _platform;
