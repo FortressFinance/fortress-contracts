@@ -221,7 +221,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         vm.expectRevert();
         _localConcentrator.mint(_amount, address(alice));
         vm.expectRevert();
-        _localConcentrator.depositUnderlying(_amount, _asset, address(alice), 0);
+        _localConcentrator.depositUnderlying(_asset, address(alice), _amount, 0);
 
         vm.stopPrank();
     }
@@ -236,7 +236,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         vm.startPrank(alice);
         IERC20(_asset).safeApprove(address(_concentrator), _underlyingAlice);
         vm.expectRevert();
-        _localConcentrator.depositUnderlying(_underlyingAlice, _asset, address(alice), 0);
+        _localConcentrator.depositUnderlying(_asset, address(alice), _underlyingAlice, 0);
 
         vm.stopPrank();
     }
@@ -250,7 +250,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         
         vm.startPrank(alice);
         IERC20(_asset).safeApprove(address(_concentrator), _underlyingAlice);
-        uint256 _share = _localConcentrator.depositUnderlying(_underlyingAlice, _asset, address(alice), 0);
+        uint256 _share = _localConcentrator.depositUnderlying(_asset, address(alice), _underlyingAlice, 0);
         vm.stopPrank();
         assertEq(_share, IERC20(address(_concentrator)).balanceOf(alice), "testWithdrawNotOwner: E1");
 
@@ -265,9 +265,9 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         vm.expectRevert();
         _localConcentrator.redeem(_share, bob, bob);
         vm.expectRevert();
-        _localConcentrator.redeemUnderlying(_share, _asset, bob, alice, 0);
+        _localConcentrator.redeemUnderlying(_asset, bob, alice, _share, 0);
         vm.expectRevert();
-        _localConcentrator.redeemUnderlying(_share, _asset, bob, bob, 0);
+        _localConcentrator.redeemUnderlying(_asset, bob, bob, _share, 0);
         
         vm.stopPrank();
     }
@@ -326,7 +326,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
 
         uint256 _balanceBefore = address(alice).balance;
         vm.prank(alice);
-        uint256 _tokenOutAlice = _localConcentrator.redeemUnderlying(_sharesAlice, _asset, address(alice), address(alice), 0);
+        uint256 _tokenOutAlice = _localConcentrator.redeemUnderlying(_asset, address(alice), address(alice), _sharesAlice, 0);
 
         if (_asset == ETH) {
             assertEq(_tokenOutAlice, address(alice).balance - _balanceBefore, "_testWithdrawUnderlying: E01");
@@ -339,7 +339,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         
         _balanceBefore = address(bob).balance;
         vm.prank(bob);
-        uint256 _tokenOutBob = _localConcentrator.redeemUnderlying(_sharesBob, _asset, address(bob), address(bob), 0);
+        uint256 _tokenOutBob = _localConcentrator.redeemUnderlying(_asset, address(bob), address(bob), _sharesBob, 0);
         
         if (_asset == ETH) {
             assertEq(_tokenOutBob, address(bob).balance - _balanceBefore, "_testWithdrawUnderlying: E03");
@@ -352,7 +352,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
 
         _balanceBefore = address(charlie).balance;
         vm.prank(charlie);
-        uint256 _tokenOutCharlie = _localConcentrator.redeemUnderlying(_sharesCharlie, _asset, address(charlie), address(charlie), 0);
+        uint256 _tokenOutCharlie = _localConcentrator.redeemUnderlying(_asset, address(charlie), address(charlie), _sharesCharlie, 0);
         
         if (_asset == ETH) {
             assertEq(_tokenOutCharlie, address(charlie).balance - _balanceBefore, "_testWithdrawUnderlying: E005");
@@ -460,7 +460,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         vm.startPrank(alice);
         IERC20(_asset).safeApprove(address(_localConcentrator), _balance);
         vm.expectRevert();
-        _localConcentrator.depositUnderlying(_balance, _asset, address(alice), 0);
+        _localConcentrator.depositUnderlying(_asset, address(alice), _balance, 0);
         vm.stopPrank();
     }
 
@@ -671,7 +671,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertTrue(_localConcentrator.balanceOf(address(charlie)) > 0, "_testRedeemUnderlyingAndClaimInt: E7");
 
         vm.startPrank(alice);
-        (uint256 _underlyingAmount, uint256 _rewards) = _localConcentrator.redeemUnderlyingAndClaim(_lowestShare, _underlyingAsset, address(alice), 0);
+        (uint256 _underlyingAmount, uint256 _rewards) = _localConcentrator.redeemUnderlyingAndClaim(_underlyingAsset, address(alice), _lowestShare, 0);
         vm.stopPrank();
 
         assertEq(IERC20(_underlyingAsset).balanceOf(address(alice)), _underlyingAmount, "_testRedeemUnderlyingAndClaimInt: E8");
@@ -679,7 +679,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertEq(_localConcentrator.pendingReward(address(alice)), 0, "_testRedeemUnderlyingAndClaimInt: E11");
 
         vm.startPrank(bob);
-        (uint256 _underlyingAmount2, uint256 _rewards2) = _localConcentrator.redeemUnderlyingAndClaim(_lowestShare, _underlyingAsset, address(bob), 0);
+        (uint256 _underlyingAmount2, uint256 _rewards2) = _localConcentrator.redeemUnderlyingAndClaim(_underlyingAsset, address(bob), _lowestShare, 0);
         vm.stopPrank();
 
         assertEq(IERC20(_underlyingAsset).balanceOf(address(bob)), _underlyingAmount2, "_testRedeemUnderlyingAndClaimInt: E12");
@@ -687,7 +687,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertEq(_localConcentrator.pendingReward(address(bob)), 0, "_testRedeemUnderlyingAndClaimInt: E14");
 
         vm.startPrank(charlie);
-        (uint256 _underlyingAmount3, uint256 _rewards3) = _localConcentrator.redeemUnderlyingAndClaim(_lowestShare, _underlyingAsset, address(charlie), 0);
+        (uint256 _underlyingAmount3, uint256 _rewards3) = _localConcentrator.redeemUnderlyingAndClaim(_underlyingAsset, address(charlie), _lowestShare, 0);
         vm.stopPrank();
 
         assertEq(IERC20(_underlyingAsset).balanceOf(address(charlie)), _underlyingAmount3, "_testRedeemUnderlyingAndClaimInt: E15");
@@ -784,9 +784,9 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         
         if (_asset != ETH) {
             IERC20(_asset).safeApprove(address(_concentrator), _amount);
-            _share = _localConcentrator.depositUnderlying(_amount, _asset, _owner, 0);
+            _share = _localConcentrator.depositUnderlying(_asset, _owner, _amount, 0);
         } else {
-            _share = _localConcentrator.depositUnderlying{value: _amount}(_amount, _asset, _owner, 0);
+            _share = _localConcentrator.depositUnderlying{value: _amount}(_asset, _owner, _amount, 0);
         }
         vm.stopPrank();
 

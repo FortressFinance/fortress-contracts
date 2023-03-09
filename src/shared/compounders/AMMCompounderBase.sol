@@ -316,12 +316,12 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Mints vault shares to _receiver by depositing exact amount of underlying assets
-    /// @param _underlyingAmount - The amount of underlying assets to deposit
     /// @param _underlyingAsset - The address of the underlying asset to deposit
     /// @param _receiver - The receiver of minted shares
+    /// @param _underlyingAmount - The amount of underlying assets to deposit
     /// @param _minAmount - The minimum amount of assets (LP tokens) to receive
     /// @return _shares - The amount of shares minted
-    function depositUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
+    function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         
@@ -343,14 +343,16 @@ abstract contract AMMCompounderBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from the _owner and sends underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _shares - The amount of shares to burn
+    /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value
+    /// @notice If the _owner is whitelisted, no withdrawal fee is applied
+    /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver
     /// @param _underlyingAsset - The address of underlying asset to redeem shares for
     /// @param _receiver - The address of the receiver of underlying assets
     /// @param _owner - The owner of _shares
+    /// @param _shares - The amount of shares to burn
     /// @param _minAmount - The minimum amount of underlying assets to receive
     /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver
-    function redeemUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) external nonReentrant returns (uint256 _underlyingAmount) {
+    function redeemUnderlying(address _underlyingAsset, address _receiver, address _owner, uint256 _shares, uint256 _minAmount) external nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 

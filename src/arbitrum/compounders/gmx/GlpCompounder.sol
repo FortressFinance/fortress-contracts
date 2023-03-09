@@ -81,7 +81,7 @@ contract GlpCompounder is TokenCompounderBase {
     /********************************** Mutated Functions **********************************/
 
     /// @notice See {TokenCompounderBase - depositUnderlying}
-    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAmount, address _receiver, uint256 _minAmount) public override payable nonReentrant returns (uint256 _shares) {
+    function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) public override payable nonReentrant returns (uint256 _shares) {
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 
@@ -111,7 +111,7 @@ contract GlpCompounder is TokenCompounderBase {
     }
 
     /// @notice See {TokenCompounderBase - redeemUnderlying}
-    function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAmount) {
+    function redeemUnderlying(address _underlyingAsset, address _receiver, address _owner, uint256 _shares, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAmount) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 

@@ -146,7 +146,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         assertEq(IERC20(FRAX).balanceOf(address(alice)), 0, "testDepositNoAssets: E1");
         IERC20(FRAX).safeApprove(address(glpCompounder), type(uint256).max);
         vm.expectRevert();
-        aliceAmountOut = glpCompounder.depositUnderlying(FRAX, _amount, alice, 0);
+        aliceAmountOut = glpCompounder.depositUnderlying(FRAX, alice, _amount, 0);
 
         assertEq(IERC20(sGLP).balanceOf(address(alice)), 0, "testDepositNoAssets: E2");
         IERC20(sGLP).safeApprove(address(glpCompounder), type(uint256).max);
@@ -165,7 +165,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(address(alice));
         IERC20(WETH).safeApprove(address(glpCompounder), type(uint256).max); 
         uint256 _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 aliceSharesOut = glpCompounder.depositUnderlying(WETH, IERC20(WETH).balanceOf(alice), alice, 0);
+        uint256 aliceSharesOut = glpCompounder.depositUnderlying(WETH, alice, IERC20(WETH).balanceOf(alice), 0);
         uint256 accumulatedShares = aliceSharesOut;
         uint256 accumulatedAmount = IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -181,7 +181,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(bob);
         
         vm.expectRevert();
-        bobAmountOut = glpCompounder.redeemUnderlying(WETH, _fakeShares, address(bob), address(bob), 0);
+        bobAmountOut = glpCompounder.redeemUnderlying(WETH, address(bob), address(bob), _fakeShares, 0);
 
         vm.expectRevert();
         bobAmountOut = glpCompounder.redeem(_fakeShares, address(bob), address(bob));
@@ -209,10 +209,10 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(alice);
 
         vm.expectRevert();
-        glpCompounder.depositUnderlying{value: _amount}(ETH, _amount - 1, alice, 0);
+        glpCompounder.depositUnderlying{value: _amount}(ETH, alice, _amount - 1, 0);
 
         vm.expectRevert();
-        glpCompounder.depositUnderlying{value: _amount - 1}(ETH, _amount, alice, 0);
+        glpCompounder.depositUnderlying{value: _amount - 1}(ETH, alice, _amount, 0);
         
         vm.stopPrank();
     }
@@ -225,10 +225,10 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(alice);
 
         vm.expectRevert();
-        glpCompounder.depositUnderlying{value: _amount}(WETH, _amount, alice, 0);
+        glpCompounder.depositUnderlying{value: _amount}(WETH, alice, _amount, 0);
 
         vm.expectRevert();
-        glpCompounder.depositUnderlying{value: _amount}(FRAX, _amount, alice, 0);
+        glpCompounder.depositUnderlying{value: _amount}(FRAX, alice, _amount, 0);
         
         vm.stopPrank();
     }
@@ -355,7 +355,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
         vm.startPrank(address(alice));
         uint256 _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 aliceSharesOut = glpCompounder.depositUnderlying{value: _amount}(ETH, _amount, alice, 0);
+        uint256 aliceSharesOut = glpCompounder.depositUnderlying{value: _amount}(ETH, alice, _amount, 0);
         uint256 accumulatedShares = aliceSharesOut;
         uint256 accumulatedAmount = IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -369,7 +369,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
         vm.startPrank(address(bob));
         _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 bobSharesOut = glpCompounder.depositUnderlying{value: _amount}(ETH, _amount, bob, 0);
+        uint256 bobSharesOut = glpCompounder.depositUnderlying{value: _amount}(ETH, bob, _amount, 0);
         accumulatedShares += bobSharesOut;
         accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -381,7 +381,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
         vm.startPrank(address(charlie));
         _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 charlieSharesOut = glpCompounder.depositUnderlying{value: _amount}(ETH, _amount, charlie, 0);
+        uint256 charlieSharesOut = glpCompounder.depositUnderlying{value: _amount}(ETH, charlie, _amount, 0);
         accumulatedShares += charlieSharesOut;
         accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -413,7 +413,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(address(alice));
         IERC20(_underlyingAsset).safeApprove(address(glpCompounder), type(uint256).max); 
         uint256 _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 aliceSharesOut = glpCompounder.depositUnderlying(_underlyingAsset, IERC20(_underlyingAsset).balanceOf(alice), alice, 0);
+        uint256 aliceSharesOut = glpCompounder.depositUnderlying(_underlyingAsset, alice, IERC20(_underlyingAsset).balanceOf(alice), 0);
         uint256 accumulatedShares = aliceSharesOut;
         uint256 accumulatedAmount = IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -429,7 +429,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(address(bob));
         IERC20(_underlyingAsset).safeApprove(address(glpCompounder), type(uint256).max);
         _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 bobSharesOut = glpCompounder.depositUnderlying(_underlyingAsset, IERC20(_underlyingAsset).balanceOf(bob), bob, 0);
+        uint256 bobSharesOut = glpCompounder.depositUnderlying(_underlyingAsset, bob, IERC20(_underlyingAsset).balanceOf(bob), 0);
         accumulatedShares += bobSharesOut;
         accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -443,7 +443,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         vm.startPrank(address(charlie));
         IERC20(_underlyingAsset).safeApprove(address(glpCompounder), type(uint256).max);
         _before = IERC20(fsGLP).balanceOf(address(glpCompounder));
-        uint256 charlieSharesOut = glpCompounder.depositUnderlying(_underlyingAsset, IERC20(_underlyingAsset).balanceOf(charlie), charlie, 0);
+        uint256 charlieSharesOut = glpCompounder.depositUnderlying(_underlyingAsset, charlie, IERC20(_underlyingAsset).balanceOf(charlie), 0);
         accumulatedShares += charlieSharesOut;
         accumulatedAmount += IERC20(fsGLP).balanceOf(address(glpCompounder)) - _before;
 
@@ -522,7 +522,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
             shares = glpCompounder.balanceOf(address(alice));
             vm.prank(alice);
-            aliceAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(alice), address(alice), 0);
+            aliceAmountOut = glpCompounder.redeemUnderlying(WETH, address(alice), address(alice), shares, 0);
             _accumulatedShares -= shares;
 
             assertEq(IERC20(WETH).balanceOf(address(alice)), aliceAmountOut, "_depositNonEthUnderlying: E29");
@@ -531,7 +531,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
             shares = glpCompounder.balanceOf(address(bob));
             vm.prank(bob);
-            bobAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(bob), address(bob), 0);
+            bobAmountOut = glpCompounder.redeemUnderlying(WETH, address(bob), address(bob), shares, 0);
             _accumulatedShares -= shares;
 
             assertEq(IERC20(WETH).balanceOf(address(bob)), bobAmountOut, "_depositNonEthUnderlying: E33");
@@ -540,7 +540,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
             shares = glpCompounder.balanceOf(address(charlie));
             vm.prank(charlie);
-            charlieAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(charlie), address(charlie), 0);
+            charlieAmountOut = glpCompounder.redeemUnderlying(WETH, address(charlie), address(charlie), shares, 0);
             _accumulatedShares -= shares;
 
             assertEq(IERC20(WETH).balanceOf(address(charlie)), charlieAmountOut, "_depositNonEthUnderlying: E37");
@@ -564,7 +564,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
             shares = glpCompounder.balanceOf(address(alice));
             vm.prank(alice);
             uint256 _balanceBefore = address(alice).balance;
-            aliceAmountOut = glpCompounder.redeemUnderlying(ETH, shares, address(alice), address(alice), 0);
+            aliceAmountOut = glpCompounder.redeemUnderlying(ETH, address(alice), address(alice), shares, 0);
             uint256 _realAmountOut = address(alice).balance - _balanceBefore;
             _accumulatedShares -= shares;
 
@@ -575,7 +575,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
             shares = glpCompounder.balanceOf(address(bob));
             vm.prank(bob);
             _balanceBefore = address(bob).balance;
-            bobAmountOut = glpCompounder.redeemUnderlying(ETH, shares, address(bob), address(bob), 0);
+            bobAmountOut = glpCompounder.redeemUnderlying(ETH, address(bob), address(bob), shares, 0);
             _realAmountOut = address(bob).balance - _balanceBefore;
             _accumulatedShares -= shares;
 
@@ -586,7 +586,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
             shares = glpCompounder.balanceOf(address(charlie));
             vm.prank(charlie);
             _balanceBefore = address(charlie).balance;
-            charlieAmountOut = glpCompounder.redeemUnderlying(ETH, shares, address(charlie), address(charlie), 0);
+            charlieAmountOut = glpCompounder.redeemUnderlying(ETH, address(charlie), address(charlie), shares, 0);
             _realAmountOut = address(charlie).balance - _balanceBefore;
             _accumulatedShares -= shares;
 
@@ -614,7 +614,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
         shares = glpCompounder.balanceOf(address(alice)) / 2;
         vm.prank(alice);
-        aliceAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(alice), address(alice), 0);
+        aliceAmountOut = glpCompounder.redeemUnderlying(WETH, address(alice), address(alice), shares, 0);
         _accumulatedShares -= shares;
 
         assertEq(IERC20(WETH).balanceOf(address(alice)), aliceAmountOut, "_whitelistedRedeem: E2");
@@ -622,7 +622,7 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
 
         shares = glpCompounder.balanceOf(address(bob)) / 2;
         vm.prank(bob);
-        bobAmountOut = glpCompounder.redeemUnderlying(WETH, shares, address(bob), address(bob), 0);
+        bobAmountOut = glpCompounder.redeemUnderlying(WETH, address(bob), address(bob), shares, 0);
         _accumulatedShares -= shares;
 
         assertEq(IERC20(WETH).balanceOf(address(bob)), bobAmountOut, "_whitelistedRedeem: E4");

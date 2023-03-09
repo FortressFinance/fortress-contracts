@@ -342,13 +342,13 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Mints vault shares to _receiver by depositing exact amount of underlying assets
-    /// @param _underlyingAmount - The amount of underlying assets to deposit
     /// @param _underlyingAsset - The address of underlying asset to deposit
     /// @param _receiver - The receiver of minted shares
+    /// @param _underlyingAmount - The amount of underlying assets to deposit
     /// @param _minAmount - The minimum amount of assets (LP tokens) to receive
     /// @return _shares - The amount of shares minted
     // slither-disable-next-line reentrancy-no-eth
-    function depositUnderlying(uint256 _underlyingAmount, address _underlyingAsset, address _receiver, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
+    function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) external payable nonReentrant returns (uint256 _shares) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (!(_underlyingAmount > 0)) revert ZeroAmount();
         
@@ -372,15 +372,17 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
         return _shares;
     }
 
-    /// @dev Burns exact amount of shares from the owner and sends underlying assets to _receiver
-    /// @param _shares - The amount of shares to burn
+    /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value
+    /// @notice If the _owner is whitelisted, no withdrawal fee is applied
+    /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver
     /// @param _underlyingAsset - The address of underlying asset to redeem shares for
     /// @param _receiver - The address of the receiver of underlying assets
     /// @param _owner - The owner of _shares
+    /// @param _shares - The amount of shares to burn
     /// @param _minAmount - The minimum amount of underlying assets to receive
     /// @return _underlyingAmount - The amount of underlying assets sent to the _receiver
     // slither-disable-next-line reentrancy-no-eth
-    function redeemUnderlying(uint256 _shares, address _underlyingAsset, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
+    function redeemUnderlying(address _underlyingAsset, address _receiver, address _owner, uint256 _shares, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAmount) {
         if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
         
@@ -438,15 +440,15 @@ abstract contract AMMConcentratorBase is ReentrancyGuard, ERC4626 {
     }
 
     /// @dev Redeem to an underlying asset and claim rewards in a single transaction
-    /// @param _shares - The amount of shares to redeem
     /// @param _underlyingAsset - The address of the underlying asset to redeem the shares to
     /// @param _receiver - The receiver of underlying assets and rewards
+    /// @param _shares - The amount of shares to redeem
     /// @param _minAmount - The minimum amount of underlying assets to receive
     /// @return _underlyingAmount - The amount of underlying assets sent to _receiver
     /// @return _rewards - The amount of rewards sent to _receiver
     // slither-disable-next-line reentrancy-eth
-    function redeemUnderlyingAndClaim(uint256 _shares, address _underlyingAsset, address _receiver, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
-        _underlyingAmount = redeemUnderlying(_shares, _underlyingAsset, _receiver, msg.sender, _minAmount);
+    function redeemUnderlyingAndClaim(address _underlyingAsset, address _receiver, uint256 _shares, uint256 _minAmount) external returns (uint256 _underlyingAmount, uint256 _rewards) {
+        _underlyingAmount = redeemUnderlying(_underlyingAsset, _receiver, msg.sender, _shares, _minAmount);
         _rewards = claim(address(0), _receiver);
 
         return (_underlyingAmount, _rewards);

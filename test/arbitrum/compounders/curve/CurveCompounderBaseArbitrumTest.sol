@@ -256,7 +256,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         }
         
         vm.expectRevert();
-        curveCompounder.depositUnderlying(_underlyingAlice, _asset, address(alice), 0);
+        curveCompounder.depositUnderlying(_asset, address(alice), _underlyingAlice, 0);
         vm.stopPrank();
     }
 
@@ -317,7 +317,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
     function _depositSingleUnwrapped(address _owner, address _asset, uint256 _amount) internal returns (uint256 _share) {
         vm.startPrank(_owner);
         IERC20(_asset).safeApprove(address(curveCompounder), _amount);
-        _share = curveCompounder.depositUnderlying(_amount, _asset, _owner, 0);
+        _share = curveCompounder.depositUnderlying(_asset, _owner, _amount, 0);
         vm.stopPrank();
 
         assertEq(_share, curveCompounder.balanceOf(_owner), "_depositSingleUnwrapped: E1");
@@ -325,7 +325,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
 
     function _depositSingleUnwrappedETH(address _owner, uint256 _amount) internal returns (uint256 _share) {
         vm.startPrank(_owner);
-        _share = curveCompounder.depositUnderlying{ value: _amount }(_amount, ETH, _owner, 0);
+        _share = curveCompounder.depositUnderlying{ value: _amount }(ETH, _owner, _amount, 0);
         vm.stopPrank();
 
         assertEq(_share, curveCompounder.balanceOf(_owner), "_depositSingleUnwrapped: E1");
@@ -367,17 +367,17 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
 
     function _testRedeemSingleUnwrapped(address _asset, uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
         vm.prank(alice);
-        uint256 _tokenOutAlice = curveCompounder.redeemUnderlying(_sharesAlice, _asset, address(alice), address(alice), 0);
+        uint256 _tokenOutAlice = curveCompounder.redeemUnderlying(_asset, address(alice), address(alice), _sharesAlice, 0);
         assertApproxEqAbs(_tokenOutAlice, IERC20(_asset).balanceOf(address(alice)), 1e15, "_testRedeemSingleUnwrapped: E1");
         assertEq(curveCompounder.balanceOf(address(alice)), 0, "_testRedeemSingleUnwrapped: E2");
 
         vm.prank(bob);
-        uint256 _tokenOutBob = curveCompounder.redeemUnderlying(_sharesBob, _asset, address(bob), address(bob), 0);
+        uint256 _tokenOutBob = curveCompounder.redeemUnderlying(_asset, address(bob), address(bob), _sharesBob, 0);
         assertApproxEqAbs(_tokenOutBob, IERC20(_asset).balanceOf(address(bob)), 1e15, "_testRedeemSingleUnwrapped: E3");
         assertEq(curveCompounder.balanceOf(address(bob)), 0, "_testRedeemSingleUnwrapped: E4");
 
         vm.prank(charlie);
-        uint256 _tokenOutCharlie = curveCompounder.redeemUnderlying(_sharesCharlie, _asset, address(charlie), address(charlie), 0);
+        uint256 _tokenOutCharlie = curveCompounder.redeemUnderlying(_asset, address(charlie), address(charlie), _sharesCharlie, 0);
         assertApproxEqAbs(_tokenOutCharlie, IERC20(_asset).balanceOf(address(charlie)), 1e15, "_testRedeemSingleUnwrapped: E5");
         assertEq(curveCompounder.balanceOf(address(charlie)), 0, "_testRedeemSingleUnwrapped: E6");
 
@@ -493,21 +493,21 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         
         uint256 _before = address(alice).balance;
         vm.prank(alice);
-        uint256 _tokenOutAlice = curveCompounder.redeemUnderlying(_sharesAlice, ETH, address(alice), address(alice), 0);
+        uint256 _tokenOutAlice = curveCompounder.redeemUnderlying(ETH, address(alice), address(alice), _sharesAlice, 0);
         uint256 _after = address(alice).balance - _before;
         assertEq(_tokenOutAlice, _after, "_testRedeemSingleUnwrappedETH: E1");
         assertEq(curveCompounder.balanceOf(address(alice)), 0, "_testRedeemSingleUnwrappedETH: E2");
 
         _before = address(bob).balance;
         vm.prank(bob);
-        uint256 _tokenOutBob = curveCompounder.redeemUnderlying(_sharesBob, ETH, address(bob), address(bob), 0);
+        uint256 _tokenOutBob = curveCompounder.redeemUnderlying(ETH, address(bob), address(bob), _sharesBob, 0);
         _after = address(bob).balance - _before;
         assertEq(_tokenOutBob, _after, "_testRedeemSingleUnwrappedETH: E3");
         assertEq(curveCompounder.balanceOf(address(bob)), 0, "_testRedeemSingleUnwrappedETH: E4");
 
         _before = address(charlie).balance;
         vm.prank(charlie);
-        uint256 _tokenOutCharlie = curveCompounder.redeemUnderlying(_sharesCharlie, ETH, address(charlie), address(charlie), 0);
+        uint256 _tokenOutCharlie = curveCompounder.redeemUnderlying(ETH, address(charlie), address(charlie), _sharesCharlie, 0);
         _after = address(charlie).balance - _before;
         assertEq(_tokenOutCharlie, _after, "_testRedeemSingleUnwrappedETH: E5");
         assertEq(curveCompounder.balanceOf(address(charlie)), 0, "_testRedeemSingleUnwrappedETH: E6");
@@ -597,7 +597,7 @@ contract CurveCompounderBaseArbitrumTest is Test, AddressesArbi {
         vm.startPrank(alice);
         IERC20(_asset).safeApprove(address(curveCompounder), _balance);
         vm.expectRevert();
-        curveCompounder.depositUnderlying(_balance, _asset, address(alice), 0);
+        curveCompounder.depositUnderlying(_asset, address(alice), _balance, 0);
         vm.stopPrank();
     }
 
