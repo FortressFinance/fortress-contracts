@@ -70,6 +70,16 @@ contract testGlpCompounder is BaseTest, InitGlpCompounder {
         redeemEthUnderlying(_accumulatedShares);
     }
 
+    function testSanity(uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        (uint256 _accumulatedAmount, uint256 _accumulatedShares) = _depositNonEthUnderlying(_amount, WETH);
+
+        _harvest(_accumulatedAmount, _accumulatedShares);
+
+        redeemEthUnderlying(_accumulatedShares);
+    }
+
     // function testCorrectFlowUSDC(uint256 _amount) public {
     //     vm.assume(_amount > 0.01 ether && _amount < 1 ether);
         
