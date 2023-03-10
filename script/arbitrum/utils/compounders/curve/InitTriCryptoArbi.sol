@@ -4,11 +4,11 @@ pragma solidity 0.8.17;
 import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
-import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitTriCryptoArbi is InitBaseArbi {
 
-    function _initializeTriCrypto(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) public returns (address) {
+    function _initializeTriCrypto(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _ammOperations) public returns (address) {
 
         _initSwapTriCrypto(_fortressSwap);
         
@@ -17,24 +17,32 @@ contract InitTriCryptoArbi is InitBaseArbi {
         uint256 _convexPid = 3;
         uint256 _poolType = 0; 
         address _asset = TRICRYPTO_LP;
-        string memory _symbol = "fortTriCrypto";
-        string memory _name = "Fortress Curve TriCrypto";
-
+        
         address[] memory _rewardAssets = new address[](1);
         _rewardAssets[0] = CRV;
         // _rewardAssets[1] = CVX;
 
-        // NOTE - make sure the order of underlying assets is the same as in Curve contract (Backend requirment) 
-        address[] memory _underlyingAssets = new address[](3);
+        // NOTE - make sure the order of underlying assets is the same as in Curve contract (Backend requirment)
+        address[] memory _underlyingAssets = new address[](4);
         _underlyingAssets[0] = USDT;
         _underlyingAssets[1] = WBTC;
         _underlyingAssets[2] = WETH;
+        _underlyingAssets[3] = ETH;
 
-        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), _name, _symbol, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
-        
+        address _booster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+        address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_convexPid).rewards;
+        bytes memory _settingsConfig = abi.encode(curveCryptoDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
+        bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
+
+        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding TriCrypto", "fcTriCrypto", _settingsConfig, _boosterConfig, _underlyingAssets, _poolType);
+
         // ------------------------- init registry -------------------------
 
-        FortressArbiRegistry(_fortressArbiRegistry).registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
+        YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmCompounder(true, address(curveCompounder), address(_asset));
+
+        // ------------------------- whitelist in ammOperations -------------------------
+
+        CurveArbiOperations(payable(_ammOperations)).updateWhitelist(address(curveCompounder), true);
         
         return address(curveCompounder);
     }

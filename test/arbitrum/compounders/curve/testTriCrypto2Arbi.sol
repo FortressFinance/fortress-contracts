@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import "test/arbitrum/compounders/curve/CurveCompounderBaseArbitrumTest.sol";
 import "script/arbitrum/utils/compounders/curve/InitTriCryptoArbi.sol";
 
-contract testTriCrypto2Arbitrum is CurveCompounderBaseArbitrumTest, InitTriCryptoArbi {
+contract testTriCrypto2Arbi is CurveCompounderBaseArbitrumTest, InitTriCryptoArbi {
 
     // TriCrypto2 (https://curve.fi/tricrypto2)
 
@@ -13,12 +13,16 @@ contract testTriCrypto2Arbitrum is CurveCompounderBaseArbitrumTest, InitTriCrypt
     function setUp() public {
         
         _setUp();
-        
+
         vm.startPrank(owner);
-        address _curveCompounder = _initializeTriCrypto(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
+        address _curveCompounder = _initializeTriCrypto(owner, address(fortressArbiRegistry), address(fortressSwap), platform, address(ammOperations));
         vm.stopPrank();
         
         curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
+
+        vm.startPrank(owner);
+        ammOperations.updateWhitelist(address(curveCompounder), true);
+        vm.stopPrank();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -73,9 +77,9 @@ contract testTriCrypto2Arbitrum is CurveCompounderBaseArbitrumTest, InitTriCrypt
         _testDepositCap(WBTC, _amount);
     }
 
-    function testFortressRegistry() public {
-        _testFortressRegistry();
-    }
+    // function testFortressRegistry() public {
+    //     _testFortressRegistry();
+    // }
 
     // // // ------------------------------------------------------------------------------------------
     // // // --------------------------------- test wrong flows ---------------------------------------

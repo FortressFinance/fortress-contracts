@@ -7,18 +7,18 @@ import "script/arbitrum/utils/compounders/curve/InitFraxBPArbi.sol";
 
 contract InitCurveCompounders is InitTriCryptoArbi, InitCurveBPArbi, InitFraxBPArbi {
     
-    function _initializeCurveCompounders(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) internal {
+    function _initializeCurveCompounders(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _ammOperations) internal {
         
         // ------------------------- TriCrypto -------------------------
         
-        _initializeTriCrypto(_owner, _fortressArbiRegistry, _fortressSwap, _platform);
+        _initializeTriCrypto(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _ammOperations);
 
-        // ------------------------- Crv BP -------------------------
+        // // ------------------------- Crv BP -------------------------
 
-        _initializeCurveBP(_owner, _fortressArbiRegistry, _fortressSwap, _platform);
+        _initializeCurveBP(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _ammOperations);
 
-        // ------------------------- Frax BP -------------------------
+        // // ------------------------- Frax BP -------------------------
 
-        _initializeFraxBP(_owner, _fortressArbiRegistry, _fortressSwap, _platform);
+        // _initializeFraxBP(_owner, _fortressArbiRegistry, _fortressSwap, _platform);
     }
 }

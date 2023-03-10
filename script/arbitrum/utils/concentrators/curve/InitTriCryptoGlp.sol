@@ -5,10 +5,11 @@ import "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitTriCryptoGlp is InitBaseArbi {
     
-    function _initializeTriCryptoGlp(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder) public returns (address) {
+    function _initializeTriCryptoGlp(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder, address _ammOperations) public returns (address) {
        
         _initSwapTriCryptoGlp(_fortressSwap);
         
@@ -18,21 +19,31 @@ contract InitTriCryptoGlp is InitBaseArbi {
         uint256 _poolType = 0; 
 
         _asset = TRICRYPTO_LP;
-        _symbol = "fortGLP-TriCrypto";
-        _name = "Fortress GLP Curve TriCrypto";
+        _symbol = "fctrTriCrypto-fcGLP";
+        _name = "Fortress Curve TriCrypto Concentrating to fcGLP";
 
-        _underlyingAssets3[0] = USDT;
-        _underlyingAssets3[1] = WBTC;
-        _underlyingAssets3[2] = WETH;
+        _underlyingAssets4[0] = USDT;
+        _underlyingAssets4[1] = WBTC;
+        _underlyingAssets4[2] = WETH;
+        _underlyingAssets4[3] = ETH;
 
         _rewardAssets1[0] = CRV;
 
-        CurveGlpConcentrator curveGlpConcentrator = new CurveGlpConcentrator(ERC20(_asset), _name, _symbol, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets1, _underlyingAssets3, _compounder, _poolType);
+        address _booster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+        address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_convexPid).rewards;
+        bytes memory _settingsConfig = abi.encode(curveCryptoDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
+        bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets1);
+
+        CurveGlpConcentrator curveGlpConcentrator = new CurveGlpConcentrator(ERC20(_asset), _name, _symbol, _settingsConfig, _boosterConfig, _compounder, _underlyingAssets4, _poolType);
         
         // ------------------------- init registry -------------------------
 
-        FortressArbiRegistry(_fortressArbiRegistry).registerCurveGlpConcentrator(address(curveGlpConcentrator), _asset, _symbol, _name, _underlyingAssets3, _compounder);
-        
+        YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmConcentrator(true, address(curveGlpConcentrator), address(_compounder), address(_asset));
+
+        // ------------------------- whitelist in ammOperations -------------------------
+
+        CurveArbiOperations(payable(_ammOperations)).updateWhitelist(address(curveGlpConcentrator), true);
+
         return address(curveGlpConcentrator);
     }
 

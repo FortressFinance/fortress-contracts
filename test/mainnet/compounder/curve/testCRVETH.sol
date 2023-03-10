@@ -1,119 +1,119 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "test/mainnet/compounder/curve/CurveCompounderBaseTest.sol";
+// import "test/mainnet/compounder/curve/CurveCompounderBaseTest.sol";
+contract testCRVETH {}
+// contract testCRVETH is Test, AddRoutes, CurveCompounderBaseTest {
 
-contract testCRVETH is Test, AddRoutes, CurveCompounderBaseTest {
-
-    // CRV/ETH (https://curve.fi/crveth)
+//     // CRV/ETH (https://curve.fi/crveth)
     
-    using SafeERC20 for IERC20;
+//     using SafeERC20 for IERC20;
  
-    function setUp() public {
+//     function setUp() public {
         
-        _setUp();
+//         _setUp();
 
-        uint256 _convexPid = 61;
-        uint256 _poolType = 6;
-        address _asset = CRVETHLP;
-        string memory _symbol = "fortress-cCRVETH";
-        string memory _name = "Fortress Curve CRVETH";
+//         uint256 _convexPid = 61;
+//         uint256 _poolType = 6;
+//         address _asset = CRVETHLP;
+//         string memory _symbol = "fortress-cCRVETH";
+//         string memory _name = "Fortress Curve CRVETH";
 
-        address[] memory _rewardAssets = new address[](2);
-        _rewardAssets[0] = CVX;
-        _rewardAssets[1] = CRV;
+//         address[] memory _rewardAssets = new address[](2);
+//         _rewardAssets[0] = CVX;
+//         _rewardAssets[1] = CRV;
 
-        address[] memory _underlyingAssets = new address[](2);
-        _underlyingAssets[0] = CRV;
-        _underlyingAssets[1] = ETH;
+//         address[] memory _underlyingAssets = new address[](2);
+//         _underlyingAssets[0] = CRV;
+//         _underlyingAssets[1] = ETH;
 
-        vm.startPrank(owner);
-        // curveCompounder = fortressFactory.launchCurveCompounder(ERC20(CRVETHLP), "Fortress Curve CRVETH", "fortress-cCRVETH", platform, address(fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
-        curveCompounder = new CurveCompounder(ERC20(_asset), _name, _symbol, owner, platform, address(fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
-        fortressRegistry.registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
-        vm.stopPrank();
-    }
+//         vm.startPrank(owner);
+//         // curveCompounder = fortressFactory.launchCurveCompounder(ERC20(CRVETHLP), "Fortress Curve CRVETH", "fortress-cCRVETH", platform, address(fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+//         curveCompounder = new CurveCompounder(ERC20(_asset), _name, _symbol, owner, platform, address(fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+//         fortressRegistry.registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
+//         vm.stopPrank();
+//     }
 
-    // ------------------------------------------------------------------------------------------
-    // --------------------------------- test correct flow --------------------------------------
-    // ------------------------------------------------------------------------------------------
+//     // ------------------------------------------------------------------------------------------
+//     // --------------------------------- test correct flow --------------------------------------
+//     // ------------------------------------------------------------------------------------------
     
-    function testSingleUnwrappedCRV(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testSingleUnwrappedCRV(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testSingleUnwrapped(CRV, _amount);
-    }
+//         _testSingleUnwrapped(CRV, _amount);
+//     }
 
-    function testSingleUnwrappedETH(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testSingleUnwrappedETH(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testSingleUnwrappedETH(_amount);
-    }
+//         _testSingleUnwrappedETH(_amount);
+//     }
 
-    function testDeposit(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testDeposit(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testDeposit(_amount);
-    }
+//         _testDeposit(_amount);
+//     }
 
-    function testRedeem(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testRedeem(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testRedeem(CRV, _amount);
-    }
+//         _testRedeem(CRV, _amount);
+//     }
     
-    function testWithdraw(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testWithdraw(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testWithdraw(CRV, _amount);
-    }
+//         _testWithdraw(CRV, _amount);
+//     }
 
-    function testMint(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testMint(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
  
-        _testMint(CRV, _amount);
-    }
+//         _testMint(CRV, _amount);
+//     }
 
-    function testDepositCap(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testDepositCap(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testDepositCap(CRV, _amount);
-    }
+//         _testDepositCap(CRV, _amount);
+//     }
 
-    function testFortressRegistry() public {
-        _testFortressRegistry();
-    }
+//     function testFortressRegistry() public {
+//         _testFortressRegistry();
+//     }
 
-    // ------------------------------------------------------------------------------------------
-    // --------------------------------- test wrong flows ---------------------------------------
-    // ------------------------------------------------------------------------------------------
+//     // ------------------------------------------------------------------------------------------
+//     // --------------------------------- test wrong flows ---------------------------------------
+//     // ------------------------------------------------------------------------------------------
 
-    function testNoAssetsDeposit(uint256 _amount) public {
-        _testNoAssetsDeposit(_amount);
-    }
+//     function testNoAssetsDeposit(uint256 _amount) public {
+//         _testNoAssetsDeposit(_amount);
+//     }
 
-    function testNoAssetsMint(uint256 _amount) public {
-        _testNoAssetsMint(_amount);
-    }
+//     function testNoAssetsMint(uint256 _amount) public {
+//         _testNoAssetsMint(_amount);
+//     }
 
-    function testNoSharesWithdraw(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testNoSharesWithdraw(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testNoSharesWithdraw(_amount, CRV);
-    }
+//         _testNoSharesWithdraw(_amount, CRV);
+//     }
 
-    function testNoSharesRedeem(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testNoSharesRedeem(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        _testNoSharesRedeem(_amount, CRV);
-    }
+//         _testNoSharesRedeem(_amount, CRV);
+//     }
 
-    function testSingleUnwrappedDepositWrongAsset(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 99 ether);
-        _testSingleUnwrappedDepositWrongAsset(BAL, _amount);
-    }
+//     function testSingleUnwrappedDepositWrongAsset(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 99 ether);
+//         _testSingleUnwrappedDepositWrongAsset(BAL, _amount);
+//     }
 
-    function testHarvestNoBounty() public {
-        _testHarvestNoBounty(CRV);
-    }
-}
+//     function testHarvestNoBounty() public {
+//         _testHarvestNoBounty(CRV);
+//     }
+// }

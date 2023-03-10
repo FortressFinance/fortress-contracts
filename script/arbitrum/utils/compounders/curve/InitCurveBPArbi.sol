@@ -5,10 +5,11 @@ import "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitCurveBPArbi is InitBaseArbi {
 
-    function _initializeCurveBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform) public returns (address) {
+    function _initializeCurveBP(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _ammOperations) public returns (address) {
 
         _initSwap(_fortressSwap);
         
@@ -19,8 +20,8 @@ contract InitCurveBPArbi is InitBaseArbi {
         uint256 _convexPid = 1;
         uint256 _poolType = 1; 
         address _asset = CRVBP_LP;
-        string memory _symbol = "fortCurveBP";
-        string memory _name = "Fortress Curve CurveBP";
+        // string memory _symbol = "fc2Pool";
+        // string memory _name = "Fortress Compounding 2Pool";
 
         address[] memory _rewardAssets = new address[](1);
         _rewardAssets[0] = CRV;
@@ -31,11 +32,20 @@ contract InitCurveBPArbi is InitBaseArbi {
         _underlyingAssets[0] = USDT;
         _underlyingAssets[1] = USDC;
 
-        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), _name, _symbol, _owner, _platform, address(_fortressSwap), _convexPid, _rewardAssets, _underlyingAssets, _poolType);
+        address _booster = address(0xF403C135812408BFbE8713b5A23a04b3D48AAE31);
+        address _crvRewards = IConvexBoosterArbi(_booster).poolInfo(_convexPid).rewards;
+        bytes memory _settingsConfig = abi.encode(curveStableDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
+        bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
+        
+        CurveArbiCompounder curveCompounder = new CurveArbiCompounder(ERC20(_asset), "Fortress Compounding 2Pool", "fc2Pool", _settingsConfig, _boosterConfig, _underlyingAssets, _poolType);
         
         // ------------------------- init registry -------------------------
 
-        FortressArbiRegistry(_fortressArbiRegistry).registerCurveCompounder(address(curveCompounder), _asset, _symbol, _name, _underlyingAssets);
+        YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmCompounder(true, address(curveCompounder), address(_asset));
+
+        // ------------------------- whitelist in ammOperations -------------------------
+
+        CurveArbiOperations(payable(_ammOperations)).updateWhitelist(address(curveCompounder), true);
         
         return address(curveCompounder);
     }

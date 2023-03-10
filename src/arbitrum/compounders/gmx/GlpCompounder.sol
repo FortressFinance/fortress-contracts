@@ -22,36 +22,42 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import "src/shared/compounders/TokenCompounderBase.sol";
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
 
-import "src/shared/fortress-interfaces/IFortressSwap.sol";
-import "src/arbitrum/interfaces/IGlpRewardHandler.sol";
-import "src/arbitrum/interfaces/IGlpMinter.sol";
-import "src/arbitrum/interfaces/IGlpRewardTracker.sol";
+import {TokenCompounderBase, ERC20, IERC20, SafeERC20} from "src/shared/compounders/TokenCompounderBase.sol";
+
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
+import {IFortressSwap} from "src/shared/fortress-interfaces/IFortressSwap.sol";
+import {IGlpRewardHandler} from "src/arbitrum/interfaces/IGlpRewardHandler.sol";
+import {IGlpMinter} from "src/arbitrum/interfaces/IGlpMinter.sol";
+import {IGlpRewardTracker} from "src/arbitrum/interfaces/IGlpRewardTracker.sol";
 
 contract GlpCompounder is TokenCompounderBase {
 
     using SafeERC20 for IERC20;
+    using Address for address payable;
 
-    /// @notice The address of the contract that handles rewards.
+    /// @notice The address of the contract that handles rewards
     address public rewardHandler;
-    /// @notice The address of the contract that trackes ETH rewards.
+    /// @notice The address of the contract that trackes ETH rewards
     address public rewardTracker;
-    /// @notice The address of the contract that mints and stakes GLP.
+    /// @notice The address of the contract that mints and stakes GLP
     address public glpHandler;
-    /// @notice The address of the contract that needs an approval before minting GLP.
+    /// @notice The address of the contract that needs an approval before minting GLP
     address public glpManager;
 
-    /// @notice The address of sGLP token.
+    /// @notice The address of sGLP token
     address public constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
-    /// @notice The address of GMX token.
-    address public constant GMX = 0xfc5A1A6EB076a2C7aD06eD22C90d7E710E35ad0a;
     /// @notice The address of WETH token.
     address public constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+    /// @notice The address representing ETH
+    address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     
     /********************************** Constructor **********************************/
     
-    constructor(address _owner, address _platform, address _swap) TokenCompounderBase(ERC20(sGLP), "Fortress GLP", "fortGLP", _owner, _platform, _swap) {
+    constructor(string memory _description, address _owner, address _platform, address _swap, address[] memory _underlyingAssets)
+        TokenCompounderBase(ERC20(sGLP), "Fortress Compounding GLP", "fcGLP", _description, _owner, _platform, _swap, _underlyingAssets) {
+        
         IERC20(WETH).safeApprove(_swap, type(uint256).max);
 
         rewardHandler = 0xA906F338CB21815cBc4Bc87ace9e68c87eF8d8F1;
@@ -62,7 +68,7 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** View Functions **********************************/
 
-    /// @notice Return the amount of ETH pending rewards (without accounting for other rewards).
+    /// @notice Returns the amount of ETH pending rewards (without accounting for other rewards)
     function pendingRewards() public view returns (uint256) {
         return IGlpRewardTracker(rewardTracker).claimable(address(this));
     }
@@ -74,57 +80,62 @@ contract GlpCompounder is TokenCompounderBase {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @notice Extending the base function to enable deposit of any one of GLP's underlying assets.
-    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAssets, address _receiver, uint256 _minAmount) public nonReentrant returns (uint256 _shares) {
-        if (!(_underlyingAssets > 0)) revert ZeroAmount();
+    /// @notice See {TokenCompounderBase - depositUnderlying}
+    function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) public override payable nonReentrant returns (uint256 _shares) {
+        if (!(_underlyingAmount > 0)) revert ZeroAmount();
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 
-        IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAssets);
-        
+        if (msg.value > 0) {
+            if (_underlyingAsset != ETH) revert NotUnderlyingAsset();
+            if (msg.value != _underlyingAmount) revert InvalidAmount();
+
+            _underlyingAsset = WETH;
+            payable(_underlyingAsset).functionCallWithValue(abi.encodeWithSignature("deposit()"), _underlyingAmount);
+        } else {
+            IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _underlyingAmount);
+        }
+
         address _sGLP = sGLP;
         uint256 _before = IERC20(_sGLP).balanceOf(address(this));
-        _approve(_underlyingAsset, glpManager, _underlyingAssets);
-        IGlpMinter(glpHandler).mintAndStakeGlp(_underlyingAsset, _underlyingAssets, 0, 0);
+        _approve(_underlyingAsset, glpManager, _underlyingAmount);
+        IGlpMinter(glpHandler).mintAndStakeGlp(_underlyingAsset, _underlyingAmount, 0, 0);
         uint256 _assets = IERC20(_sGLP).balanceOf(address(this)) - _before;
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
 
+        if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
+        
         _shares = previewDeposit(_assets);
         _deposit(msg.sender, _receiver, _assets, _shares);
 
         return _shares;
     }
 
-    /// @notice Extending the base function to enable withdrawal of any one of GLP's underlying assets.
-    function redeemUnderlying(address _underlyingAsset, uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public nonReentrant returns (uint256 _underlyingAssets) {
+    /// @notice See {TokenCompounderBase - redeemUnderlying}
+    function redeemUnderlying(address _underlyingAsset, address _receiver, address _owner, uint256 _shares, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAmount) {
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
 
-        uint256 _assets = previewRedeem(_shares);
+        // If the _owner is whitelisted, we can skip the preview and just convert the shares to assets
+        uint256 _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
+
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
-        uint256 _before = IERC20(_underlyingAsset).balanceOf(address(this));
-        IGlpMinter(glpHandler).unstakeAndRedeemGlp(_underlyingAsset, _assets, 0, address(this));
-        _underlyingAssets = IERC20(_underlyingAsset).balanceOf(address(this)) - _before;
-        if (!(_underlyingAssets >= _minAmount)) revert InsufficientAmountOut();
+        if (_underlyingAsset == ETH) {
+            _underlyingAmount = IGlpMinter(glpHandler).unstakeAndRedeemGlpETH(_assets, 0, payable(_receiver));
+        } else {
+            _underlyingAmount = IGlpMinter(glpHandler).unstakeAndRedeemGlp(_underlyingAsset, _assets, 0, _receiver);
+        }
+        if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
 
-        IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAssets);
-
-        return _underlyingAssets;
+        return _underlyingAmount;
     }
 
-    /// @notice See {TokenCompounderBase - depositUnderlying}
-    function depositUnderlying(uint256 _underlyingAssets, address _receiver, uint256 _minAmount) external override nonReentrant returns (uint256 _shares) {
-        return depositUnderlying(WETH, _underlyingAssets, _receiver, _minAmount);
-    }
-
-    /// @notice See {TokenCompounderBase - redeemUnderlying}
-    function redeemUnderlying(uint256 _shares, address _receiver, address _owner, uint256 _minAmount) public override nonReentrant returns (uint256 _underlyingAssets) {
-        return redeemUnderlying(WETH, _shares, _receiver, _owner, _minAmount);
-    }
-
-    /// @dev Adds the ability to choose the underlying asset to deposit to the base function.
-    /// @dev Harvest the pending rewards and convert to underlying token, then stake.
-    /// @param _receiver - The address of account to receive harvest bounty.
-    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get.
+    /// @dev Adds the ability to choose the underlying asset to deposit to the base function
+    /// @dev Harvest the pending rewards and convert to underlying token, then stake
+    /// @param _receiver - The address of account to receive harvest bounty
+    /// @param _minBounty - The minimum amount of harvest bounty _receiver should get
     function harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) external nonReentrant returns (uint256 _rewards) {
+        if (!_isUnderlyingAsset(_underlyingAsset)) revert NotUnderlyingAsset();
         if (block.number == lastHarvestBlock) revert HarvestAlreadyCalled();
         lastHarvestBlock = block.number;
 
@@ -165,6 +176,7 @@ contract GlpCompounder is TokenCompounderBase {
         }
 
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
+        
         if (_underlyingAsset != _weth) {
             _balance = IFortressSwap(swap).swap(_weth, _underlyingAsset, _balance);
         }

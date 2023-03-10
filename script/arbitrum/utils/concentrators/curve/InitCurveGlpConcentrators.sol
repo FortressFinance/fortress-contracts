@@ -6,14 +6,14 @@ import "script/arbitrum/utils/concentrators/curve/InitFraxBPGlp.sol";
 
 contract InitCurveGlpConcentrators is InitTriCryptoGlp, InitFraxBPGlp {
     
-    function _initializeCurveConcentrators(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder) internal {
+    function _initializeCurveConcentrators(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder, address _ammOperations) internal {
         
         // ------------------------- TriCrypto -------------------------
         
-        _initializeTriCryptoGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
+        _initializeTriCryptoGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder, _ammOperations);
 
         // ------------------------- FraxBP -------------------------
 
-        _initializeFraxBPGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
+        // _initializeFraxBPGlp(_owner, _fortressArbiRegistry, _fortressSwap, _platform, _compounder);
     }
 }

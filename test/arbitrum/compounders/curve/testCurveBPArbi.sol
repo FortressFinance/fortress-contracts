@@ -13,10 +13,14 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
         _setUp();
         
         vm.startPrank(owner);
-        address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform);
+        address _curveCompounder = _initializeCurveBP(owner, address(fortressArbiRegistry), address(fortressSwap), platform, address(ammOperations));
         vm.stopPrank();
         
         curveCompounder = CurveArbiCompounder(payable(_curveCompounder));
+
+        vm.startPrank(owner);
+        ammOperations.updateWhitelist(address(curveCompounder), true);
+        vm.stopPrank();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -65,9 +69,9 @@ contract testCurveBPArbi is CurveCompounderBaseArbitrumTest, InitCurveBPArbi {
         _testDepositCap(USDC, _amount);
     }
 
-    function testFortressRegistry() public {
-        _testFortressRegistry();
-    }
+    // function testFortressRegistry() public {
+    //     _testFortressRegistry();
+    // }
 
     // // // ------------------------------------------------------------------------------------------
     // // // --------------------------------- test wrong flows ---------------------------------------

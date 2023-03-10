@@ -6,47 +6,56 @@ import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
 
-import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/shared/utils/YieldOptimizersRegistry.sol";
+import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "script/arbitrum/utils/compounders/gmx/InitGlpCompounder.sol";
 import "script/arbitrum/utils/compounders/curve/InitCurveCompounders.sol";
 import "script/arbitrum/utils/concentrators/curve/InitCurveGlpConcentrators.sol";
+import "src/arbitrum/utils/CurveArbiOperations.sol";
 
 contract InitFortress is Script, InitGlpCompounder, InitCurveCompounders, InitCurveGlpConcentrators {
 
     function run() public {
         
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        // uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY2");
         address owner = vm.envAddress("OWNER");
         // address deployer = vm.envAddress("DEPLOYER");
+        address deployer = vm.envAddress("DEPLOYER2");
         // address platform = vm.envAddress("PLATFORM");
         address platform = owner;
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // FortressArbiSwap _fortressSwap = new FortressArbiSwap(address(deployer));
-        address _fortressSwap = FortressSwapV1;
-        address _fortressArbiRegistry = FortressRegistryV1;
+        FortressArbiSwap _fortressSwap = new FortressArbiSwap(address(deployer));
+        YieldOptimizersRegistry _yieldOptimizersRegistry = new YieldOptimizersRegistry(address(deployer));
+        CurveArbiOperations _ammOperations = new CurveArbiOperations(address(deployer));
+        // address _fortressSwap = FortressSwapV1;
         
-        console.log("FortressArbiSwap address: ", address(_fortressSwap));
-        console.log("FortressArbiRegistry address: ", address(_fortressArbiRegistry));
+        console.log("_fortressSwap address: ", address(_fortressSwap));
+        console.log("_yieldOptimizersRegistry address: ", address(_yieldOptimizersRegistry));
+        console.log("_ammOperations address: ", address(_ammOperations));
         
         // initialize GLP Compounder
-        address _GlpCompounder = _initializeGlpCompounder(address(owner), address(platform), address(_fortressArbiRegistry), address(_fortressSwap));
-        console.log("GlpCompounder address: ", _GlpCompounder);
+        address _glpCompounder = _initializeGlpCompounder(address(owner), address(platform), address(_yieldOptimizersRegistry), address(_fortressSwap));
+        console.log("GlpCompounder address: ", _glpCompounder);
+
+        // update YieldOptimizersRegistry 
+        YieldOptimizersRegistry(_yieldOptimizersRegistry).updateConcentratorsTargetAssets(address(0), address(0), address(_glpCompounder), address(0));
 
         // initialize Curve AMM Compounders Arbitrum
-        _initializeCurveCompounders(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform));
+        _initializeCurveCompounders(address(owner), address(_yieldOptimizersRegistry), address(_fortressSwap), address(platform), address(_ammOperations));
 
         // initialize Curve GLP AMM Concentrators Arbitrum
-        _initializeCurveConcentrators(address(owner), address(_fortressArbiRegistry), address(_fortressSwap), address(platform), address(_GlpCompounder));
+        _initializeCurveConcentrators(address(owner), address(_yieldOptimizersRegistry), address(_fortressSwap), address(platform), address(_glpCompounder), address(_ammOperations));
         
         string memory path = "script/arbitrum/utils/arbi-registry.txt";
-        string memory data = string(abi.encodePacked(string(vm.toString(address(_fortressArbiRegistry)))));
+        string memory data = string(abi.encodePacked(string(vm.toString(address(_yieldOptimizersRegistry)))));
         vm.writeFile(path, data);
 
         path = "script/arbitrum/utils/addresses.txt";
-        data = string(abi.encodePacked("!", "FortressRegistry=", string(vm.toString(address(_fortressArbiRegistry))), "!", "FortressSwap=", string(vm.toString(address(_fortressSwap))), "!", "GlpCompounder=", string(vm.toString(address(_GlpCompounder))), "!"));
+        data = string(abi.encodePacked("!", "_yieldOptimizersRegistry=", string(vm.toString(address(_yieldOptimizersRegistry))), "!", "_fortressSwap=", string(vm.toString(address(_fortressSwap))), "!", "GlpCompounder=", string(vm.toString(address(_glpCompounder))), "!"));
         vm.writeFile(path, data);
 
         vm.stopBroadcast();

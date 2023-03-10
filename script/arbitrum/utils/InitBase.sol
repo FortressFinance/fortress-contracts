@@ -2,6 +2,7 @@
 pragma solidity 0.8.17;
 
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
+import "src/shared/utils/YieldOptimizersRegistry.sol";
 import "script/arbitrum/utils/AddressesArbi.sol";
 
 contract InitBaseArbi is AddressesArbi {
@@ -38,4 +39,14 @@ contract InitBaseArbi is AddressesArbi {
 
     address[] _underlyingAssets2 = new address[](2);
     address[] _underlyingAssets3 = new address[](3);
+    address[] _underlyingAssets4 = new address[](4);
+    address[] _underlyingAssets5 = new address[](5);
+    address[] _underlyingAssets6 = new address[](6);
+
+    string curveCryptoDescription = "Curve,Crypto";
+    string curveStableDescription = "Curve,Stable";
+    string balancerCryptoDescription = "Balancer,Crypto";
+    string balancerStableDescription = "Balancer,Stable";
+    string cryptoDescription = "Crypto";
+    string stableDescription = "Stable";
 }

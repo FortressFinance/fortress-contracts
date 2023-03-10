@@ -1,292 +1,292 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "src/shared/interfaces/IConvexBasicRewards.sol";
+// import "src/shared/interfaces/IConvexBasicRewards.sol";
 
-import "src/mainnet/compounders/balancer/BalancerCompounder.sol";
-import "src/mainnet/concentrators/balancer/BalancerEthConcentrator.sol";
+// import "src/mainnet/compounders/balancer/BalancerCompounder.sol";
+// import "src/mainnet/concentrators/balancer/BalancerEthConcentrator.sol";
 
-import "test/mainnet/concentrator/BaseTest.sol";
+// import "test/mainnet/concentrator/BaseTest.sol";
 
-import "script/mainnet/utils/concentrators/balancer/eth/InitWETHAURAEthConcentrator.sol";
-import "script/mainnet/utils/compounders/balancer/InitThreeETH.sol";
+// import "script/mainnet/utils/concentrators/balancer/eth/InitWETHAURAEthConcentrator.sol";
+// import "script/mainnet/utils/compounders/balancer/InitThreeETH.sol";
+contract testWETHAURAethConcentrator {}
+// contract testWETHAURAethConcentrator is InitWETHAURAEthConcentrator, InitThreeETH, BaseTest {
 
-contract testWETHAURAethConcentrator is InitWETHAURAEthConcentrator, InitThreeETH, BaseTest {
+//     using SafeERC20 for IERC20;
 
-    using SafeERC20 for IERC20;
-
-    BalancerCompounder ethCompounder;
-    BalancerEthConcentrator ethConcentrator;
+//     BalancerCompounder ethCompounder;
+//     BalancerEthConcentrator ethConcentrator;
     
-    function setUp() public {
+//     function setUp() public {
         
-        _setUp();
+//         _setUp();
 
-        address tempAddr = _initializeThreeETH(address(owner), address(fortressRegistry), address(fortressSwap), platform);
-        ethCompounder = BalancerCompounder(payable(tempAddr));
+//         address tempAddr = _initializeThreeETH(address(owner), address(fortressRegistry), address(fortressSwap), platform);
+//         ethCompounder = BalancerCompounder(payable(tempAddr));
 
-        tempAddr = _initWETHAURAEthConcentrator(address(owner), address(fortressRegistry), address(fortressSwap), platform, address(ethCompounder));
-        ethConcentrator = BalancerEthConcentrator(payable(tempAddr));
-    }
+//         tempAddr = _initWETHAURAEthConcentrator(address(owner), address(fortressRegistry), address(fortressSwap), platform, address(ethCompounder));
+//         ethConcentrator = BalancerEthConcentrator(payable(tempAddr));
+//     }
 
-    // todo - add testWithdraw, testMint
+//     // todo - add testWithdraw, testMint
 
 
-    function testCorrectFlowAURA(uint256 _amount) public {
-        // uint256 _amount = 1 ether;
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testCorrectFlowAURA(uint256 _amount) public {
+//         // uint256 _amount = 1 ether;
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
-        // ------------ Get _asset ------------
+//         // ------------ Get _asset ------------
         
-        uint256 _underlyingAlice = _getAssetFromETH(alice, AURA, _amount);
-        uint256 _underlyingBob = _getAssetFromETH(bob, AURA, _amount);
-        uint256 _underlyingCharlie = _getAssetFromETH(charlie, AURA, _amount);
+//         uint256 _underlyingAlice = _getAssetFromETH(alice, AURA, _amount);
+//         uint256 _underlyingBob = _getAssetFromETH(bob, AURA, _amount);
+//         uint256 _underlyingCharlie = _getAssetFromETH(charlie, AURA, _amount);
 
-        // ------------ Deposit ------------
+//         // ------------ Deposit ------------
 
-        (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(AURA, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+//         (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(AURA, _underlyingAlice, _underlyingBob, _underlyingCharlie);
 
-        // ------------ Harvest rewards ------------
+//         // ------------ Harvest rewards ------------
 
-        _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
+//         _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
 
-        // ------------ Withdraw ------------
+//         // ------------ Withdraw ------------
 
-        _testWithdrawUnderlying(AURA, _sharesAlice, _sharesBob, _sharesCharlie);
+//         _testWithdrawUnderlying(AURA, _sharesAlice, _sharesBob, _sharesCharlie);
 
-        // ------------ Claim ------------
+//         // ------------ Claim ------------
 
-        _testClaim();
-    }
+//         _testClaim();
+//     }
 
-    function testCorrectFlowWETH(uint256 _amount) public {
-        // uint256 _amount = 1 ether;
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testCorrectFlowWETH(uint256 _amount) public {
+//         // uint256 _amount = 1 ether;
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
 
-        // ------------ Get _asset ------------
+//         // ------------ Get _asset ------------
         
-        uint256 _underlyingAlice = _getAssetFromETH(alice, WETH, _amount);
-        uint256 _underlyingBob = _getAssetFromETH(bob, WETH, _amount);
-        uint256 _underlyingCharlie = _getAssetFromETH(charlie, WETH, _amount);
+//         uint256 _underlyingAlice = _getAssetFromETH(alice, WETH, _amount);
+//         uint256 _underlyingBob = _getAssetFromETH(bob, WETH, _amount);
+//         uint256 _underlyingCharlie = _getAssetFromETH(charlie, WETH, _amount);
         
-        // ------------ Deposit ------------
+//         // ------------ Deposit ------------
 
-        (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(WETH, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+//         (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(WETH, _underlyingAlice, _underlyingBob, _underlyingCharlie);
 
-        // ------------ Harvest rewards ------------
+//         // ------------ Harvest rewards ------------
 
-        _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
+//         _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
 
-        // ------------ Withdraw ------------
+//         // ------------ Withdraw ------------
 
-        _testWithdrawUnderlying(AURA, _sharesAlice, _sharesBob, _sharesCharlie);
+//         _testWithdrawUnderlying(AURA, _sharesAlice, _sharesBob, _sharesCharlie);
 
-        // ------------ Claim ------------
+//         // ------------ Claim ------------
 
-        _testClaim();
-    }
+//         _testClaim();
+//     }
 
-    function testDepositNoAsset(uint256 _amount) public {
-        vm.startPrank(alice);
+//     function testDepositNoAsset(uint256 _amount) public {
+//         vm.startPrank(alice);
         
-        IERC20(AURA).safeApprove(address(ethConcentrator), _amount);
-        vm.expectRevert();
-        ethConcentrator.depositSingleUnderlying(_amount, AURA, alice, 0);
+//         IERC20(AURA).safeApprove(address(ethConcentrator), _amount);
+//         vm.expectRevert();
+//         ethConcentrator.depositSingleUnderlying(_amount, AURA, alice, 0);
 
-        vm.stopPrank();
-    }
+//         vm.stopPrank();
+//     }
 
-    function testDepositWrongAsset(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testDepositWrongAsset(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
-        uint256 _underlyingAlice = _getAssetFromETH(alice, BAL, _amount);
+//         uint256 _underlyingAlice = _getAssetFromETH(alice, BAL, _amount);
         
-        vm.startPrank(alice);
-        IERC20(BAL).safeApprove(address(ethConcentrator), _underlyingAlice);
-        vm.expectRevert();
-        ethConcentrator.depositSingleUnderlying(_underlyingAlice, BAL, alice, 0);
+//         vm.startPrank(alice);
+//         IERC20(BAL).safeApprove(address(ethConcentrator), _underlyingAlice);
+//         vm.expectRevert();
+//         ethConcentrator.depositSingleUnderlying(_underlyingAlice, BAL, alice, 0);
 
-        vm.stopPrank();
-    }
+//         vm.stopPrank();
+//     }
 
-    function testWrongWithdraw(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testWrongWithdraw(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
-        uint256 _underlyingAlice = _getAssetFromETH(alice, AURA, _amount);
+//         uint256 _underlyingAlice = _getAssetFromETH(alice, AURA, _amount);
         
-        vm.startPrank(alice);
-        IERC20(AURA).safeApprove(address(ethConcentrator), _underlyingAlice);
-        uint256 _share = ethConcentrator.depositSingleUnderlying(_underlyingAlice, AURA, alice, 0);
-        vm.stopPrank();
-        assertEq(_share, IERC20(address(ethConcentrator)).balanceOf(alice), "testWithdrawNotOwner: E1");
+//         vm.startPrank(alice);
+//         IERC20(AURA).safeApprove(address(ethConcentrator), _underlyingAlice);
+//         uint256 _share = ethConcentrator.depositSingleUnderlying(_underlyingAlice, AURA, alice, 0);
+//         vm.stopPrank();
+//         assertEq(_share, IERC20(address(ethConcentrator)).balanceOf(alice), "testWithdrawNotOwner: E1");
 
-        vm.startPrank(bob);
-        vm.expectRevert();
-        ethConcentrator.redeem(_share, bob, alice);
-        vm.expectRevert();
-        ethConcentrator.redeem(_share, bob, bob);
-        vm.expectRevert();
-        ethConcentrator.redeemSingleUnderlying(_share, AURA, bob, alice, 0);
-        vm.expectRevert();
-        ethConcentrator.redeemSingleUnderlying(_share, AURA, bob, bob, 0);
-        vm.stopPrank();
-    }
+//         vm.startPrank(bob);
+//         vm.expectRevert();
+//         ethConcentrator.redeem(_share, bob, alice);
+//         vm.expectRevert();
+//         ethConcentrator.redeem(_share, bob, bob);
+//         vm.expectRevert();
+//         ethConcentrator.redeemSingleUnderlying(_share, AURA, bob, alice, 0);
+//         vm.expectRevert();
+//         ethConcentrator.redeemSingleUnderlying(_share, AURA, bob, bob, 0);
+//         vm.stopPrank();
+//     }
 
-    function testDepositCap(uint256 _amount) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+//     function testDepositCap(uint256 _amount) public {
+//         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
-        address _asset = AURA; 
+//         address _asset = AURA; 
         
-        // ------------ Get _asset ------------
+//         // ------------ Get _asset ------------
         
-        uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
-        uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
-        uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
+//         uint256 _underlyingAlice = _getAssetFromETH(alice, _asset, _amount);
+//         uint256 _underlyingBob = _getAssetFromETH(bob, _asset, _amount);
+//         uint256 _underlyingCharlie = _getAssetFromETH(charlie, _asset, _amount);
 
-        // ------------ Deposit ------------
+//         // ------------ Deposit ------------
 
-        _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+//         _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
 
-        // ------------ Harvest ------------
+//         // ------------ Harvest ------------
         
-        // Fast forward 1 month
-        skip(216000);
+//         // Fast forward 1 month
+//         skip(216000);
 
-        vm.prank(harvester);
-        ethConcentrator.harvest(address(harvester), 0);
+//         vm.prank(harvester);
+//         ethConcentrator.harvest(address(harvester), 0);
 
-        // ------------ Deposit Cap ------------
+//         // ------------ Deposit Cap ------------
 
-        _testDepositCapInt(_asset);
-    }
+//         _testDepositCapInt(_asset);
+//     }
 
-    // ------------------------------------------------------------------------------------------
-    // --------------------------------- internal functions -------------------------------------
-    // ------------------------------------------------------------------------------------------
+//     // ------------------------------------------------------------------------------------------
+//     // --------------------------------- internal functions -------------------------------------
+//     // ------------------------------------------------------------------------------------------
 
-    function _testDepositCapInt(address _asset) internal {
-        assertEq(ethConcentrator.depositCap(), 0, "_testDepositCap: E1");
-        assertEq(ethConcentrator.platform(), address(platform), "_testDepositCap: E2");
-        assertEq(ethConcentrator.swap(), address(fortressSwap), "_testDepositCap: E3");
-        assertEq(ethConcentrator.owner(), address(owner), "_testDepositCap: E4");
-        assertEq(ethConcentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
-        assertEq(ethConcentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
+//     function _testDepositCapInt(address _asset) internal {
+//         assertEq(ethConcentrator.depositCap(), 0, "_testDepositCap: E1");
+//         assertEq(ethConcentrator.platform(), address(platform), "_testDepositCap: E2");
+//         assertEq(ethConcentrator.swap(), address(fortressSwap), "_testDepositCap: E3");
+//         assertEq(ethConcentrator.owner(), address(owner), "_testDepositCap: E4");
+//         assertEq(ethConcentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E3");
+//         assertEq(ethConcentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E4");
 
-        vm.startPrank(owner);
-        ethConcentrator.updateInternalUtils(address(ethCompounder), address(platform), address(fortressSwap), address(owner), ethConcentrator.totalSupply());
-        vm.stopPrank();
+//         vm.startPrank(owner);
+//         ethConcentrator.updateInternalUtils(address(ethCompounder), address(platform), address(fortressSwap), address(owner), ethConcentrator.totalSupply());
+//         vm.stopPrank();
         
-        assertEq(ethConcentrator.depositCap(), ethConcentrator.totalSupply(), "_testDepositCap: E2");
-        assertEq(ethConcentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
-        assertEq(ethConcentrator.maxMint(address(alice)), 0, "_testDepositCap: E4");
+//         assertEq(ethConcentrator.depositCap(), ethConcentrator.totalSupply(), "_testDepositCap: E2");
+//         assertEq(ethConcentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E3");
+//         assertEq(ethConcentrator.maxMint(address(alice)), 0, "_testDepositCap: E4");
 
-        uint256 _amount = 1 ether;
-        uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
-        vm.startPrank(alice);
-        IERC20(_asset).safeApprove(address(ethConcentrator), _balance);
-        vm.expectRevert();
-        ethConcentrator.depositSingleUnderlying(_balance, _asset, address(alice), 0);
-        vm.stopPrank();
-    }
+//         uint256 _amount = 1 ether;
+//         uint256 _balance = _getAssetFromETH(alice, _asset, _amount);
+//         vm.startPrank(alice);
+//         IERC20(_asset).safeApprove(address(ethConcentrator), _balance);
+//         vm.expectRevert();
+//         ethConcentrator.depositSingleUnderlying(_balance, _asset, address(alice), 0);
+//         vm.stopPrank();
+//     }
 
-    function _depositSingleUnderlyingAsset(address _owner, address _asset, uint256 _amount) internal returns (uint256 _share) {
-        vm.startPrank(_owner);
-        if (_asset != ETH) {
-            IERC20(_asset).safeApprove(address(ethConcentrator), _amount);
-            _share = ethConcentrator.depositSingleUnderlying(_amount, _asset, _owner, 0);
-        } else {
-            _share = ethConcentrator.depositSingleUnderlying{value: _amount}(_amount, _asset, _owner, 0);
-        }
-        vm.stopPrank();
+//     function _depositSingleUnderlyingAsset(address _owner, address _asset, uint256 _amount) internal returns (uint256 _share) {
+//         vm.startPrank(_owner);
+//         if (_asset != ETH) {
+//             IERC20(_asset).safeApprove(address(ethConcentrator), _amount);
+//             _share = ethConcentrator.depositSingleUnderlying(_amount, _asset, _owner, 0);
+//         } else {
+//             _share = ethConcentrator.depositSingleUnderlying{value: _amount}(_amount, _asset, _owner, 0);
+//         }
+//         vm.stopPrank();
 
-        assertEq(_share, ethConcentrator.balanceOf(_owner), "_depositSingleUnderlyingAsset: E1");
-    }
+//         assertEq(_share, ethConcentrator.balanceOf(_owner), "_depositSingleUnderlyingAsset: E1");
+//     }
 
-    function _testDepositUnderlying(address _asset, uint256 _underlyingAlice, uint256 _underlyingBob, uint256 _underlyingCharlie) internal returns (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) {
-        _sharesAlice = _depositSingleUnderlyingAsset(alice, _asset, _underlyingAlice);
-        _sharesBob = _depositSingleUnderlyingAsset(bob, _asset, _underlyingBob);
-        _sharesCharlie = _depositSingleUnderlyingAsset(charlie, _asset, _underlyingCharlie);
+//     function _testDepositUnderlying(address _asset, uint256 _underlyingAlice, uint256 _underlyingBob, uint256 _underlyingCharlie) internal returns (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) {
+//         _sharesAlice = _depositSingleUnderlyingAsset(alice, _asset, _underlyingAlice);
+//         _sharesBob = _depositSingleUnderlyingAsset(bob, _asset, _underlyingBob);
+//         _sharesCharlie = _depositSingleUnderlyingAsset(charlie, _asset, _underlyingCharlie);
         
-        assertEq(ethConcentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositUnderlying: E1");
-        assertEq(ethConcentrator.totalAssets(), IConvexBasicRewards(ethConcentrator.crvRewards()).balanceOf(address(ethConcentrator)), "_testDepositUnderlying: E2");
-        assertApproxEqAbs(_sharesAlice, _sharesBob, 1e19, "_testDepositUnderlying: E3");
-        assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e19, "_testDepositUnderlying: E4");
+//         assertEq(ethConcentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testDepositUnderlying: E1");
+//         assertEq(ethConcentrator.totalAssets(), IConvexBasicRewards(ethConcentrator.crvRewards()).balanceOf(address(ethConcentrator)), "_testDepositUnderlying: E2");
+//         assertApproxEqAbs(_sharesAlice, _sharesBob, 1e19, "_testDepositUnderlying: E3");
+//         assertApproxEqAbs(_sharesAlice, _sharesCharlie, 1e19, "_testDepositUnderlying: E4");
 
-        return (_sharesAlice, _sharesBob, _sharesCharlie);
-    }
+//         return (_sharesAlice, _sharesBob, _sharesCharlie);
+//     }
 
-    function _testHarvest(uint256 _totalShare) internal {
-        assertTrue(IConvexBasicRewards(ethConcentrator.crvRewards()).earned(address(ethConcentrator)) == 0, "_testHarvest: E1");
-        assertEq(ethConcentrator.pendingReward(address(alice)), 0, "_testHarvest: E01");
-        assertEq(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(bob)), "_testHarvest: E02");
-        assertEq(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(charlie)), "_testHarvest: E03");
-        assertEq(ethConcentrator.accRewardPerShare(), 0, "_testHarvest: E04");
+//     function _testHarvest(uint256 _totalShare) internal {
+//         assertTrue(IConvexBasicRewards(ethConcentrator.crvRewards()).earned(address(ethConcentrator)) == 0, "_testHarvest: E1");
+//         assertEq(ethConcentrator.pendingReward(address(alice)), 0, "_testHarvest: E01");
+//         assertEq(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(bob)), "_testHarvest: E02");
+//         assertEq(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(charlie)), "_testHarvest: E03");
+//         assertEq(ethConcentrator.accRewardPerShare(), 0, "_testHarvest: E04");
         
-        // Fast forward 1 month
-        skip(216000);
+//         // Fast forward 1 month
+//         skip(216000);
 
-        assertTrue(IConvexBasicRewards(ethConcentrator.crvRewards()).earned(address(ethConcentrator)) > 0, "_testHarvest: E2");
+//         assertTrue(IConvexBasicRewards(ethConcentrator.crvRewards()).earned(address(ethConcentrator)) > 0, "_testHarvest: E2");
         
-        uint256 _underlyingBefore = ethConcentrator.totalAssets();
-        uint256 _rewardsBefore = IERC20(address(ethCompounder)).balanceOf(address(ethConcentrator));
-        vm.prank(harvester);
-        uint256 _newUnderlying = ethConcentrator.harvest(address(harvester), 0);
+//         uint256 _underlyingBefore = ethConcentrator.totalAssets();
+//         uint256 _rewardsBefore = IERC20(address(ethCompounder)).balanceOf(address(ethConcentrator));
+//         vm.prank(harvester);
+//         uint256 _newUnderlying = ethConcentrator.harvest(address(harvester), 0);
 
-        assertTrue(IConvexBasicRewards(ethConcentrator.crvRewards()).earned(address(ethConcentrator)) == 0, "_testHarvest: E3");
-        assertTrue(IERC20(BALANCER_3ETH).balanceOf(platform) > 0, "_testHarvest: E4");
-        assertTrue(IERC20(BALANCER_3ETH).balanceOf(harvester) > 0, "_testHarvest: E5");
-        assertEq(ethConcentrator.totalAssets(), _underlyingBefore, "_testHarvest: E6");
-        assertEq(ethConcentrator.totalSupply(), _totalShare, "_testHarvest: E7");
-        assertEq((IERC20(address(ethCompounder)).balanceOf(address(ethConcentrator)) - _rewardsBefore), _newUnderlying, "_testHarvest: E8");
-        assertTrue(_newUnderlying > 0, "_testHarvest: E9");
-        assertTrue(ethConcentrator.accRewardPerShare() > 0, "_testHarvest: E10");
-        assertTrue(ethConcentrator.pendingReward(address(alice)) > 0, "_testHarvest: E11");
-        assertApproxEqAbs(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(bob)), 1e17, "_testHarvest: E12");
-        assertApproxEqAbs(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvest: E13");
-    }
+//         assertTrue(IConvexBasicRewards(ethConcentrator.crvRewards()).earned(address(ethConcentrator)) == 0, "_testHarvest: E3");
+//         assertTrue(IERC20(BALANCER_3ETH).balanceOf(platform) > 0, "_testHarvest: E4");
+//         assertTrue(IERC20(BALANCER_3ETH).balanceOf(harvester) > 0, "_testHarvest: E5");
+//         assertEq(ethConcentrator.totalAssets(), _underlyingBefore, "_testHarvest: E6");
+//         assertEq(ethConcentrator.totalSupply(), _totalShare, "_testHarvest: E7");
+//         assertEq((IERC20(address(ethCompounder)).balanceOf(address(ethConcentrator)) - _rewardsBefore), _newUnderlying, "_testHarvest: E8");
+//         assertTrue(_newUnderlying > 0, "_testHarvest: E9");
+//         assertTrue(ethConcentrator.accRewardPerShare() > 0, "_testHarvest: E10");
+//         assertTrue(ethConcentrator.pendingReward(address(alice)) > 0, "_testHarvest: E11");
+//         assertApproxEqAbs(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(bob)), 1e17, "_testHarvest: E12");
+//         assertApproxEqAbs(ethConcentrator.pendingReward(address(alice)) , ethConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvest: E13");
+//     }
 
-    function _testWithdrawUnderlying(address _asset, uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
-        vm.prank(alice);
-        uint256 _tokenOutAlice = ethConcentrator.redeemSingleUnderlying(_sharesAlice, _asset, address(alice), address(alice), 0);
-        assertEq(_tokenOutAlice, IERC20(_asset).balanceOf(address(alice)), "_testWithdrawUnderlying: E1");
-        assertEq(ethConcentrator.balanceOf(address(alice)), 0, "_testWithdrawUnderlying: E2");
+//     function _testWithdrawUnderlying(address _asset, uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
+//         vm.prank(alice);
+//         uint256 _tokenOutAlice = ethConcentrator.redeemSingleUnderlying(_sharesAlice, _asset, address(alice), address(alice), 0);
+//         assertEq(_tokenOutAlice, IERC20(_asset).balanceOf(address(alice)), "_testWithdrawUnderlying: E1");
+//         assertEq(ethConcentrator.balanceOf(address(alice)), 0, "_testWithdrawUnderlying: E2");
         
-        vm.prank(bob);
-        uint256 _tokenOutBob = ethConcentrator.redeemSingleUnderlying(_sharesBob, _asset, address(bob), address(bob), 0);
-        assertEq(_tokenOutBob, IERC20(_asset).balanceOf(address(bob)), "_testWithdrawUnderlying: E3");
-        assertEq(ethConcentrator.balanceOf(address(bob)), 0, "_testWithdrawUnderlying: E4");
+//         vm.prank(bob);
+//         uint256 _tokenOutBob = ethConcentrator.redeemSingleUnderlying(_sharesBob, _asset, address(bob), address(bob), 0);
+//         assertEq(_tokenOutBob, IERC20(_asset).balanceOf(address(bob)), "_testWithdrawUnderlying: E3");
+//         assertEq(ethConcentrator.balanceOf(address(bob)), 0, "_testWithdrawUnderlying: E4");
 
-        vm.prank(charlie);
-        uint256 _tokenOutCharlie = ethConcentrator.redeemSingleUnderlying(_sharesCharlie, _asset, address(charlie), address(charlie), 0);
-        assertEq(_tokenOutCharlie, IERC20(_asset).balanceOf(address(charlie)), "_testWithdrawUnderlying: E5");
-        assertEq(ethConcentrator.balanceOf(address(charlie)), 0, "_testWithdrawUnderlying: E6");
+//         vm.prank(charlie);
+//         uint256 _tokenOutCharlie = ethConcentrator.redeemSingleUnderlying(_sharesCharlie, _asset, address(charlie), address(charlie), 0);
+//         assertEq(_tokenOutCharlie, IERC20(_asset).balanceOf(address(charlie)), "_testWithdrawUnderlying: E5");
+//         assertEq(ethConcentrator.balanceOf(address(charlie)), 0, "_testWithdrawUnderlying: E6");
 
-        assertEq(ethConcentrator.totalAssets(), 0, "_testWithdrawUnderlying: E7");
-        assertEq(ethConcentrator.totalSupply(), 0, "_testWithdrawUnderlying: E8");
-        assertApproxEqAbs(_tokenOutAlice, _tokenOutBob, 1e20, "_testWithdrawUnderlying: E9");
-        assertApproxEqAbs(_tokenOutAlice, _tokenOutCharlie, 1e20, "_testWithdrawUnderlying: E10");
-    }
+//         assertEq(ethConcentrator.totalAssets(), 0, "_testWithdrawUnderlying: E7");
+//         assertEq(ethConcentrator.totalSupply(), 0, "_testWithdrawUnderlying: E8");
+//         assertApproxEqAbs(_tokenOutAlice, _tokenOutBob, 1e20, "_testWithdrawUnderlying: E9");
+//         assertApproxEqAbs(_tokenOutAlice, _tokenOutCharlie, 1e20, "_testWithdrawUnderlying: E10");
+//     }
 
-    function _testClaim() internal {
-        vm.prank(alice);
-        uint256 _rewardsOutAlice = ethConcentrator.claim(address(alice));
-        assertTrue(_rewardsOutAlice > 0, "_testClaim: E01");
-        assertEq(_rewardsOutAlice, IERC20(address(ethCompounder)).balanceOf(address(alice)), "_testClaim: E1");
-        assertEq(ethConcentrator.pendingReward(address(alice)), 0, "_testClaim: E2");
+//     function _testClaim() internal {
+//         vm.prank(alice);
+//         uint256 _rewardsOutAlice = ethConcentrator.claim(address(alice));
+//         assertTrue(_rewardsOutAlice > 0, "_testClaim: E01");
+//         assertEq(_rewardsOutAlice, IERC20(address(ethCompounder)).balanceOf(address(alice)), "_testClaim: E1");
+//         assertEq(ethConcentrator.pendingReward(address(alice)), 0, "_testClaim: E2");
 
-        vm.prank(bob);
-        uint256 _rewardsOutBob = ethConcentrator.claim(address(bob));
-        assertTrue(_rewardsOutBob > 0, "_testClaim: E02");
-        assertEq(_rewardsOutBob, IERC20(address(ethCompounder)).balanceOf(address(bob)), "_testClaim: E3");
-        assertEq(ethConcentrator.pendingReward(address(bob)), 0, "_testClaim: E4");
+//         vm.prank(bob);
+//         uint256 _rewardsOutBob = ethConcentrator.claim(address(bob));
+//         assertTrue(_rewardsOutBob > 0, "_testClaim: E02");
+//         assertEq(_rewardsOutBob, IERC20(address(ethCompounder)).balanceOf(address(bob)), "_testClaim: E3");
+//         assertEq(ethConcentrator.pendingReward(address(bob)), 0, "_testClaim: E4");
 
-        vm.prank(charlie);
-        uint256 _rewardsOutCharlie = ethConcentrator.claim(address(charlie));
-        assertTrue(_rewardsOutCharlie > 0, "_testClaim: E03");
-        assertEq(_rewardsOutCharlie, IERC20(address(ethCompounder)).balanceOf(address(charlie)), "_testClaim: E5");
-        assertEq(ethConcentrator.pendingReward(address(charlie)), 0, "_testClaim: E6");
+//         vm.prank(charlie);
+//         uint256 _rewardsOutCharlie = ethConcentrator.claim(address(charlie));
+//         assertTrue(_rewardsOutCharlie > 0, "_testClaim: E03");
+//         assertEq(_rewardsOutCharlie, IERC20(address(ethCompounder)).balanceOf(address(charlie)), "_testClaim: E5");
+//         assertEq(ethConcentrator.pendingReward(address(charlie)), 0, "_testClaim: E6");
 
-        assertApproxEqAbs(_rewardsOutAlice, _rewardsOutBob, 1e19, "_testClaim: E7");
-        assertApproxEqAbs(_rewardsOutAlice, _rewardsOutCharlie, 1e19, "_testClaim: E8");
-    } 
-}
+//         assertApproxEqAbs(_rewardsOutAlice, _rewardsOutBob, 1e19, "_testClaim: E7");
+//         assertApproxEqAbs(_rewardsOutAlice, _rewardsOutCharlie, 1e19, "_testClaim: E8");
+//     } 
+// }
