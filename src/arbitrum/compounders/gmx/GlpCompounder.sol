@@ -170,11 +170,6 @@ contract GlpCompounder is TokenCompounderBase {
         IGlpRewardHandler(rewardHandler).handleRewards(true, false, true, true, true, true, false);
 
         address _weth = WETH;
-        uint256 _gmxBalance = IERC20(GMX).balanceOf(address(this));
-        if (_gmxBalance > 0) {
-            IFortressSwap(swap).swap(GMX, _weth, _gmxBalance);
-        }
-
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
         
         if (_underlyingAsset != _weth) {

@@ -47,6 +47,7 @@ contract FortressGlpStrategy is BaseStrategy {
 
     function isActive() public view override returns (bool) {
         if (isStrategiesActiveOverride) return false;
+        // TODO - remove this if statement as it breaks the contract
         if (IERC20(IAssetVault(assetVault).getAsset()).balanceOf(address(this)) > 0) return true;
         if (IERC20(fortGlp).balanceOf(address(this)) > 0) return true;
 
@@ -58,6 +59,7 @@ contract FortressGlpStrategy is BaseStrategy {
     /// @dev Executes the strategy - deposit into fortGLP
     /// @dev _configData expects _asset, _amount and _minAmount. If _amount is set to type(uint256).max, it will deposit all the funds
     function execute(bytes memory _configData) external override onlyManager returns (uint256) {
+        // TODO - remove the need for _asset - a StrategyVault should only be able to hold one asset 
         (address _asset, uint256 _amount, uint256 _minAmount) = abi.decode(_configData, (address, uint256, uint256));
 
         address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
@@ -65,6 +67,7 @@ contract FortressGlpStrategy is BaseStrategy {
             _amount = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
         }
 
+        // TODO - remove this logic - a StrategyVault should only be able to hold one asset
         if (_asset != _assetVaultPrimaryAsset) {
             address _swap = swap;
             _approve(_assetVaultPrimaryAsset, _swap, _amount);
@@ -81,6 +84,7 @@ contract FortressGlpStrategy is BaseStrategy {
     /// @dev Terminates the strategy - withdraw from fortGLP
     /// @dev _configData expects _asset, _amount and _minAmount. If _amount is set to type(uint256).max, it will withdraw all the funds
     function terminate(bytes memory _configData) external override onlyManager returns (uint256) {
+        // TODO - remove the need for _asset - a StrategyVault should only be able to hold one asset
         (address _asset, uint256 _amount, uint256 _minAmount) = abi.decode(_configData, (address, uint256, uint256));
 
         if (_amount == type(uint256).max) {
@@ -88,7 +92,8 @@ contract FortressGlpStrategy is BaseStrategy {
         }
 
         _amount = IFortGlp(fortGlp).redeemUnderlying(_asset, _amount, address(this), address(this), _minAmount);
-        
+
+        // TODO - remove this logic - a StrategyVault should only be able to hold one asset
         if (_asset != assetVaultPrimaryAsset) {
             address _swap = swap;
             _approve(_asset, _swap, _amount);

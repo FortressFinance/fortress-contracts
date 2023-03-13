@@ -18,6 +18,7 @@ contract TestFortGlpStrategy is BaseTest {
         
         _setUp(USDC);
 
+        GlpCompounder _glpCompounder = new GlpCompounder("description", manager, address _platform, address _swap, address[] memory _underlyingAssets);
         GlpCompounder _glpCompounder = new GlpCompounder(fortGlp, manager, platform);
         fortGlp = address(_glpCompounder);
 

@@ -7,6 +7,7 @@ import "forge-std/console.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
+import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/epoch-based-managed-vaults/MetaVault.sol";
 import "src/arbitrum/epoch-based-managed-vaults/interfaces/IStrategy.sol";
 
@@ -33,7 +34,7 @@ contract BaseTest is Test, AddressesArbi {
 
     uint256 arbiFork;
     
-    IFortressSwap fortressSwap;
+    FortressArbiSwap fortressSwap;
     MetaVault metaVault;
 
     function _setUp(address _asset) internal {
@@ -56,7 +57,7 @@ contract BaseTest is Test, AddressesArbi {
         vm.deal(manager, 100 ether);
         vm.deal(platform, 100 ether);
         
-        fortressSwap = IFortressSwap(payable(FORTRESS_SWAP));
+        fortressSwap = new FortressArbiSwap(owner);
 
         metaVault = new MetaVault(ERC20(_asset), "MetaVault", "MV", platform, manager, FORTRESS_SWAP);
     }
@@ -164,6 +165,7 @@ contract BaseTest is Test, AddressesArbi {
         // uint256 _totalSupply = metaVault.previewDeposit(_amount) * 3;
         uint256 _desiredTotalSupply = metaVault.totalSupply() + (metaVault.previewDeposit(_amount) * 3);
         // uint256 _managerShares = _managerAddCollateral(_desiredTotalSupply / metaVault.collateralRequirement());
+        // TODO - do something _managerShares
         uint256 _managerShares = _managerAddCollateral((_desiredTotalSupply / metaVault.collateralRequirement()) - metaVault.balanceOf(address(metaVault)));
         
         console.log("testetsttest");
