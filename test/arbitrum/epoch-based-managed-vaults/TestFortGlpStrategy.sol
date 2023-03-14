@@ -7,20 +7,27 @@ import "./BaseTest.sol";
 import "src/shared/interfaces/ERC4626.sol";
 
 import {FortressGlpStrategy, IFortGlp} from "src/arbitrum/epoch-based-managed-vaults/stratagies/FortressGlpStrategy.sol";
-import {GlpCompounder} from "src/arbitrum/compounders/gmx/GlpCompounder.sol";
+import "src/arbitrum/compounders/gmx/GlpCompounder.sol";
 
 contract TestFortGlpStrategy is BaseTest {
 
-    address fortGlp = address(0x9363e5e4a7aDfB346BEA0fe87a8BD02fddA48855);
+    address fortGlp;
     uint256 public assetVaultBalanceBeforeStrategy;
     
     function setUp() public {
         
         _setUp(USDC);
 
-        GlpCompounder _glpCompounder = new GlpCompounder("description", manager, address _platform, address _swap, address[] memory _underlyingAssets);
-        GlpCompounder _glpCompounder = new GlpCompounder(fortGlp, manager, platform);
-        fortGlp = address(_glpCompounder);
+        address[] memory _underlyingAssets5 = new address[](5);
+        _underlyingAssets5[0] = WETH;
+        _underlyingAssets5[1] = ETH;
+        _underlyingAssets5[2] = FRAX;
+        _underlyingAssets5[3] = USDC;
+        _underlyingAssets5[4] = USDT;
+
+        GlpCompounder glpCompounder = new GlpCompounder("description", manager, platform, address(fortressSwap), _underlyingAssets5);
+        // GlpCompounder _glpCompounder = new GlpCompounder(fortGlp, manager, platform);
+        fortGlp = address(glpCompounder);
 
         uint256[] memory _poolType = new uint256[](1);
         _poolType[0] = 13;
@@ -31,10 +38,10 @@ contract TestFortGlpStrategy is BaseTest {
         address[] memory _toList = new address[](1);
         _toList[0] = USDC;
 
-        vm.startPrank(address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc));
+        vm.startPrank(owner);
         // address owner = vm.envAddress("OWNER");
-        IFortressSwap(FORTRESS_SWAP).deleteRoute(WETH, USDC);
-        IFortressSwap(FORTRESS_SWAP).updateRoute(WETH, USDC, _poolType, _poolAddress, _fromList, _toList);
+        FortressArbiSwap(payable(address(fortressSwap))).deleteRoute(WETH, USDC);
+        FortressArbiSwap(payable(address(fortressSwap))).updateRoute(WETH, USDC, _poolType, _poolAddress, _fromList, _toList);
         vm.stopPrank();
     }
 
@@ -62,25 +69,26 @@ contract TestFortGlpStrategy is BaseTest {
             uint256 _amountDeposited = _letInvestorsDepositOnCollateralRequired(_investorDepositAmount);
             // _managerAddCollateral(1 ether);
             // if (i > 0) revert("test1");
-
+            console.log("startEpoch");
             _startEpoch();
-
+            console.log("_depositToAssetsVault");
             _amountDeposited = _depositToAssetsVault(_wethAssetVault, WETH, _amountDeposited);
-
+            console.log("_depositToStrategy");
             _depositToStrategy(_wethAssetVault, _fortGlpStrategy, _amountDeposited);
-            
+            console.log("_executeFortGlpStrategy");
             uint256 _fortGlpShares = _executeFortGlpStrategy(WETH, _wethAssetVault, _fortGlpStrategy, _amountDeposited);
-
+            console.log("_profitableTerminateFortGlpStrategy");
             uint256 _amountOut = _profitableTerminateFortGlpStrategy(WETH, _wethAssetVault, _fortGlpStrategy, _fortGlpShares);
-
+            console.log("_withdrawAllFromStrategy");
             // _withdrawFromStrategy(_wethAssetVault, _fortGlpStrategy, _amountOut);
             _withdrawAllFromStrategy(_wethAssetVault, _fortGlpStrategy);
-
+            console.log("_withdrawFromAssetVault");
             _withdrawFromAssetVault(_wethAssetVault, _amountOut);
-            
+            console.log("_endEpoch");
             _endEpoch();
-
+            console.log("_removeCollateral");
             _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
+            console.log("done");
         }
     }
 
@@ -152,7 +160,7 @@ contract TestFortGlpStrategy is BaseTest {
     // ------------------- UTILS -------------------
 
     function _deployFortGlpStrategy(address _enabledAsset, address _assetVault) internal returns (address) {
-        FortressGlpStrategy _fortGlpStrategy = new FortressGlpStrategy(_enabledAsset, _assetVault, platform, manager, fortGlp, FORTRESS_SWAP);
+        FortressGlpStrategy _fortGlpStrategy = new FortressGlpStrategy(_enabledAsset, _assetVault, platform, manager, fortGlp, address(fortressSwap));
 
         assertEq(_fortGlpStrategy.isActive(), false);
         assertEq(_fortGlpStrategy.isAssetEnabled(_enabledAsset), true);
@@ -186,17 +194,28 @@ contract TestFortGlpStrategy is BaseTest {
         assertEq(metaVault.isEpochinitiated(), true, "_profitableTerminateFortGlpStrategy: E2");
         assertEq(IStrategy(_strategy).isActive(), true, "_profitableTerminateFortGlpStrategy: E4");
         assertTrue(AssetVault(_assetVaultAddress).strategies(_strategy), "_profitableTerminateFortGlpStrategy: E04");
-
-        bytes memory _configData = abi.encode(_asset, _amount, 0);
-
-        uint256 _before = IERC20(fortGlp).balanceOf(address(_strategy));
-        uint256 _underlyingBefore = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(address(_strategy));
         
+        bytes memory _configData = abi.encode(_asset, _amount, 0);
+        bool testtt = GlpCompounder(fortGlp).isPendingRewards();
+        console.log("isPendingRewards: %s", testtt);
+        uint256 _pendingRewards1 = GlpCompounder(fortGlp).pendingRewards();
+        console.log("Pending rewards1: %s", _pendingRewards1);
+        uint256 _before = GlpCompounder(fortGlp).balanceOf(address(_strategy));
+        uint256 _underlyingBefore = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(address(_strategy));
+        console.log("Pending2");
         // Fast forward 1 month
         skip(216000);
-        
-        vm.rollFork(block.number + 1);
-        GlpCompounder(fortGlp).harvest(manager, 0);
+        console.log("Pending3");
+        // TODO - this fucks shit up 
+        // vm.rollFork(block.number + 1);
+        // GlpCompounder(fortGlp).harvest(address(manager), 0);
+        // GlpCompounder(fortGlp).harvest(address(manager), WETH, 0);
+        console.log("Pending4");
+        uint256 _pendingRewards = GlpCompounder(fortGlp).pendingRewards();
+        console.log("Pending rewards: %s", _pendingRewards);
+        IFortGlp(fortGlp).harvest(address(manager), WETH, 0);
+        // glpCompounder.harvest(address(manager), WETH, 0);
+        revert("asd");
         
         vm.prank(manager);
         uint256 _amountOut = IStrategy(_strategy).terminate(_configData);

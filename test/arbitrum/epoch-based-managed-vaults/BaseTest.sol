@@ -4,18 +4,18 @@ pragma solidity 0.8.17;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "src/arbitrum/utils/FortressArbiSwap.sol";
-import "src/arbitrum/epoch-based-managed-vaults/MetaVault.sol";
-import "src/arbitrum/epoch-based-managed-vaults/interfaces/IStrategy.sol";
+import {FortressArbiSwap} from "src/arbitrum/utils/FortressArbiSwap.sol";
+import {MetaVault, AssetVault, ERC20} from "src/arbitrum/epoch-based-managed-vaults/MetaVault.sol";
+import {IStrategy} from "src/arbitrum/epoch-based-managed-vaults/interfaces/IStrategy.sol";
 
-import "script/arbitrum/utils/AddressesArbi.sol";
+import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 
 contract BaseTest is Test, AddressesArbi {
 
-    address FORTRESS_SWAP = address(0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F);
+    // address FORTRESS_SWAP = address(0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F);
 
     address owner;
     address alice;
@@ -59,7 +59,7 @@ contract BaseTest is Test, AddressesArbi {
         
         fortressSwap = new FortressArbiSwap(owner);
 
-        metaVault = new MetaVault(ERC20(_asset), "MetaVault", "MV", platform, manager, FORTRESS_SWAP);
+        metaVault = new MetaVault(ERC20(_asset), "MetaVault", "MV", platform, manager, address(fortressSwap));
     }
 
     function testAddERC20ToExsistingFork() public {
@@ -140,8 +140,8 @@ contract BaseTest is Test, AddressesArbi {
             _addWETHUSDCRouteToSwap();
         }
         
-        assertTrue(IFortressSwap(fortressSwap).routeExists(address(metaVault.asset()), _targetAsset), "_addAssetVault: E1");
-        assertTrue(IFortressSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset())), "_addAssetVault: E2");
+        assertTrue(FortressArbiSwap(fortressSwap).routeExists(address(metaVault.asset()), _targetAsset), "_addAssetVault: E1");
+        assertTrue(FortressArbiSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset())), "_addAssetVault: E2");
         assertTrue(metaVault.isUnmanaged(), "_addAssetVault: E3");
         
         vm.startPrank(manager);
@@ -501,7 +501,7 @@ contract BaseTest is Test, AddressesArbi {
         _poolAddress1[0] = address(0);
 
         // vm.startPrank(fortressSwap.owner());
-        vm.startPrank(address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc));
+        vm.startPrank(owner);
 
         // WETH --> USDC
         if (!(fortressSwap.routeExists(WETH, USDC))) {

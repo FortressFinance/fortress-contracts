@@ -76,7 +76,7 @@ contract FortressGlpStrategy is BaseStrategy {
         
         address _fortGlp = fortGlp;
         _approve(_asset, _fortGlp, _amount);
-        uint256 _shares = IFortGlp(_fortGlp).depositUnderlying(_asset, _amount, address(this), _minAmount);
+        uint256 _shares = IFortGlp(_fortGlp).depositUnderlying(_asset, address(this), _amount, _minAmount);
 
         return _shares;
     }
