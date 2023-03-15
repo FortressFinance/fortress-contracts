@@ -91,7 +91,7 @@ contract FortressGlpStrategy is BaseStrategy {
             _amount = IERC20(fortGlp).balanceOf(address(this));
         }
 
-        _amount = IFortGlp(fortGlp).redeemUnderlying(_asset, _amount, address(this), address(this), _minAmount);
+        _amount = IFortGlp(fortGlp).redeemUnderlying(_asset, address(this), address(this), _amount, _minAmount);
 
         // TODO - remove this logic - a StrategyVault should only be able to hold one asset
         if (_asset != assetVaultPrimaryAsset) {

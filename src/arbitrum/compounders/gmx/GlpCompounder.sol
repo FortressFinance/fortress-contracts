@@ -166,7 +166,7 @@ contract GlpCompounder is TokenCompounderBase {
         address _sGLP = sGLP;
         uint256 _startBalance = IERC20(_sGLP).balanceOf(address(this));
         
-        // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH.
+        // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH
         IGlpRewardHandler(rewardHandler).handleRewards(true, false, true, true, true, true, false);
 
         address _weth = WETH;
