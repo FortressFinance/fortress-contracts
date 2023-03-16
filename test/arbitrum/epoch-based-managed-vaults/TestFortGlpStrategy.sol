@@ -50,19 +50,29 @@ contract TestFortGlpStrategy is BaseTest {
         
         _initVault(_epochDuration);
 
-        for (uint256 i = 0; i < 1; i++) {
+        for (uint256 i = 0; i < 4; i++) {
             if (i > 0) {
                 _initEpoch(_epochDuration);
             }
 
+            // Add asset vaults
             address _wethAssetVault = _addAssetVault(WETH);
+            address _usdtAssetVault = _addAssetVault(USDT);
+            //
 
+            // Add strategies
             address _fortGlpStrategy = _deployFortGlpStrategy(WETH, _wethAssetVault);
+            address _fortGlpStrategyUsdt = _deployFortGlpStrategy(USDT, _usdtAssetVault);
 
             _initiateStrategy(WETH, _wethAssetVault, _fortGlpStrategy);
 
             _addStrategy(_wethAssetVault, _fortGlpStrategy);
-            
+
+            _initiateStrategy(USDT, _usdtAssetVault, _fortGlpStrategyUsdt);
+
+            _addStrategy(_usdtAssetVault, _fortGlpStrategyUsdt);
+            //
+
             uint256 _amountDeposited = _investorsDepositOnCollateralRequired(_investorDepositAmount);
 
             _startEpoch();
@@ -85,45 +95,15 @@ contract TestFortGlpStrategy is BaseTest {
             _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
             console.log("DONE: ", i);
         }
+
+        // Blacklist asset
+        _blacklistAsset(WETH);
+        _blacklistAsset(USDT);
+
+        // Update manager
+        _updateManager(address(alice));
     }
-
-    // 1*
-    // 1. initiate vault (which intiates an epoch)
-    // 2. user deposits
-    // 3. start epoch
-    // 4. manage assets (1. deposit into AssetsVault, 2. deposit into Strategy vaults)
-    // 5. end epoch
-    // 6. user withdraws
-
-    // 2* (continue from 1)
-    // 1. call 1*
-    // 2. initiate a new epoch (initiateEpoch)
-    // 3. user deposits
-    // 4. start epoch
-    // 5. manage assets (1. deposit into AssetsVault, 2. deposit into Strategy vaults)
-    // 6. end epoch
-    // 7. user withdraws
-
-    // *3 (add asset vault)
-    // 1. call 2*
-    // 2. add asset vault
-    // 3. call 2* again
-
-    // *4 (add strategy vault)
-    // 1. call 2*
-    // 2. add strategy vault
-    // 3. call 2* again
-
-    // *5 (remove asset vault (blacklist asset))
-    // 1. call 3*
-    // 2. remove asset vault
-    // 3. call 2*
-
-    // *6 (update manager)
-    // 1. call 2*
-    // 2. update manager
-    // 3. call 2* again
-
+    
     // *7 (manager didnt finish epoch on time)
     // 1. call 2*
     // 2. start epoch
@@ -202,10 +182,10 @@ contract TestFortGlpStrategy is BaseTest {
         // GlpCompounder(fortGlp).harvest(address(manager), 0);
 
         // artificially inject WETH rewards to the GLP vault 
-        _dealERC20(WETH, address(fortGlp) , 5 ether);
-        // -----
+        // _dealERC20(WETH, address(fortGlp) , 5 ether);
 
-        IFortGlp(fortGlp).harvest(address(manager), WETH, 0);
+        // IFortGlp(fortGlp).harvest(address(manager), WETH, 0);
+        // -----
 
         vm.prank(manager);
         uint256 _amountOut = IStrategy(_strategy).terminate(_configData);

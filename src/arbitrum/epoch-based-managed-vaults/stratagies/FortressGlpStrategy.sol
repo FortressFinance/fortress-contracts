@@ -67,7 +67,7 @@ contract FortressGlpStrategy is BaseStrategy {
             _amount = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
         }
 
-        // TODO - remove this logic - a StrategyVault should only be able to hold one asset
+        // TODO - remove this logic - a StrategyVault should only be able to handle one asset
         if (_asset != _assetVaultPrimaryAsset) {
             address _swap = swap;
             _approve(_assetVaultPrimaryAsset, _swap, _amount);
