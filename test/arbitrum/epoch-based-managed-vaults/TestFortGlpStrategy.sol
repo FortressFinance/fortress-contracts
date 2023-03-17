@@ -44,11 +44,17 @@ contract TestFortGlpStrategy is BaseTest {
     }
 
     function testCorrectFlow(uint256 _epochDuration, uint256 _investorDepositAmount) public {
-        vm.assume(_epochDuration < (type(uint256).max - block.timestamp));
-        vm.assume(_epochDuration > 0);
-        vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 10 ether);
+        // uint256 _epochDuration = 1679048754;
+        uint256 _epochDuration = 1;
+        // vm.assume(_epochDuration < (type(uint256).max - block.timestamp));
+        // vm.assume(_epochDuration > 0);
+        vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 2 ether);
         
         _initVault(_epochDuration);
+
+        console.log("_epochDuration ", _epochDuration);
+        console.log("block.timestamp ", block.timestamp);
+        console.log("epoch expected end ", block.timestamp + _epochDuration);
 
         for (uint256 i = 0; i < 4; i++) {
             if (i > 0) {
@@ -102,15 +108,17 @@ contract TestFortGlpStrategy is BaseTest {
 
         // Update manager
         _updateManager(address(alice));
+
+        console.log("epochEndTimestamp1 ", metaVault.epochEndTimestamp());
+        console.log("block.timestamp1 ", block.timestamp);
+
+        bool _testy = metaVault.isEpochOverdue();
+        console.log("_testy: ", _testy);
+        revert("DONE");
+        // function isEpochOverdue() public view returns (bool) {
+        //     return block.timestamp > epochEndTimestamp;
+        // }
     }
-    
-    // *7 (manager didnt finish epoch on time)
-    // 1. call 2*
-    // 2. start epoch
-    // 3. manage assets (1. deposit into AssetsVault, 2. deposit into Strategy vaults)
-    // 4. do not end epoch on time
-    // 5. punish vault manager
-    // 6. end epoch
 
     // ------------------- WRONG FLOWS -------------------
 
@@ -151,7 +159,7 @@ contract TestFortGlpStrategy is BaseTest {
         assertTrue(AssetVault(_assetVaultAddress).strategies(_strategy), "_executeFortGlpStrategy: E03");
 
         // TODO - we deposit only half of the amount to the strategy because GLP mint exceed max USDG (which means the contract can't take more of that asset)
-        bytes memory _configData = abi.encode(_asset, _amount / 10, 0);
+        bytes memory _configData = abi.encode(_asset, _amount / 50, 0);
         assetVaultBalanceBeforeStrategy = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy);
 
         vm.prank(manager);

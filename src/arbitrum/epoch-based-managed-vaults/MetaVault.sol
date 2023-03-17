@@ -162,6 +162,13 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /********************************** View Functions **********************************/
 
+    // TODO - document
+    function isEpochOverdue() public view returns (bool) {
+        if (currentVaultState != State.MANAGED) return false;
+
+        return block.timestamp > epochEndTimestamp;
+    }
+
     /// @inheritdoc ERC4626
     /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function previewDeposit(uint256 _assets) public view override returns (uint256) {
@@ -339,7 +346,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc IMetaVault
     function executeLatenessPenalty() external nonReentrant {
         if (isPenaltyEnabled == false) revert LatenessNotPenalized();
-        if (block.timestamp < epochEndTimestamp) revert EpochNotCompleted();
+        // if (block.timestamp < epochEndTimestamp) revert EpochNotCompleted();
+        if (!isEpochOverdue()) revert EpochNotCompleted();
         
         _onState(State.MANAGED);
 
@@ -611,6 +619,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     function _afterEpochEnd() internal virtual {
         isEpochinitiated = false;
+        epochEndTimestamp = 0;
     }
 
     function _executeSnapshot() internal virtual {
