@@ -70,17 +70,17 @@ contract BaseTest is Test, AddressesArbi {
 
     // call first
     function _initVault(uint256 _epochDuration) internal {
-        uint256 _epochEndTimestamp = uint256(block.timestamp) + _epochDuration;
+        uint256 _epochEndBlock = uint256(block.number) + _epochDuration;
         bool _isPenaltyEnabled = true;
         bool _isPerformanceFeeEnabled = true;
         bool _isCollateralRequired = true;
 
-        bytes memory _configData = abi.encode(_epochEndTimestamp, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired);
+        bytes memory _configData = abi.encode(_epochEndBlock, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired);
         
         vm.startPrank(manager);
         metaVault.initiateVault(_configData);
         
-        assertEq(metaVault.epochEndTimestamp(), _epochEndTimestamp, "_initVault: E1");
+        assertEq(metaVault.epochEndBlock(), _epochEndBlock, "_initVault: E1");
         assertEq(metaVault.isPenaltyEnabled(), _isPenaltyEnabled, "_initVault: E2");
         assertEq(metaVault.isPerformanceFeeEnabled(), _isPerformanceFeeEnabled, "_initVault: E3");
         assertEq(metaVault.isCollateralRequired(), _isCollateralRequired, "_initVault: E4");
@@ -101,17 +101,17 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isUnmanaged(), true, "_initEpoch: E0");
         assertEq(metaVault.isEpochinitiated(), false, "_initEpoch: E1");
         
-        uint256 _epochEndTimestamp = uint256(block.timestamp) + _epochDuration;
+        uint256 _epochEndBlock = uint256(block.number) + _epochDuration;
         bool _isPenaltyEnabled = true;
         bool _isPerformanceFeeEnabled = true;
         bool _isCollateralRequired = true;
 
-        bytes memory _configData = abi.encode(_epochEndTimestamp, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired);
+        bytes memory _configData = abi.encode(_epochEndBlock, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired);
         
         vm.startPrank(manager);
         metaVault.initiateEpoch(_configData);
         
-        assertEq(metaVault.epochEndTimestamp(), _epochEndTimestamp, "_initEpoch: E2");
+        assertEq(metaVault.epochEndBlock(), _epochEndBlock, "_initEpoch: E2");
         assertEq(metaVault.isPenaltyEnabled(), _isPenaltyEnabled, "_initEpoch: E3");
         assertEq(metaVault.isPerformanceFeeEnabled(), _isPerformanceFeeEnabled, "_initEpoch: E4");
         assertEq(metaVault.isCollateralRequired(), _isCollateralRequired, "_initEpoch: E5");
@@ -470,7 +470,7 @@ contract BaseTest is Test, AddressesArbi {
             vm.stopPrank();
         } else {
             // TODO
-            revert("else");
+            // revert("else");
             // there's enough collateral for more deposits --> check how much
             uint256 _maxMintAmount = metaVault.balanceOf(address(metaVault)) * metaVault.collateralRequirement() - metaVault.totalSupply();
             assertEq(metaVault.maxMint(address(0)), _maxMintAmount, "_removeCollateral: E11");
@@ -509,6 +509,34 @@ contract BaseTest is Test, AddressesArbi {
         vm.stopPrank();
 
         assertEq(metaVault.manager(), address(0), "_updateManager: E4");
+    }
+
+    function _executeLatenessPenalty() internal {
+        vm.roll(metaVault.epochEndBlock() + 1);
+
+        assertTrue(metaVault.epochEndBlock() < block.number, "_executeLatenessPenalty: E0");
+        assertTrue(metaVault.isEpochOverdue(), "_executeLatenessPenalty: E1");
+        assertTrue(metaVault.isPenaltyEnabled(), "_executeLatenessPenalty: E2");
+        assertTrue(metaVault.isPerformanceFeeEnabled(), "_executeLatenessPenalty: E3");
+        assertEq(metaVault.isUnmanaged(), false, "_executeLatenessPenalty: E4");
+        
+        if (metaVault.isCollateralRequired()) {
+            assertTrue(metaVault.balanceOf(address(metaVault)) > 0, "_executeLatenessPenalty: E5");
+        }
+
+        uint256 _balanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
+        uint256 _burnAmount = metaVault.balanceOf(address(metaVault)) / 2;
+        uint256 _totalSupplyBefore = metaVault.totalSupply();
+        uint256 _totalAssetsBefore = metaVault.totalAssets();
+
+        vm.startPrank(alice);
+        metaVault.executeLatenessPenalty();
+        vm.stopPrank();
+
+        assertEq(metaVault.totalSupply(), (_totalSupplyBefore - _burnAmount), "_executeLatenessPenalty: E6");
+        assertEq(metaVault.totalAssets(), _totalAssetsBefore, "_executeLatenessPenalty: E7");
+        assertEq(metaVault.isPerformanceFeeEnabled(), false, "_executeLatenessPenalty: E8");
+        assertEq(metaVault.balanceOf(address(metaVault)), _balanceBefore / 2, "_executeLatenessPenalty: E8");
     }
     
     // ------------------- UTILS -------------------

@@ -56,8 +56,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     uint256 public vaultWithdrawFee;
     /// @notice The percentage of TVL required in collateral by Vault Manager
     uint256 public collateralRequirement;
-    /// @notice The time that the Epoch is expected to end
-    uint256 public epochEndTimestamp;
+    /// @notice The block number that the Epoch is expected to end at
+    uint256 public epochEndBlock;
     /// @notice Indicates whether to punish vault manager on not finishing an Epoch at the specified time
     bool public isPenaltyEnabled;
     /// @notice Indicates whether to charge a performance fee for Vault Manager
@@ -166,7 +166,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function isEpochOverdue() public view returns (bool) {
         if (currentVaultState != State.MANAGED) return false;
 
-        return block.timestamp > epochEndTimestamp;
+        return block.number > epochEndBlock;
     }
 
     /// @inheritdoc ERC4626
@@ -346,18 +346,18 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc IMetaVault
     function executeLatenessPenalty() external nonReentrant {
         if (isPenaltyEnabled == false) revert LatenessNotPenalized();
-        // if (block.timestamp < epochEndTimestamp) revert EpochNotCompleted();
         if (!isEpochOverdue()) revert EpochNotCompleted();
         
         _onState(State.MANAGED);
 
+        uint256 _burnAmount = balanceOf[address(this)] / 2;
         if (isCollateralRequired) {
-            _burn(address(this), balanceOf[address(this)]);
+            _burn(address(this), _burnAmount);
         }
 
         isPerformanceFeeEnabled = false;
         
-        emit LatenessPenalty(block.timestamp);
+        emit LatenessPenalty(block.timestamp, _burnAmount);
     }
 
     /********************************** Manager Functions **********************************/
@@ -368,7 +368,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         currentVaultState = State.UNMANAGED;
 
-        emit EpochCompleted(block.timestamp, 0, 0);
+        emit EpochCompleted(block.timestamp, block.number, 0, 0);
 
         initiateEpoch(_configData);
     }
@@ -379,10 +379,10 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         _onState(State.UNMANAGED);
 
-        (epochEndTimestamp, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
+        (epochEndBlock, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
          = abi.decode(_configData, (uint256, bool, bool, bool));
         
-        if (epochEndTimestamp <= block.timestamp) revert EpochEndTimestampInvalid();
+        if (epochEndBlock <= block.number) revert EpochEndBlockInvalid();
 
         timelockStartTimestamp = block.timestamp;
         isTimelockInitiated = true;
@@ -416,7 +416,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         currentVaultState = State.UNMANAGED;
 
-        emit EpochCompleted(block.timestamp, snapshotAssetBalance, snapshotSharesSupply);
+        emit EpochCompleted(block.timestamp, block.number, snapshotAssetBalance, snapshotSharesSupply);
 
         _afterEpochEnd();
     }
@@ -619,14 +619,14 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     function _afterEpochEnd() internal virtual {
         isEpochinitiated = false;
-        epochEndTimestamp = 0;
+        epochEndBlock = 0;
     }
 
     function _executeSnapshot() internal virtual {
         snapshotSharesSupply = totalSupply;
         snapshotAssetBalance = totalAssets();
 
-        emit Snapshot(block.timestamp,  snapshotAssetBalance, snapshotSharesSupply);
+        emit Snapshot(block.timestamp, block.number, snapshotAssetBalance, snapshotSharesSupply);
     }
 
     function _chargeFees() internal virtual {

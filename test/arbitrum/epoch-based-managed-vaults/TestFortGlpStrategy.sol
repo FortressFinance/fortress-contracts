@@ -43,22 +43,22 @@ contract TestFortGlpStrategy is BaseTest {
         vm.stopPrank();
     }
 
-    function testCorrectFlow(uint256 _epochDuration, uint256 _investorDepositAmount) public {
-        // uint256 _epochDuration = 1679048754;
-        uint256 _epochDuration = 1;
-        // vm.assume(_epochDuration < (type(uint256).max - block.timestamp));
-        // vm.assume(_epochDuration > 0);
+    function testCorrectFlow(uint256 _epochEndBlockNumber, uint256 _investorDepositAmount) public {
+        // uint256 _epochEndBlockNumber = 1679048754;
+        // uint256 _epochEndBlockNumber = 1;
+        // vm.assume(_epochEndBlockNumber < (type(uint256).max - block.number));
+        vm.assume(_epochEndBlockNumber > block.number);
         vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 2 ether);
         
-        _initVault(_epochDuration);
+        _initVault(_epochEndBlockNumber);
 
-        console.log("_epochDuration ", _epochDuration);
-        console.log("block.timestamp ", block.timestamp);
-        console.log("epoch expected end ", block.timestamp + _epochDuration);
+        console.log("_epochEndBlockNumber ", _epochEndBlockNumber);
+        console.log("block.number ", block.number);
 
         for (uint256 i = 0; i < 4; i++) {
+
             if (i > 0) {
-                _initEpoch(_epochDuration);
+                _initEpoch(_epochEndBlockNumber);
             }
 
             // Add asset vaults
@@ -96,6 +96,10 @@ contract TestFortGlpStrategy is BaseTest {
 
             _withdrawFromAssetVault(_wethAssetVault, _amountOut);
 
+            if (i == 3) {
+                _executeLatenessPenalty();
+            }
+
             _endEpoch();
 
             _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
@@ -108,16 +112,6 @@ contract TestFortGlpStrategy is BaseTest {
 
         // Update manager
         _updateManager(address(alice));
-
-        console.log("epochEndTimestamp1 ", metaVault.epochEndTimestamp());
-        console.log("block.timestamp1 ", block.timestamp);
-
-        bool _testy = metaVault.isEpochOverdue();
-        console.log("_testy: ", _testy);
-        revert("DONE");
-        // function isEpochOverdue() public view returns (bool) {
-        //     return block.timestamp > epochEndTimestamp;
-        // }
     }
 
     // ------------------- WRONG FLOWS -------------------

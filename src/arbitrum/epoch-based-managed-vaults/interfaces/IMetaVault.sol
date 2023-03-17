@@ -26,7 +26,7 @@ interface IMetaVault {
         
     /********************************** Investor Functions **********************************/
 
-    /// @dev Burns manager's collateral + cancels the charging of performance fee for the epoch. Used in order to incentivize Vault Managers to end the epoch at the specified time
+    /// @dev Burns half of the managers collateral + cancels the charging of performance fee for the epoch. Used in order to incentivize Vault Managers to end the epoch at the specified time
     /// @dev Can only be called by anyone while "state" is "MANAGED" and "epochEnd" has passed
     function executeLatenessPenalty() external;
 
@@ -138,7 +138,8 @@ interface IMetaVault {
 
     /// @notice emitted when "executeLatenessPenalty" function is called
     /// @param _timestamp - The timestamp at call time
-    event LatenessPenalty(uint256 indexed _timestamp);
+    /// @param _burnAmount - The amount of shares burned
+    event LatenessPenalty(uint256 indexed _timestamp, uint256 _burnAmount);
 
     /// @notice emitted when "setPauseInteraction" function is called
     /// @param _pauseDeposit - The new pauseDeposit status
@@ -152,9 +153,10 @@ interface IMetaVault {
 
     /// @notice emitted when an epoch has ended
     /// @param _timestamp The timestamp of epoch end (indexed)
+    /// @param _blockNumber The block number of epoch end (indexed)
     /// @param _assetBalance The asset balance at this time
     /// @param _shareSupply The share balance at this time
-    event EpochCompleted(uint256 indexed _timestamp, uint256 _assetBalance, uint256 _shareSupply);
+    event EpochCompleted(uint256 indexed _timestamp, uint256 indexed _blockNumber, uint256 _assetBalance, uint256 _shareSupply);
 
     /// @notice emitted when an epoch has started
     /// @param _timestamp The timestamp of epoch start (indexed)
@@ -188,9 +190,10 @@ interface IMetaVault {
 
     /// @notice emitted when vault balance snapshot is taken
     /// @param _timestamp The snapshot timestamp (indexed)
+    /// @param _blockNumber The snapshot block number (indexed)
     /// @param _assetBalance The asset balance at this time
     /// @param _shareSupply The share balance at this time
-    event Snapshot(uint256 indexed _timestamp, uint256 _assetBalance, uint256 _shareSupply);
+    event Snapshot(uint256 indexed _timestamp, uint256 indexed _blockNumber, uint256 _assetBalance, uint256 _shareSupply);
 
     /********************************** Errors **********************************/
 
@@ -215,7 +218,7 @@ interface IMetaVault {
     error TimelockNotExpired();
     error Unauthorized();
     error AssetsNotBack();
-    error EpochEndTimestampInvalid();
+    error EpochEndBlockInvalid();
     error ManagerPerformanceFeeInvalid();
     error VaultWithdrawFeeInvalid();
     error CollateralRequirementInvalid();
