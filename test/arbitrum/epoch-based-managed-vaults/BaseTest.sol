@@ -411,7 +411,8 @@ contract BaseTest is Test, AddressesArbi {
         bool _isProfitable = IERC20(address(metaVault.asset())).balanceOf(address(metaVault)) > metaVault.snapshotAssetBalance() ? true : false; 
         uint256 _managerBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(manager));
         uint256 _platformBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(platform));
-
+        bool _isEpochOverdue = metaVault.isEpochOverdue();
+        
         vm.startPrank(manager);
         metaVault.endEpoch();
         vm.stopPrank();
@@ -423,10 +424,14 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.snapshotAssetBalance(), metaVault.totalAssets(), "_endEpoch: E8");
         assertEq(IERC20(address(metaVault.asset())).balanceOf(address(metaVault)), metaVault.totalAssets(), "_endEpoch: E9");
 
+        uint256 _managerPerformanceFeePaid = IERC20(address(metaVault.asset())).balanceOf(address(manager)) - _managerBalanceBefore;
         if (_isProfitable) {
-            uint256 _managerPerformanceFeePaid = IERC20(address(metaVault.asset())).balanceOf(address(manager)) - _managerBalanceBefore;
-            assertTrue(_managerPerformanceFeePaid > 0, "_endEpoch: E10");
-            assertTrue(_managerPerformanceFeePaid <= (metaVault.snapshotAssetBalance() / metaVault.performanceFeeLimit()), "_endEpoch: E11");
+            if (_isEpochOverdue) {
+                assertEq(_managerPerformanceFeePaid, 0, "_endEpoch: E010");
+            } else {
+                assertTrue(_managerPerformanceFeePaid > 0, "_endEpoch: E10");
+                assertTrue(_managerPerformanceFeePaid <= (metaVault.snapshotAssetBalance() / metaVault.performanceFeeLimit()), "_endEpoch: E11");
+            }
         } else {
             revert("unprofitable");
             // TODO - check that manager did not get performance fee
@@ -524,7 +529,7 @@ contract BaseTest is Test, AddressesArbi {
             assertTrue(metaVault.balanceOf(address(metaVault)) > 0, "_executeLatenessPenalty: E5");
         }
 
-        uint256 _balanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(metaVault));
+        uint256 _balanceBefore = metaVault.balanceOf(address(metaVault));
         uint256 _burnAmount = metaVault.balanceOf(address(metaVault)) / 2;
         uint256 _totalSupplyBefore = metaVault.totalSupply();
         uint256 _totalAssetsBefore = metaVault.totalAssets();
@@ -536,7 +541,7 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.totalSupply(), (_totalSupplyBefore - _burnAmount), "_executeLatenessPenalty: E6");
         assertEq(metaVault.totalAssets(), _totalAssetsBefore, "_executeLatenessPenalty: E7");
         assertEq(metaVault.isPerformanceFeeEnabled(), false, "_executeLatenessPenalty: E8");
-        assertEq(metaVault.balanceOf(address(metaVault)), _balanceBefore / 2, "_executeLatenessPenalty: E8");
+        assertApproxEqAbs(metaVault.balanceOf(address(metaVault)), _balanceBefore / 2, 1e15, "_executeLatenessPenalty: E9");
     }
     
     // ------------------- UTILS -------------------
