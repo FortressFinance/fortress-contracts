@@ -268,6 +268,13 @@ contract BaseTest is Test, AddressesArbi {
         metaVault.updateManager(address(alice));
 
         vm.stopPrank();
+
+        vm.startPrank(alice);
+        _dealERC20(address(metaVault.asset()), alice, 1 ether);
+        _amount = IERC20(address(metaVault.asset())).balanceOf(alice);
+        vm.expectRevert();
+        metaVault.deposit(_amount, alice);
+        vm.stopPrank();
     }
 
     // call when vault is "managed" + epoch is initiated + assets were deposited into meta vault
@@ -376,6 +383,48 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress), _after - _before, "_withdrawFromStrategy: E8");
     }
 
+    function _investorWithdraw() internal {
+        assertEq(metaVault.isUnmanaged(), true, "_investorWithdraw: E1");
+        assertEq(metaVault.isEpochinitiated(), false, "_investorWithdraw: E2");
+
+        uint256 _balanceBefore = metaVault.balanceOf(address(metaVault));
+        uint256 _totalSupplyBefore = metaVault.totalSupply();
+        uint256 _totalAssetsBefore = metaVault.totalAssets();
+
+        vm.startPrank(alice);
+        uint256 _aliceBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(alice));
+        uint256 _aliceShares = metaVault.balanceOf(address(alice));
+        assertTrue(_aliceShares > 0, "_investorWithdraw: E3");
+        uint256 _aliceAssets = metaVault.redeem(_aliceShares, alice, alice);
+        vm.stopPrank();
+
+        assertEq(IERC20(address(metaVault.asset())).balanceOf(address(alice)), _aliceBalanceBefore + _aliceAssets, "_investorWithdraw: E4");
+        assertEq(metaVault.totalSupply(), _totalSupplyBefore - _aliceShares, "_investorWithdraw: E5");
+        assertEq(metaVault.totalAssets(), _totalAssetsBefore - _aliceAssets, "_investorWithdraw: E6");
+
+        vm.startPrank(bob);
+        uint256 _bobBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(bob));
+        uint256 _bobShares = metaVault.balanceOf(address(bob));
+        assertTrue(_bobShares > 0, "_investorWithdraw: E7");
+        uint256 _bobAssets = metaVault.redeem(_bobShares, bob, bob);
+        vm.stopPrank();
+
+        assertEq(IERC20(address(metaVault.asset())).balanceOf(address(bob)), _bobBalanceBefore + _bobAssets, "_investorWithdraw: E8");
+        assertEq(metaVault.totalSupply(), _totalSupplyBefore - _aliceShares - _bobShares, "_investorWithdraw: E9");
+        assertEq(metaVault.totalAssets(), _totalAssetsBefore - _aliceAssets - _bobAssets, "_investorWithdraw: E10");
+
+        vm.startPrank(charlie);
+        uint256 _charlieBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(charlie));
+        uint256 _charlieShares = metaVault.balanceOf(address(charlie));
+        assertTrue(_charlieShares > 0, "_investorWithdraw: E11");
+        uint256 _charlieAssets = metaVault.redeem(_charlieShares, charlie, charlie);
+        vm.stopPrank();
+
+        assertEq(IERC20(address(metaVault.asset())).balanceOf(address(charlie)), _charlieBalanceBefore + _charlieAssets, "_investorWithdraw: E12");
+        assertEq(metaVault.totalSupply(), _totalSupplyBefore - _aliceShares - _bobShares - _charlieShares, "_investorWithdraw: E13");
+        assertEq(metaVault.totalAssets(), _totalAssetsBefore - _aliceAssets - _bobAssets - _charlieAssets, "_investorWithdraw: E14");
+    }
+
     function _withdrawAllFromStrategy(address _assetVaultAddress, address _strategy) internal {
         AssetVault _assetVault = AssetVault(_assetVaultAddress);
 
@@ -434,7 +483,6 @@ contract BaseTest is Test, AddressesArbi {
             }
         } else {
             revert("unprofitable");
-            // TODO - check that manager did not get performance fee
         }
 
         uint256 _platformManagementFeePaid = IERC20(address(metaVault.asset())).balanceOf(address(platform)) - _platformBalanceBefore;
@@ -474,9 +522,6 @@ contract BaseTest is Test, AddressesArbi {
             metaVault.deposit(_amount, alice);
             vm.stopPrank();
         } else {
-            // TODO
-            // revert("else");
-            // there's enough collateral for more deposits --> check how much
             uint256 _maxMintAmount = metaVault.balanceOf(address(metaVault)) * metaVault.collateralRequirement() - metaVault.totalSupply();
             assertEq(metaVault.maxMint(address(0)), _maxMintAmount, "_removeCollateral: E11");
             assertEq(metaVault.maxDeposit(address(0)), metaVault.convertToAssets(_maxMintAmount), "_removeCollateral: E12");
@@ -543,7 +588,7 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isPerformanceFeeEnabled(), false, "_executeLatenessPenalty: E8");
         assertApproxEqAbs(metaVault.balanceOf(address(metaVault)), _balanceBefore / 2, 1e15, "_executeLatenessPenalty: E9");
     }
-    
+
     // ------------------- UTILS -------------------
 
     function _addWETHUSDCRouteToSwap() internal {

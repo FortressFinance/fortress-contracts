@@ -43,14 +43,19 @@ contract TestFortGlpStrategy is BaseTest {
         vm.stopPrank();
     }
 
-    function testCorrectFlow(uint256 _epochEndBlockNumber, uint256 _investorDepositAmount) public {
+    function testCorrectFlow(uint256 _epochDuration, uint256 _investorDepositAmount) public {
         // uint256 _epochEndBlockNumber = 1679048754;
         // uint256 _epochEndBlockNumber = 1; 70818642
         // vm.assume(_epochEndBlockNumber < (type(uint256).max - 70818642));
-        vm.assume(_epochEndBlockNumber < (type(uint256).max - 10));
-        vm.assume(_epochEndBlockNumber > block.number);
+        // vm.assume(_epochEndBlockNumber < (type(uint256).max - 10));
+        // vm.assume(_epochDuration > 0);
         vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 2 ether);
         
+        if (_epochDuration > type(uint256).max / 2) {
+            _epochDuration = type(uint256).max / 2;
+        }
+
+        uint256 _epochEndBlockNumber = block.number + _epochDuration;
         _initVault(_epochEndBlockNumber);
 
         console.log("_epochEndBlockNumber ", _epochEndBlockNumber);
@@ -105,22 +110,17 @@ contract TestFortGlpStrategy is BaseTest {
 
             _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
             console.log("DONE: ", i);
-
-            // TODO
-            // _investorWithdraw(_amountOut);
         }
 
-        // Blacklist asset
         _blacklistAsset(WETH);
         _blacklistAsset(USDT);
 
-        // Update manager
         _updateManager(address(alice));
+        
+        _investorWithdraw();
     }
 
     // ------------------- WRONG FLOWS -------------------
-
-    // *1 (Investor interact with contract on wrong state)
 
     // *2 (call executeLatenessPenalty (1) before end epoch and (2) when penalty is disabled)
 
