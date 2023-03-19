@@ -109,6 +109,10 @@ contract BaseTest is Test, AddressesArbi {
         bytes memory _configData = abi.encode(_epochEndBlock, _isPenaltyEnabled, _isPerformanceFeeEnabled, _isCollateralRequired);
         
         vm.startPrank(manager);
+        
+        vm.expectRevert();
+        metaVault.startEpoch();
+
         metaVault.initiateEpoch(_configData);
         
         assertEq(metaVault.epochEndBlock(), _epochEndBlock, "_initEpoch: E2");
@@ -310,6 +314,11 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_initiateStrategy: E4");
         assertEq(metaVault.assetVaults(_strategyAsset), _assetVaultAddress, "_initiateStrategy: E5");
 
+        vm.startPrank(alice);
+        vm.expectRevert();
+        _assetVault.initiateStrategy(_strategy);
+        vm.stopPrank();
+        
         vm.prank(manager);
         _assetVault.initiateStrategy(_strategy);
 
@@ -333,6 +342,16 @@ contract BaseTest is Test, AddressesArbi {
 
         vm.expectRevert();
         _assetVault.addStrategy();
+
+        if (metaVault.timelockStartTimestamp() + metaVault.timelockDuration() > block.timestamp) {
+            vm.startPrank(manager);
+            vm.expectRevert();
+            metaVault.startEpoch();
+            vm.stopPrank();
+
+            uint256 _timeLeft = metaVault.timelockStartTimestamp() + metaVault.timelockDuration() - block.timestamp;
+            skip(_timeLeft);
+        }
 
         skip(_assetVault.timelockDuration());
 
@@ -387,7 +406,6 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isUnmanaged(), true, "_investorWithdraw: E1");
         assertEq(metaVault.isEpochinitiated(), false, "_investorWithdraw: E2");
 
-        uint256 _balanceBefore = metaVault.balanceOf(address(metaVault));
         uint256 _totalSupplyBefore = metaVault.totalSupply();
         uint256 _totalAssetsBefore = metaVault.totalAssets();
 
@@ -438,6 +456,11 @@ contract BaseTest is Test, AddressesArbi {
     function _withdrawFromAssetVault(address _assetVaultAddress, uint256 _amount) internal {
         AssetVault _assetVault = AssetVault(_assetVaultAddress);
 
+        vm.startPrank(manager);
+        vm.expectRevert();
+        metaVault.endEpoch();
+        vm.stopPrank();
+        
         assertEq(metaVault.isUnmanaged(), false, "_withdrawFromAssetVault: E1");
         assertEq(metaVault.isEpochinitiated(), true, "_withdrawFromAssetVault: E2");
         assertTrue(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress) >= _amount, "_withdrawFromAssetVault: E3");
@@ -562,6 +585,11 @@ contract BaseTest is Test, AddressesArbi {
     }
 
     function _executeLatenessPenalty() internal {
+        vm.startPrank(alice);
+        vm.expectRevert();
+        metaVault.executeLatenessPenalty();
+        vm.stopPrank();
+
         vm.roll(metaVault.epochEndBlock() + 1);
 
         assertTrue(metaVault.epochEndBlock() < block.number, "_executeLatenessPenalty: E0");

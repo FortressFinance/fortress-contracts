@@ -265,7 +265,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     function areAssetsBack() public view returns (bool) {
         address[] memory _assetVaultList = assetVaultList;
         for (uint256 i = 0; i < _assetVaultList.length; i++) {
-            if (AssetVault(_assetVaultList[i]).areStrategiesActive()) return false;
+            if (AssetVault(_assetVaultList[i]).isActive()) return false;
         }
         return true;
     }

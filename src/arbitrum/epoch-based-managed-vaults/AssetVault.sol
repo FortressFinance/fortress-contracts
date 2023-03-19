@@ -102,6 +102,12 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /********************************** View Functions **********************************/
 
+    // TODO - document
+    // @inheritdoc IAssetVault
+    function isActive() external view returns (bool) {
+        return ERC20(primaryAsset).balanceOf(address(this)) > 0 || areStrategiesActive();
+    }
+
     /// @inheritdoc IAssetVault
     function isStrategyActive(address _strategy) public view returns (bool) {
         return IStrategy(_strategy).isActive();

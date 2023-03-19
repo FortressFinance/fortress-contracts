@@ -44,27 +44,19 @@ contract TestFortGlpStrategy is BaseTest {
     }
 
     function testCorrectFlow(uint256 _epochDuration, uint256 _investorDepositAmount) public {
-        // uint256 _epochEndBlockNumber = 1679048754;
-        // uint256 _epochEndBlockNumber = 1; 70818642
-        // vm.assume(_epochEndBlockNumber < (type(uint256).max - 70818642));
-        // vm.assume(_epochEndBlockNumber < (type(uint256).max - 10));
-        // vm.assume(_epochDuration > 0);
+        vm.assume(_epochDuration > 0);
         vm.assume(_investorDepositAmount > 0.1 ether && _investorDepositAmount < 2 ether);
         
         if (_epochDuration > type(uint256).max / 2) {
             _epochDuration = type(uint256).max / 2;
         }
 
-        uint256 _epochEndBlockNumber = block.number + _epochDuration;
-        _initVault(_epochEndBlockNumber);
-
-        console.log("_epochEndBlockNumber ", _epochEndBlockNumber);
-        console.log("block.number ", block.number);
+        _initVault(_epochDuration);
 
         for (uint256 i = 0; i < 4; i++) {
 
             if (i > 0) {
-                _initEpoch(_epochEndBlockNumber);
+                _initEpoch(_epochDuration);
             }
 
             // Add asset vaults
@@ -120,24 +112,6 @@ contract TestFortGlpStrategy is BaseTest {
         _investorWithdraw();
     }
 
-    // ------------------- WRONG FLOWS -------------------
-
-    // *2 (call executeLatenessPenalty (1) before end epoch and (2) when penalty is disabled)
-
-    // *3 (test modifiers)
-
-    // *4 (deposit wrong asset)
-
-    // *5 (withdraw wrong asset)
-
-    // *6 (start epoch before timelock passed)
-
-    // *7 (start epoch without calling initiateEpoch)
-
-    // *8 (end epoch without withdawing assets)
-
-    // *9 (deposit a blacklisted asset)
-
     // ------------------- UTILS -------------------
 
     function _deployFortGlpStrategy(address _enabledAsset, address _assetVault) internal returns (address) {
@@ -156,7 +130,7 @@ contract TestFortGlpStrategy is BaseTest {
         assertTrue(IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy) >= _amount, "_executeFortGlpStrategy: E3");
         assertTrue(AssetVault(_assetVaultAddress).strategies(_strategy), "_executeFortGlpStrategy: E03");
 
-        // TODO - we deposit only half of the amount to the strategy because GLP mint exceed max USDG (which means the contract can't take more of that asset)
+        // we deposit only a fraction of the amount to the strategy because GLP mint exceed max USDG (which means the contract can't take more of that asset)
         bytes memory _configData = abi.encode(_asset, _amount / 50, 0);
         assetVaultBalanceBeforeStrategy = IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy);
 
@@ -183,7 +157,7 @@ contract TestFortGlpStrategy is BaseTest {
         // Fast forward 1 month
         skip(216000);
         
-        // TODO -----
+        // -----
         // vm.rollFork(block.number + 1);
         // GlpCompounder(fortGlp).harvest(address(manager), 0);
 
