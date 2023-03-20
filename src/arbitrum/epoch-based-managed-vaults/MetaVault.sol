@@ -162,13 +162,6 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /********************************** View Functions **********************************/
 
-    // TODO - document
-    function isEpochOverdue() public view returns (bool) {
-        if (currentVaultState != State.MANAGED) return false;
-
-        return block.number > epochEndBlock;
-    }
-
     /// @inheritdoc ERC4626
     /// @notice Returns "0" if the Vault is not in an "UNMANAGED" state
     function previewDeposit(uint256 _assets) public view override returns (uint256) {
@@ -261,7 +254,14 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         return balanceOf[owner];
     }
 
-    // @inheritdoc IMetaVault // TODO
+    /// @inheritdoc IMetaVault
+    function isEpochOverdue() public view returns (bool) {
+        if (currentVaultState != State.MANAGED) return false;
+
+        return block.number > epochEndBlock;
+    }
+
+    /// @inheritdoc IMetaVault
     function areAssetsBack() public view returns (bool) {
         address[] memory _assetVaultList = assetVaultList;
         for (uint256 i = 0; i < _assetVaultList.length; i++) {

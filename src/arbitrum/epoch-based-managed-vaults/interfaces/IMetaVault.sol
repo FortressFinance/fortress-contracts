@@ -15,6 +15,12 @@ interface IMetaVault {
 
     /********************************** View Functions **********************************/
 
+    /// @dev Returns whether the epoch is overdue or not, i.e. if the epoch has ended in the specified time
+    function isEpochOverdue() external view returns (bool);
+
+    /// @dev Returns whether all assets are back from AssetVaults or not
+    function areAssetsBack() external view returns (bool);
+
     /// @dev Returns the address of the FortressSwap contract
     function getSwap() external view returns (address);
 
