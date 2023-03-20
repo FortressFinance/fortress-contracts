@@ -33,12 +33,18 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
     using FixedPointMathLib for uint256;
     using SafeERC20 for IERC20;
     
-    /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to vault participants. Used as a mechanism to protect against mercenary capital
-    uint256 public withdrawFeePercentage;
-    /// @notice The performance fee percentage to take for platform on harvest
-    uint256 public platformFeePercentage;
-    /// @notice The fee percentage to take for caller on harvest
-    uint256 public harvestBountyPercentage;
+    struct Fees {
+        /// @notice The performance fee percentage to take for platform on harvest
+        uint256 platformFeePercentage;
+        /// @notice The percentage of fee to pay for caller on harvest
+        uint256 harvestBountyPercentage;
+        /// @notice The fee percentage to take on withdrawal. Fee stays in the vault, and is therefore distributed to vault participants. Used as a mechanism to protect against mercenary capital
+        uint256 withdrawFeePercentage;
+    }
+
+    /// @notice The fees settings
+    Fees public fees;
+
     /// @notice The last block number that the harvest function was executed
     uint256 public lastHarvestBlock;
     /// @notice The internal accounting of AUM
@@ -89,11 +95,15 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
             address[] memory _underlyingAssets
         )
         ERC4626(_asset, _name, _symbol) {
+
+        {
+            Fees storage _fees = fees;
+            _fees.platformFeePercentage = 50000000; // 5%
+            _fees.harvestBountyPercentage = 25000000; // 2.5%
+            _fees.withdrawFeePercentage = 2000000; // 0.2%
+        }
         
         description = _description;
-        platformFeePercentage = 50000000; // 5%
-        harvestBountyPercentage = 25000000; // 2.5%
-        withdrawFeePercentage = 2000000; // 0.2%
         owner = _owner;
         platform = _platform;
         swap = _swap;
@@ -141,7 +151,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         uint256 _totalSupply = totalSupply;
 
         // Calculate a fee - zero if user is the last to withdraw
-        uint256 _fee = (_totalSupply == 0 || _totalSupply - _shares == 0) ? 0 : assets.mulDivDown(withdrawFeePercentage, FEE_DENOMINATOR);
+        uint256 _fee = (_totalSupply == 0 || _totalSupply - _shares == 0) ? 0 : assets.mulDivDown(fees.withdrawFeePercentage, FEE_DENOMINATOR);
 
         // Redeemable amount is the post-withdrawal-fee amount
         return assets - _fee;
@@ -157,7 +167,7 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         uint256 _totalSupply = totalSupply;
 
         // Factor in additional shares to fulfill withdrawal if user is not the last to withdraw
-        return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - withdrawFeePercentage);
+        return (_totalSupply == 0 || _totalSupply - _shares == 0) ? _shares : (_shares * FEE_DENOMINATOR) / (FEE_DENOMINATOR - fees.withdrawFeePercentage);
     }
 
     /// @dev Returns the total amount of assets that are managed by the vault
@@ -350,9 +360,10 @@ abstract contract TokenCompounderBase is ReentrancyGuard, ERC4626 {
         if (_platformFeePercentage > MAX_PLATFORM_FEE) revert InvalidAmount();
         if (_harvestBountyPercentage > MAX_HARVEST_BOUNTY) revert InvalidAmount();
 
-        withdrawFeePercentage = _withdrawFeePercentage;
-        platformFeePercentage = _platformFeePercentage;
-        harvestBountyPercentage = _harvestBountyPercentage;
+        Fees storage _fees = fees;
+        _fees.withdrawFeePercentage = _withdrawFeePercentage;
+        _fees.platformFeePercentage = _platformFeePercentage;
+        _fees.harvestBountyPercentage = _harvestBountyPercentage;
 
         emit UpdateFees(_withdrawFeePercentage, _platformFeePercentage, _harvestBountyPercentage);
     }
