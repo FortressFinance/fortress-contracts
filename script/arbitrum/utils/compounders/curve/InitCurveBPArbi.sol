@@ -17,7 +17,7 @@ contract InitCurveBPArbi is InitBaseArbi {
         
         // vst/frax - 0
         // crvEURSUSD - 4
-        uint256 _convexPid = 1;
+        uint256 _convexPid = 7;
         uint256 _poolType = 1; 
         address _asset = CRVBP_LP;
         // string memory _symbol = "fc2Pool";

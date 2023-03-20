@@ -14,7 +14,7 @@ contract InitTriCryptoArbi is InitBaseArbi {
         
         // ------------------------- init TriCrypto compounder -------------------------
         
-        uint256 _convexPid = 3;
+        uint256 _convexPid = 8;
         uint256 _poolType = 0; 
         address _asset = TRICRYPTO_LP;
         
