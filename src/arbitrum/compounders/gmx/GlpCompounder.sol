@@ -181,8 +181,9 @@ contract GlpCompounder is TokenCompounderBase {
         _rewards = IERC20(_sGLP).balanceOf(address(this)) - _startBalance;
         
         if (_rewards > 0) {
-            uint256 _platformFee = platformFeePercentage;
-            uint256 _harvestBounty = harvestBountyPercentage;
+            Fees memory _fees = fees;
+            uint256 _platformFee = _fees.platformFeePercentage;
+            uint256 _harvestBounty = _fees.harvestBountyPercentage;
             if (_platformFee > 0) {
                 _platformFee = (_platformFee * _rewards) / FEE_DENOMINATOR;
                 _rewards = _rewards - _platformFee;
