@@ -381,7 +381,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         (epochEndBlock, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
          = abi.decode(_configData, (uint256, bool, bool, bool));
-        
+
         if (epochEndBlock <= block.number) revert EpochEndBlockInvalid();
 
         timelockStartTimestamp = block.timestamp;
@@ -473,7 +473,6 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     // @inheritdoc IMetaVault
-    // TODO
     /// @notice Vault Manager can add collateral by calling the "deposit" or "mint" functions with "_receiver" as "address(this)"
     function removeCollateral(uint256 _shares) external onlyManager nonReentrant returns (uint256 _assets) {
         if (_shares > maxRedeem(address(this))) revert InsufficientBalance();
@@ -501,11 +500,10 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     /// @inheritdoc IMetaVault
     function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external onlyManager {
-        // TODO - fix values
-        if (_managerPerformanceFee < 0 || _managerPerformanceFee > 5) revert ManagerPerformanceFeeInvalid();
-        if (_vaultWithdrawFee < 0 || _vaultWithdrawFee > 2000000) revert VaultWithdrawFeeInvalid();
-        if (_collateralRequirement < 0 || _collateralRequirement > 200) revert CollateralRequirementInvalid();
-        if (_performanceFeeLimit < 0 || _performanceFeeLimit > 5) revert PerformanceFeeLimitInvalid();
+        if (_managerPerformanceFee < 4) revert ManagerPerformanceFeeInvalid();
+        if (_collateralRequirement < 0) revert CollateralRequirementInvalid();
+        if (_performanceFeeLimit < 0) revert PerformanceFeeLimitInvalid();
+        if (_vaultWithdrawFee < 0 || _vaultWithdrawFee > 10000000) revert VaultWithdrawFeeInvalid();
 
         _onState(State.UNMANAGED);
 
@@ -522,7 +520,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @inheritdoc IMetaVault
     function updateManagementFees(uint256 _platformManagementFee) external onlyPlatform {
         // TODO - limit to 5%
-        // if (_platformManagementFee > 10000) revert PlatformManagementFeeInvalid();
+        if (_platformManagementFee > 10000) revert PlatformManagementFeeInvalid();
 
         _onState(State.UNMANAGED);
 
@@ -649,6 +647,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
             IERC20(_asset).safeTransfer(manager, _managerFee);
         }
         
+        // TODO - mangment fee should be applied only once per month! --> make a dedicated function for this
         // send management fee to platform
         // 1 / 600 = 2 / (100 * 12) --> (set 'platformManagementFee' to '600' to charge 2% annually)
         IERC20(_asset).safeTransfer(platform, _balance / platformManagementFee);
