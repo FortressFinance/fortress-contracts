@@ -15,6 +15,10 @@ interface IAssetVault {
 
     /********************************** View Functions **********************************/
 
+    /// @dev Indicates whether the AssetVault is active, i.e. if it has assets under management
+    /// @return True if the AssetVault is active, false otherwise
+    function isActive() external view returns (bool);
+
     /// @dev Indicates whether assets are deployed in a specific strategy
     /// @param _strategy The address of the strategy
     /// @return True if assets are deployed in the strategy, false otherwise
@@ -26,9 +30,6 @@ interface IAssetVault {
 
     /// @dev Returns the address of the VaultAsset asset
     function getAsset() external view returns (address);
-
-    /// @dev Returns the length of the strategyList array
-    function getStratagiesLength() external view returns (uint256);
 
     /********************************** Meta Vault Functions **********************************/
 
@@ -58,6 +59,7 @@ interface IAssetVault {
     function withdrawAllFromAllStrategies() external;
 
     /// @dev Initiate the timelock to add a new strategy contract. Can only be called by the manager
+    /// @param _strategy The address of the new strategy
     function initiateStrategy(address _strategy) external;
 
     /// @dev Add a new strategy contract. Can only be called by the manager and after the timelock has expired
@@ -70,13 +72,21 @@ interface IAssetVault {
     /********************************** Platform Functions **********************************/
 
     /// @dev Set the timelock delay period. Can only be called by the platform
+    /// @param _delay The timelock delay
     function updateTimelockDuration(uint256 _delay) external;
 
     /// @dev Add a new strategy contract. Can only be called by the platform
+    /// @param _strategy The address of the new strategy
     function platformAddStrategy(address _strategy) external;
 
     /// @dev Override the stratagies status of the AssetVault. Can only be called by the platform
+    /// @param _isStrategiesActive The new status of the strategies
     function overrideActiveStatus(bool _isStrategiesActive) external;
+
+    /// @dev Set the blacklist status of a strategy. Can only be called by the platform
+    /// @param _strategy The address of the strategy
+    /// @param _isBlacklisted The new blacklist status of the strategy
+    function setBlacklistStatus(address _strategy, bool _isBlacklisted) external;
 
     /********************************** Events **********************************/
 
@@ -131,14 +141,19 @@ interface IAssetVault {
     /// @param _isStrategiesActive The new active status of the AssetVault
     event ActiveStatusOverriden(uint256 indexed _timestamp, bool _isStrategiesActive);
 
+    /// @notice Emitted when platform overrides the blacklist status of a strategy
+    /// @param _timestamp The timestamp of the blacklist status override
+    /// @param _strategy The address of the strategy
+    /// @param _isBlacklisted The new blacklist status of the strategy
+    event BlacklistStatusOverriden(uint256 indexed _timestamp, address indexed _strategy, bool indexed _isBlacklisted);
+
     /********************************** Errors **********************************/
 
     error InvalidState();
-    error StrategyNotActive();
+    error StrategyNonExistent();
     error StrategyAlreadyActive();
     error AssetDisabled();
     error StrategyBlacklisted();
-    error AmountMismatch();
     error NotTimelocked();
     error TimelockNotExpired();
     error Unauthorized();

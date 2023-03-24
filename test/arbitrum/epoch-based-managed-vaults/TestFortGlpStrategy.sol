@@ -53,6 +53,9 @@ contract TestFortGlpStrategy is BaseTest {
 
         _initVault(_epochDuration);
 
+        address _fortGlpStrategy;
+        address _wethAssetVault;
+        address _usdtAssetVault;
         for (uint256 i = 0; i < 4; i++) {
 
             if (i > 0) {
@@ -60,12 +63,12 @@ contract TestFortGlpStrategy is BaseTest {
             }
 
             // Add asset vaults
-            address _wethAssetVault = _addAssetVault(WETH);
-            address _usdtAssetVault = _addAssetVault(USDT);
+            _wethAssetVault = _addAssetVault(WETH);
+            _usdtAssetVault = _addAssetVault(USDT);
             //
 
             // Add strategies
-            address _fortGlpStrategy = _deployFortGlpStrategy(WETH, _wethAssetVault);
+            _fortGlpStrategy = _deployFortGlpStrategy(WETH, _wethAssetVault);
             address _fortGlpStrategyUsdt = _deployFortGlpStrategy(USDT, _usdtAssetVault);
 
             _initiateStrategy(WETH, _wethAssetVault, _fortGlpStrategy);
@@ -105,6 +108,8 @@ contract TestFortGlpStrategy is BaseTest {
             _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
             console.log("DONE: ", i);
         }
+
+        _blacklistStrategy(_wethAssetVault, _fortGlpStrategy);
 
         _blacklistAsset(WETH);
         _blacklistAsset(USDT);

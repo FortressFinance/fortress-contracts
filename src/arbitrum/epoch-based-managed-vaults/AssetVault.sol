@@ -102,17 +102,14 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /********************************** View Functions **********************************/
 
-    // TODO - document
-    // @inheritdoc IAssetVault
+    /// @inheritdoc IAssetVault
     function isActive() external view returns (bool) {
         return ERC20(primaryAsset).balanceOf(address(this)) > 0 || areStrategiesActive();
     }
 
     /// @inheritdoc IAssetVault
     function isStrategyActive(address _strategy) public view returns (bool) {
-        return IStrategy(_strategy).isActive();
-        // TODO - if strategy is blacklisted, return false
-        // return IStrategy(_strategy).isActive() && !blacklistedStrategies[_strategy];
+        return strategies[_strategy] && IStrategy(_strategy).isActive() && !blacklistedStrategies[_strategy];
     }
 
     /// @inheritdoc IAssetVault
@@ -133,20 +130,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         return primaryAsset;
     }
 
-    /// @inheritdoc IAssetVault
-    function getStratagiesLength() external view returns (uint256) {
-        return strategyList.length;
-        // TODO - count non-blacklisted strategies and return that instead
-        //
-        // uint256 _count = 0;
-        // for (uint256 i = 0; i < strategyList.length; i++) {
-        //     if (!blacklistedStrategies[strategyList[i]]) {
-        //         _count++;
-        //     }
-        // }
-        // return _count;
-    }
-
     /********************************** Meta Vault Functions **********************************/
 
     /// @inheritdoc IAssetVault
@@ -163,8 +146,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         }
         
         _amountIn = ERC20(_primaryAsset).balanceOf(address(this)) - _before;
-        // TODO - delete this - it will break contract because of MEV on swap
-        if (_amountIn != _amount) revert AmountMismatch();
 
         emit Deposited(block.timestamp, _amount);
 
@@ -185,8 +166,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
         ERC20(_metaVaultPrimaryAsset).safeTransfer(_metaVault, _amount);
         _amountOut = ERC20(_metaVaultPrimaryAsset).balanceOf(_metaVault) - _before;
-        // TODO - delete this - it will break contract because of MEV on swap
-        if (_amountOut != _amount) revert AmountMismatch();
 
         emit Withdrawn(block.timestamp, _amount);
         
@@ -197,8 +176,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function depositToStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
-        // TODO - change StrategyNotActive(); to StrategyNonExistent();
-        if (!strategies[_strategy]) revert StrategyNotActive();
+        if (!strategies[_strategy]) revert StrategyNonExistent();
         if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
 
         address _primaryAsset = primaryAsset;
@@ -210,8 +188,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function withdrawFromStrategy(address _strategy, uint256 _amount) external onlyManager nonReentrant {
-        // TODO - change StrategyNotActive(); to StrategyNonExistent();
-        if (!strategies[_strategy]) revert StrategyNotActive();
+        if (!strategies[_strategy]) revert StrategyNonExistent();
 
         IStrategy(_strategy).withdraw(_amount);
 
@@ -222,12 +199,9 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
     function withdrawAllFromAllStrategies() external onlyManager {
         address[] memory _strategyList = strategyList;
         for (uint256 i = 0; i < _strategyList.length; i++) {
-            // TODO - add check for blacklisted strategies
-            //
-            // if (!blacklistedStrategies[_strategyList[i]]) {
-            //     IStrategy(_strategyList[i]).withdrawAll();
-            // }
-            IStrategy(_strategyList[i]).withdrawAll();
+            if (!blacklistedStrategies[_strategyList[i]]) {
+                IStrategy(_strategyList[i]).withdrawAll();
+            }
         }
         
         emit WithdrawnFromAllStrategies(block.timestamp);
@@ -254,8 +228,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
         strategies[_strategy] = true;
         strategyList.push(_strategy);
-        // TODO - reset initiatedStrategy - easier to know if something is being initiated
-        // initiatedStrategy = address(0);
+        initiatedStrategy = address(0);
 
         isTimelocked = false;
 
@@ -295,13 +268,14 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         emit ActiveStatusOverriden(block.timestamp, _isStrategiesActive);
     }
 
-    // TODO - add this function
-    // /// @inheritdoc IAssetVault
-    // function setBlacklistStatus(address _strategy, bool _isBlacklisted) external onlyPlatform {
-    //     blacklistedStrategies[_strategy] = _isBlacklisted;
+    /// @inheritdoc IAssetVault
+    function setBlacklistStatus(address _strategy, bool _isBlacklisted) external onlyPlatform {
+        if (strategies[_strategy] == false) revert StrategyNonExistent();
 
-    //     emit BlacklistStatusOverriden(block.timestamp, _strategy, _isBlacklisted);
-    // }
+        blacklistedStrategies[_strategy] = _isBlacklisted;
+
+        emit BlacklistStatusOverriden(block.timestamp, _strategy, _isBlacklisted);
+    }
 
     /********************************** Internal Functions **********************************/
 
