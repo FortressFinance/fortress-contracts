@@ -482,7 +482,6 @@ contract BaseTest is Test, AddressesArbi {
 
         bool _isProfitable = IERC20(address(metaVault.asset())).balanceOf(address(metaVault)) > metaVault.snapshotAssetBalance() ? true : false; 
         uint256 _managerBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(manager));
-        uint256 _platformBalanceBefore = IERC20(address(metaVault.asset())).balanceOf(address(platform));
         bool _isEpochOverdue = metaVault.isEpochOverdue();
         
         vm.startPrank(manager);
@@ -507,10 +506,25 @@ contract BaseTest is Test, AddressesArbi {
         } else {
             revert("unprofitable");
         }
+    }
 
-        uint256 _platformManagementFeePaid = IERC20(address(metaVault.asset())).balanceOf(address(platform)) - _platformBalanceBefore;
-        assertTrue(_platformManagementFeePaid > 0, "_endEpoch: E12");
-        assertApproxEqAbs(_platformManagementFeePaid, (metaVault.snapshotAssetBalance() / metaVault.platformManagementFee()), 1e15, "_endEpoch: E13");
+    function _chargeManagementFee() internal {
+        uint256 _platformBalanceBefore = metaVault.balanceOf(address(platform));
+        uint256 _totalSupplyBefore = metaVault.totalSupply();
+
+        vm.startPrank(platform);
+        vm.expectRevert();
+        metaVault.chargeManagementFee();
+        vm.stopPrank();
+
+        skip(30 days);
+        vm.startPrank(platform);
+        metaVault.chargeManagementFee();
+        vm.stopPrank();
+
+        uint256 _platformManagementFeePaid = metaVault.balanceOf(address(platform)) - _platformBalanceBefore;
+        assertTrue(_platformManagementFeePaid > 0, "_chargeManagementFee: E1");
+        assertApproxEqAbs(_platformManagementFeePaid, (_totalSupplyBefore / metaVault.platformManagementFee()), 1e15, "_chargeManagementFee: E2");
     }
 
     function _removeCollateral(uint256 _shares) internal {

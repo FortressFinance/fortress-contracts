@@ -81,6 +81,9 @@ interface IMetaVault {
 
     /********************************** Platform Functions **********************************/
 
+    /// @dev Charges the management fee. Can only be called by the Platform
+    function chargeManagementFee() external;
+
     /// @dev Updates platform fees. Can only be called by the Platform while "state" is "UNMANAGED"
     /// @param _platformFeePercentage - The new platform fee percentage
     function updateManagementFees(uint256 _platformFeePercentage) external;
@@ -152,6 +155,11 @@ interface IMetaVault {
     /// @param _pauseWithdraw - The new pauseWithdraw status
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
 
+    /// @notice emitted when "chargeManagementFee" function is called
+    /// @param _feeAmount - The amount of fee charged
+    /// @param _timestamp - The timestamp at call time
+    event ManagementFeeCharged(uint256 indexed _timestamp, uint256 _feeAmount);
+
     /// @notice emitted when "requestStartEpoch" function is called
     /// @param _timestamp - The timestamp at call time
     /// @param _configData - The config data for the new epoch
@@ -186,6 +194,12 @@ interface IMetaVault {
     /// @param _asset The address of the asset
     /// @param _amount The amount of assets withdrawn
     event AssetWithdrawn(address indexed _assetVault, address indexed _asset, uint256 _amount);
+
+    /// @notice emitted when a manager fee is charged
+    /// @param _managerFee The amount of fee charged
+    /// @param _postEpochBalance The balance before the start of the epoch
+    /// @param _preEpochBalance The balance after the end of the epoch
+    event FeesCharged(uint256 _managerFee, uint256 _postEpochBalance, uint256 _preEpochBalance);
 
     /// @notice emitted when manager settings are updated
     /// @param _managerPerformanceFee The new manager performance fee
@@ -231,4 +245,6 @@ interface IMetaVault {
     error PlatformManagementFeeInvalid();
     error PerformanceFeeLimitInvalid();
     error EpochAlreadyInitiated();
+    error platformManagementFeeInvalid();
+    error ManagementFeeNotDue();
 }

@@ -93,7 +93,9 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
     // Utility
 
-    /// @notice The timestamp that the timelock has started
+    /// @notice The timestamp that the 'chargeManagementFee' function was last called
+    uint256 public lastManagementFeeTimestamp;
+    /// @notice The timestamp that the timelock has start.ed
     uint256 public timelockStartTimestamp;
     /// @notice Indicates whether the timelock has been initiated
     bool public isTimelockInitiated;
@@ -145,6 +147,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         isWithdrawPaused = false;
         isTimelockInitiated = false;
         isEpochinitiated = false;
+
+        lastManagementFeeTimestamp = block.timestamp;
     }
 
     /********************************* Modifiers **********************************/
@@ -518,9 +522,22 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Platform Functions **********************************/
 
     /// @inheritdoc IMetaVault
+    function chargeManagementFee() external onlyPlatform {
+        if (block.timestamp < lastManagementFeeTimestamp + 30 days) revert ManagementFeeNotDue();
+
+        // mint management fee shares to platform
+        // 1 / 600 = 2 / (100 * 12) --> (set 'platformManagementFee' to '600' to charge 2% annually)
+        uint256 _feeAmount = totalSupply / platformManagementFee;
+        _mint(platform, _feeAmount);
+
+        lastManagementFeeTimestamp = block.timestamp;
+
+        emit ManagementFeeCharged(block.timestamp, _feeAmount);
+    }
+
+    /// @inheritdoc IMetaVault
     function updateManagementFees(uint256 _platformManagementFee) external onlyPlatform {
-        // TODO - limit to 5%
-        if (_platformManagementFee > 10000) revert PlatformManagementFeeInvalid();
+        if (_platformManagementFee < 240) revert platformManagementFeeInvalid();
 
         _onState(State.UNMANAGED);
 
@@ -628,6 +645,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     function _chargeFees() internal virtual {
+        uint256 _managerFee;
         uint256 _snapshotAssetBalance = snapshotAssetBalance;
         address _asset = address(asset);
         uint256 _balance = IERC20(_asset).balanceOf(address(this));
@@ -635,7 +653,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
             uint256 _delta = _balance - _snapshotAssetBalance;
             
             // 1 / 5 = 20 / 100  --> (set 'managerPerformanceFee' to '5' to take 20% from profit)
-            uint256 _managerFee = _delta / managerPerformanceFee;
+            _managerFee = _delta / managerPerformanceFee;
             
             // cap performance fee by a % of TVL to disincentivize over risk taking
             // 1 / 5 = 20 / 100  --> (set 'performanceFeeLimit' to '5' to cap performance fee to 20% of TVL)
@@ -646,13 +664,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
             // send performance fee to Vault Manager
             IERC20(_asset).safeTransfer(manager, _managerFee);
         }
-        
-        // TODO - mangment fee should be applied only once per month! --> make a dedicated function for this
-        // send management fee to platform
-        // 1 / 600 = 2 / (100 * 12) --> (set 'platformManagementFee' to '600' to charge 2% annually)
-        IERC20(_asset).safeTransfer(platform, _balance / platformManagementFee);
 
-        // TODO - emit fees charged event
+        emit FeesCharged(_managerFee, _balance, _snapshotAssetBalance);
     }
 
     function _onState(State _expectedState) internal view virtual {

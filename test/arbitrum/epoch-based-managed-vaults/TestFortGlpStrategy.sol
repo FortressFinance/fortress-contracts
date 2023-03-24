@@ -100,6 +100,8 @@ contract TestFortGlpStrategy is BaseTest {
 
             _endEpoch();
 
+            _chargeManagementFee();
+
             _removeCollateral(IERC20(address(metaVault)).balanceOf(address(metaVault)));
             console.log("DONE: ", i);
         }
