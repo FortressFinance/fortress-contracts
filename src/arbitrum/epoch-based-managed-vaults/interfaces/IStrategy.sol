@@ -66,4 +66,5 @@ interface IStrategy {
     error Unauthorized();
     error AmountMismatch();
     error StrategyActive();
+    error NonExistent();
 }

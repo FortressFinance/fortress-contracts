@@ -75,7 +75,12 @@ contract Y2KFinanceStrategy is BaseStrategy {
         _approve(assetVaultPrimaryAsset, _vault, _amount);
         IY2KVault(_vault).deposit(_id, _amount, address(this));
 
-        return IY2KVault(_vault).balanceOf(address(this), _id) - _before;
+        uint256 _shares = IY2KVault(_vault).balanceOf(address(this), _id) - _before;
+
+        // TODO
+        // if (_getStakingContract(_vault, _id) != address(0)) _stake(_shares);
+
+        return _shares;
     }
 
     /// @dev Terminates the strategy - withdraw from fortGLP
@@ -87,6 +92,9 @@ contract Y2KFinanceStrategy is BaseStrategy {
     function terminate(bytes memory _configData) external override onlyManager returns (uint256) {
         
         (uint256 _id, uint256 _amount, uint256 _before, address _vault) = _getConfig(_configData);
+
+        // TODO
+        // if (_getStakingContract(_vault, _id) != address(0)) _unstake(_shares);
 
         IY2KVault(_vault).withdraw(_id, _amount, address(this), address(this));
 
@@ -106,6 +114,7 @@ contract Y2KFinanceStrategy is BaseStrategy {
         (address[] memory _vaults) = IY2KVaultFactory(vaultFactory).getVaults(_index);
 
         address _vault = _type == true ? _vaults[1] : _vaults[0];
+        if (_vault == address(0)) revert NonExistent();
 
         vaults.push(_vault);
         vaultIDs.push(_id);
