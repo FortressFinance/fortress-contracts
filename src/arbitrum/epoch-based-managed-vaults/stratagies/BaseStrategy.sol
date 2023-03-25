@@ -84,16 +84,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @inheritdoc IStrategy
     function isActive() public view virtual returns (bool) {
         if (isStrategiesActiveOverride) return false;
-        // TODO - remove this if statement as it breaks the contract
-        if (IERC20(IAssetVault(assetVault).getAsset()).balanceOf(address(this)) > 0) return true;
-        
-        return false;
-    }
 
-    /// @inheritdoc IStrategy
-    // TODO - delete this function
-    function isAssetEnabled(address _targetAsset) public view virtual returns (bool) {
-        if (_targetAsset == asset) return true;
         return false;
     }
 

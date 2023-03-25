@@ -311,7 +311,6 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isUnmanaged(), true, "_initiateStrategy: E1");
         assertEq(_assetVault.isTimelocked(), false, "_initiateStrategy: E2");
         assertEq(IStrategy(_strategy).isActive(), false, "_initiateStrategy: E3");
-        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_initiateStrategy: E4");
         assertEq(metaVault.assetVaults(_strategyAsset), _assetVaultAddress, "_initiateStrategy: E5");
 
         vm.startPrank(alice);
@@ -337,7 +336,6 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(_assetVault.timelock() + _assetVault.timelockDuration() > block.timestamp, true, "_addStrategy: E2");
         assertEq(_assetVault.initiatedStrategy(), _strategy, "_addStrategy: E3");
         assertEq(_assetVault.blacklistedStrategies(_strategy), false, "_addStrategy: E4");
-        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_addStrategy: E5");
         assertEq(_assetVault.strategies(_strategy), false, "_addStrategy: E6");
 
         vm.expectRevert();
@@ -371,7 +369,6 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isEpochinitiated(), true, "_depositToStrategy: E2");
         assertEq(_assetVault.blacklistedStrategies(_strategy), false, "_depositToStrategy: E3");
         assertEq(IStrategy(_strategy).isActive(), false, "_depositToStrategy: E4");
-        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_depositToStrategy: E5");
         assertEq(_assetVault.strategies(_strategy), true, "_depositToStrategy: E6");
         assertTrue(IERC20(_assetVault.getAsset()).balanceOf(_assetVaultAddress) >= _amount, "_depositToStrategy: E7");
 
@@ -390,7 +387,6 @@ contract BaseTest is Test, AddressesArbi {
         assertEq(metaVault.isEpochinitiated(), true, "_withdrawFromStrategy: E2");
         assertEq(_assetVault.blacklistedStrategies(_strategy), false, "_withdrawFromStrategy: E3");
         assertEq(IStrategy(_strategy).isActive(), true, "_withdrawFromStrategy: E4");
-        assertEq(IStrategy(_strategy).isAssetEnabled(_assetVault.getAsset()), true, "_withdrawFromStrategy: E5");
         assertEq(_assetVault.strategies(_strategy), true, "_withdrawFromStrategy: E6");
         assertTrue(IERC20(_assetVault.getAsset()).balanceOf(_strategy) >= _amount, "_withdrawFromStrategy: E7");
 

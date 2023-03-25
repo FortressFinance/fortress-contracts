@@ -72,7 +72,7 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         manager = _manager;
         metaVaultPrimaryAsset = _metaVaultPrimaryAsset;
         
-        timelockDuration = 86400; // 86400 seconds, 1 day
+        timelockDuration = 1 days;
         isStrategiesActiveOverride = false;
     }
 
@@ -223,7 +223,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
         
         address _strategy = initiatedStrategy;
         if (blacklistedStrategies[_strategy]) revert StrategyBlacklisted();
-        if (!IStrategy(_strategy).isAssetEnabled(primaryAsset)) revert AssetDisabled();
         if (strategies[_strategy]) revert StrategyAlreadyActive();
 
         strategies[_strategy] = true;
@@ -253,8 +252,6 @@ contract AssetVault is ReentrancyGuard, IAssetVault {
 
     /// @inheritdoc IAssetVault
     function platformAddStrategy(address _strategy) external onlyPlatform unmanaged {
-        if (IStrategy(_strategy).isAssetEnabled(primaryAsset)) revert AssetDisabled();
-
         strategies[_strategy] = true;
         strategyList.push(_strategy);
 

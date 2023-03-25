@@ -125,7 +125,6 @@ contract TestFortGlpStrategy is BaseTest {
         FortressGlpStrategy _fortGlpStrategy = new FortressGlpStrategy(_enabledAsset, _assetVault, platform, manager, fortGlp, address(fortressSwap));
 
         assertEq(_fortGlpStrategy.isActive(), false);
-        assertEq(_fortGlpStrategy.isAssetEnabled(_enabledAsset), true);
 
         return address(_fortGlpStrategy);
     }
@@ -134,7 +133,7 @@ contract TestFortGlpStrategy is BaseTest {
         assertEq(metaVault.isUnmanaged(), false, "_executeFortGlpStrategy: E1");
         assertEq(metaVault.isEpochinitiated(), true, "_executeFortGlpStrategy: E2");
         assertEq(IStrategy(_strategy).isActive(), true, "_executeFortGlpStrategy: E3");
-        assertTrue(IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy) >= _amount, "_executeFortGlpStrategy: E3");
+        assertTrue(IERC20(AssetVault(_assetVaultAddress).getAsset()).balanceOf(_strategy) >= _amount, "_executeFortGlpStrategy: E4");
         assertTrue(AssetVault(_assetVaultAddress).strategies(_strategy), "_executeFortGlpStrategy: E03");
 
         // we deposit only a fraction of the amount to the strategy because GLP mint exceed max USDG (which means the contract can't take more of that asset)

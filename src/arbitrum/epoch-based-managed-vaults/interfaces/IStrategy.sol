@@ -9,11 +9,6 @@ interface IStrategy {
     /// @return True if the strategy has deployed assets, false otherwise
     function isActive() external view returns (bool);
 
-    /// @dev Indicates whether an asset is enabled for the strategy
-    /// @param _asset The address of the asset to check
-    /// @return True if the asset is enabled, false otherwise
-    function isAssetEnabled(address _asset) external view returns (bool);
-
     /********************************** Asset Vault Functions **********************************/
 
     /// @dev Deposits assets into the strategy. Can only be called by the AssetVault
