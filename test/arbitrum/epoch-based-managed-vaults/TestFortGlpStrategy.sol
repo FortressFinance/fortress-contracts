@@ -68,8 +68,8 @@ contract TestFortGlpStrategy is BaseTest {
             //
 
             // Add strategies
-            _fortGlpStrategy = _deployFortGlpStrategy(WETH, _wethAssetVault);
-            address _fortGlpStrategyUsdt = _deployFortGlpStrategy(USDT, _usdtAssetVault);
+            _fortGlpStrategy = _deployFortGlpStrategy(_wethAssetVault);
+            address _fortGlpStrategyUsdt = _deployFortGlpStrategy(_usdtAssetVault);
 
             _initiateStrategy(WETH, _wethAssetVault, _fortGlpStrategy);
 
@@ -121,8 +121,8 @@ contract TestFortGlpStrategy is BaseTest {
 
     // ------------------- UTILS -------------------
 
-    function _deployFortGlpStrategy(address _enabledAsset, address _assetVault) internal returns (address) {
-        FortressGlpStrategy _fortGlpStrategy = new FortressGlpStrategy(_enabledAsset, _assetVault, platform, manager, fortGlp, address(fortressSwap));
+    function _deployFortGlpStrategy(address _assetVault) internal returns (address) {
+        FortressGlpStrategy _fortGlpStrategy = new FortressGlpStrategy(_assetVault, platform, manager, fortGlp, address(fortressSwap));
 
         assertEq(_fortGlpStrategy.isActive(), false);
 

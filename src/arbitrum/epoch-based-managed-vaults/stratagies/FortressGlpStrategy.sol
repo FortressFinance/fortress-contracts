@@ -37,8 +37,8 @@ contract FortressGlpStrategy is BaseStrategy {
 
     /********************************** Constructor **********************************/
 
-    constructor(address _asset, address _assetVault, address _platform, address _manager, address _fortGlp, address _swap)
-        BaseStrategy(_asset, _assetVault, _platform, _manager) {
+    constructor(address _assetVault, address _platform, address _manager, address _fortGlp, address _swap)
+        BaseStrategy(_assetVault, _platform, _manager) {
             fortGlp = _fortGlp;
             swap = _swap;
         }

@@ -37,6 +37,9 @@ interface IStrategy {
     /// @dev Overrides the active status of the strategy. Can only be called by the platform
     function overrideActiveStatus(bool _isStrategiesActive) external;
 
+    /// @dev Rescues stuck ERC20 tokens. Can only be called by the platform
+    function rescueERC20(uint256 _amount) external;
+
     /********************************** Events **********************************/
 
     /// @notice Emitted when a deposit is made
@@ -53,6 +56,10 @@ interface IStrategy {
     /// @param _timestamp The timestamp of the override
     /// @param _isStrategiesActive The new active status of the strategy
     event ActiveStatusOverriden(uint256 indexed _timestamp, bool _isStrategiesActive);
+
+    /// @notice Emitted when Platform rescues stuck assets
+    /// @param _amount The amount of assets rescued
+    event Rescue(uint256 _amount);
 
     /********************************** Errors **********************************/
 
