@@ -48,7 +48,7 @@ contract GlpCompounder is TokenCompounderBase {
 
     /// @notice The address of sGLP token
     address public constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
-    /// @notice The address of WETH token
+    /// @notice The address of WETH token.
     address public constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
     /// @notice The address representing ETH
     address internal constant ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -166,9 +166,9 @@ contract GlpCompounder is TokenCompounderBase {
         address _sGLP = sGLP;
         uint256 _startBalance = IERC20(_sGLP).balanceOf(address(this));
         
-        // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH.
-        IGlpRewardHandler(rewardHandler).handleRewards(true, true, true, true, true, true, false);
-        
+        // Claim rewards - compound GMX, esGMX, and MP rewards. Claim ETH rewards as WETH
+        IGlpRewardHandler(rewardHandler).handleRewards(true, false, true, true, true, true, false);
+
         address _weth = WETH;
         uint256 _balance = IERC20(_weth).balanceOf(address(this));
         
