@@ -123,4 +123,18 @@ contract Y2KFinanceStrategy is BaseStrategy {
 
         return (_id, _amount, _before, _vault);
     }
+
+    function _getStakingContract(address _vault, uint256 _id) internal view returns (address) {
+        // TODO
+        // ask user to supply value and assert it's the correct one via:
+        // https://arbiscan.io/address/0x4ae0762caa83b19d0d8ebcf26fd413354df21fe3#readContract#F18
+    }
+
+    function _stake(uint256 _shares) internal {
+        // TODO
+    }
+
+    function _unstake(uint256 _shares) internal {
+        // TODO
+    }
 }
