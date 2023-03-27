@@ -23,26 +23,42 @@ pragma solidity 0.8.17;
 // Github - https://github.com/FortressFinance
 
 import {BaseStrategy, IAssetVault} from "./BaseStrategy.sol";
-import {IY2KVaultFactory} from "./interfaces/IY2KVaultFactory.sol";
 import {IY2KVault} from "./interfaces/IY2KVault.sol";
+import {IY2KRewards} from "./interfaces/IY2KRewards.sol";
+import {IFortressSwap} from "../interfaces/IFortressSwap.sol";
 
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract Y2KFinanceStrategy is BaseStrategy {
 
-    /// @notice Address of the Y2K Vault Factory
-    address vaultFactory;
+    using SafeERC20 for IERC20;
+    
+    /// @notice The address of FortressSwap
+    address public swap;
+
+    /// @notice The address of the Y2K token
+    address public constant Y2K = address(0x65c936f008BC34fE819bce9Fa5afD9dc2d49977f);
 
     /// @notice Array of vaults that were used
     address[] vaults;
     /// @notice Array of vault IDs that were used
     uint256[] vaultIDs;
 
+    /// @notice Indicates if a vault is used
+    mapping(address => bool) isVault;
+    /// @notice The address of the Y2K Rewards contract for a specific vault and ID
+    mapping(address => mapping(uint => address)) stakingRewards;
+
+
     /********************************** Constructor **********************************/
 
-    constructor(address _assetVault, address _platform, address _manager)
+    constructor(address _assetVault, address _platform, address _manager, address _swap)
         BaseStrategy(_assetVault, _platform, _manager) {
-            vaultFactory = address(0x984E0EB8fB687aFa53fc8B33E12E04967560E092);
+            if (IFortressSwap(_swap).routeExists(Y2K, assetVaultPrimaryAsset)) revert InvalidSwap();
+
+            swap = _swap;
         }
 
     /********************************** View Functions **********************************/
@@ -62,6 +78,7 @@ contract Y2KFinanceStrategy is BaseStrategy {
 
     /********************************** Manager Functions **********************************/
 
+    // TODO - fix docs
     /// @dev Executes the strategy - deposit into a Y2K Risk/Hedge Vault
     /// @dev _configData:
     /// @dev _index - index of the vault in the vaultFactory, determines the asset and the strike vault
@@ -69,20 +86,38 @@ contract Y2KFinanceStrategy is BaseStrategy {
     /// @dev _id - id of the vault in the vaultFactory, determines end date of the Epoch
     /// @dev _type - true for Risk Vault, false for Hedge Vault
     function execute(bytes memory _configData) external override onlyManager returns (uint256) {
-        
-        (uint256 _id, uint256 _amount, uint256 _before, address _vault) = _getConfig(_configData);
 
-        _approve(assetVaultPrimaryAsset, _vault, _amount);
+        (uint256 _id, uint256 _amount, address _vault, address _stakingRewards) = abi.decode(_configData, (uint256, uint256, address, address));
+
+        address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
+        if (_amount == type(uint256).max) {
+            _amount = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
+        }
+
+        if (!isVault[_vault]) {
+            isVault[_vault] = true;
+            vaults.push(_vault);
+            vaultIDs.push(_id);
+        }
+
+        uint256 _before = IERC1155(_vault).balanceOf(address(this), _id);
+        IERC20(_assetVaultPrimaryAsset).safeApprove(_vault, _amount);
         IY2KVault(_vault).deposit(_id, _amount, address(this));
+        // TODO - should revert because no ERC1155Receiver implemented
+        uint256 _shares = IERC1155(_vault).balanceOf(address(this), _id) - _before;
 
-        uint256 _shares = IY2KVault(_vault).balanceOf(address(this), _id) - _before;
+        if (_stakingRewards != address(0)) {
+            stakingRewards[_vault][_id] = _stakingRewards;
 
-        // TODO
-        // if (_getStakingContract(_vault, _id) != address(0)) _stake(_shares);
+            IERC1155(_vault).setApprovalForAll(_stakingRewards, true);
+            IY2KRewards(_stakingRewards).stake(_shares);
+            IERC1155(_vault).setApprovalForAll(_stakingRewards, false);
+        }
 
         return _shares;
     }
 
+    // TODO - fix docs
     /// @dev Terminates the strategy - withdraw from fortGLP
     /// @dev _configData:
     /// @dev _index - index of the vault in the vaultFactory, determines the asset and the strike vault
@@ -91,50 +126,62 @@ contract Y2KFinanceStrategy is BaseStrategy {
     /// @dev _type - true for Risk Vault, false for Hedge Vault
     function terminate(bytes memory _configData) external override onlyManager returns (uint256) {
         
-        (uint256 _id, uint256 _amount, uint256 _before, address _vault) = _getConfig(_configData);
+        (uint256 _id, uint256 _shares, address _vault, bool _claimRewards) = abi.decode(_configData, (uint256,uint256,address,bool));
+        
+        address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
+        uint256 _before = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
+        if (_shares == type(uint256).max) {
+            _shares = IERC1155(_vault).balanceOf(address(this), _id);
+        }
 
-        // TODO
-        // if (_getStakingContract(_vault, _id) != address(0)) _unstake(_shares);
+        address _stakingRewards = stakingRewards[_vault][_id];
+        if (_stakingRewards != address(0)) {
+            // TODO - should revert because no ERC1155Receiver implemented
+            IY2KRewards(_stakingRewards).withdraw(_shares);
+            if (_claimRewards) _getRewards(_stakingRewards);
+        }
 
-        IY2KVault(_vault).withdraw(_id, _amount, address(this), address(this));
+        IY2KVault(_vault).withdraw(_id, _shares, address(this), address(this));
 
         return IY2KVault(_vault).balanceOf(address(this), _id) - _before;
     }
 
+    /// @dev Updates the fortressSwap address
+    function updateSwap(address _swap) external onlyManager {
+        if (IFortressSwap(_swap).routeExists(Y2K, assetVaultPrimaryAsset)) revert InvalidSwap();
+
+        swap = _swap;
+    }
+
     /********************************** Internal Functions **********************************/
 
-    function _getConfig(bytes memory _configData) internal returns (uint256, uint256, uint256, address) {
-        (uint256 _index, uint256 _amount, uint256 _id, bool _type) = abi.decode(_configData, (uint256, uint256, uint256, bool));
+    /// @dev increases the balance of assetVaultPrimaryAsset by swapping Y2K tokens
+    function _getRewards(address _stakingRewards) internal {
+        address _y2k = Y2K;
+        uint256 before = IERC20(_y2k).balanceOf(address(this));
+        IY2KRewards(_stakingRewards).getReward();
+        uint256 _rewards = IERC20(_y2k).balanceOf(address(this)) - before;
+        
+        emit Y2KRewards(_rewards);
 
-        address _assetVaultPrimaryAsset = assetVaultPrimaryAsset;
-        if (_amount == type(uint256).max) {
-            _amount = IERC20(_assetVaultPrimaryAsset).balanceOf(address(this));
+        if (_rewards > 0) {
+            address _swap = swap;
+            IERC20(_y2k).safeApprove(_swap, IERC20(_y2k).balanceOf(address(this)) - before);
+            _rewards = IFortressSwap(_swap).swap(_y2k, assetVaultPrimaryAsset, _rewards);
+
+            emit PrimaryAssetRewards(_rewards);
+        } else {
+            revert NoRewards();
         }
-
-        (address[] memory _vaults) = IY2KVaultFactory(vaultFactory).getVaults(_index);
-
-        address _vault = _type == true ? _vaults[1] : _vaults[0];
-        if (_vault == address(0)) revert NonExistent();
-
-        vaults.push(_vault);
-        vaultIDs.push(_id);
-
-        uint256 _before = IY2KVault(_vault).balanceOf(address(this), _id);
-
-        return (_id, _amount, _before, _vault);
     }
 
-    function _getStakingContract(address _vault, uint256 _id) internal view returns (address) {
-        // TODO
-        // ask user to supply value and assert it's the correct one via:
-        // https://arbiscan.io/address/0x4ae0762caa83b19d0d8ebcf26fd413354df21fe3#readContract#F18
-    }
+    /********************************** Events **********************************/
 
-    function _stake(uint256 _shares) internal {
-        // TODO
-    }
+    event PrimaryAssetRewards(uint256 _rewards);
+    event Y2KRewards(uint256 _rewards);
 
-    function _unstake(uint256 _shares) internal {
-        // TODO
-    }
+    /********************************** Errors **********************************/
+
+    error InvalidSwap();
+    error NoRewards();
 }

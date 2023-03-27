@@ -140,11 +140,4 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
         emit Rescue(_amount);
     }
-
-    /********************************** Internal Functions **********************************/
-
-    function _approve(address _asset, address _spender, uint256 _amount) internal {
-        IERC20(_asset).safeApprove(_spender, 0);
-        IERC20(_asset).safeApprove(_spender, _amount);
-    }
 }

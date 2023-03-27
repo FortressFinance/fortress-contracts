@@ -24,11 +24,14 @@ pragma solidity 0.8.17;
 
 import {BaseStrategy, IAssetVault} from "./BaseStrategy.sol";
 
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IFortGlp} from "./interfaces/IFortGlp.sol";
 import {IFortressSwap} from "../interfaces/IFortressSwap.sol";
 
 contract FortressGlpStrategy is BaseStrategy {
+
+    using SafeERC20 for IERC20;
 
     /// @notice The address of fortGLP
     address public fortGlp;
@@ -96,5 +99,17 @@ contract FortressGlpStrategy is BaseStrategy {
         }
 
         return _amount;
+    }
+
+    /// @dev Updates the fortressSwap address
+    function updateSwap(address _swap) external onlyManager {
+        swap = _swap;
+    }
+
+    /********************************** Internal Functions **********************************/
+
+    function _approve(address _asset, address _spender, uint256 _amount) internal {
+        IERC20(_asset).safeApprove(_spender, 0);
+        IERC20(_asset).safeApprove(_spender, _amount);
     }
 }
