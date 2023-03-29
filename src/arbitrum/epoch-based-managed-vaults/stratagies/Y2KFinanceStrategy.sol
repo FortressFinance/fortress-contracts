@@ -58,7 +58,7 @@ contract Y2KFinanceStrategy is BaseStrategy {
 
     constructor(address _assetVault, address _platform, address _manager, address _swap)
         BaseStrategy(_assetVault, _platform, _manager) {
-            if (IFortressSwap(_swap).routeExists(Y2K, assetVaultPrimaryAsset)) revert InvalidSwap();
+            if (!IFortressSwap(_swap).routeExists(Y2K, assetVaultPrimaryAsset)) revert InvalidSwap();
             if (assetVaultPrimaryAsset != WETH) revert InvalidAssetVault();
 
             swap = _swap;
