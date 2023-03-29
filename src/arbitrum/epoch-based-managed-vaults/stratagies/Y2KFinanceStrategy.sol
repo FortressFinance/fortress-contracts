@@ -39,7 +39,9 @@ contract Y2KFinanceStrategy is BaseStrategy {
     address public swap;
 
     /// @notice The address of the Y2K token
-    address public constant Y2K = address(0x65c936f008BC34fE819bce9Fa5afD9dc2d49977f);
+    address private constant Y2K = address(0x65c936f008BC34fE819bce9Fa5afD9dc2d49977f);
+    /// @notice The address of the WETH token
+    address private constant WETH = address(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1);
 
     /// @notice Array of vaults that were used
     address[] vaults;
@@ -57,6 +59,7 @@ contract Y2KFinanceStrategy is BaseStrategy {
     constructor(address _assetVault, address _platform, address _manager, address _swap)
         BaseStrategy(_assetVault, _platform, _manager) {
             if (IFortressSwap(_swap).routeExists(Y2K, assetVaultPrimaryAsset)) revert InvalidSwap();
+            if (assetVaultPrimaryAsset != WETH) revert InvalidAssetVault();
 
             swap = _swap;
         }
@@ -184,4 +187,5 @@ contract Y2KFinanceStrategy is BaseStrategy {
 
     error InvalidSwap();
     error NoRewards();
+    error InvalidAssetVault();
 }

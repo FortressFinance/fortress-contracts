@@ -141,8 +141,10 @@ contract BaseTest is Test, AddressesArbi {
             _addUSDTUSDCRouteToSwap();
         }
         
-        assertTrue(FortressArbiSwap(fortressSwap).routeExists(address(metaVault.asset()), _targetAsset), "_addAssetVault: E1");
-        assertTrue(FortressArbiSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset())), "_addAssetVault: E2");
+        if (address(metaVault.asset()) != _targetAsset) {
+            assertTrue(FortressArbiSwap(fortressSwap).routeExists(address(metaVault.asset()), _targetAsset), "_addAssetVault: E1");
+            assertTrue(FortressArbiSwap(fortressSwap).routeExists(_targetAsset, address(metaVault.asset())), "_addAssetVault: E2");
+        }
         assertTrue(metaVault.isUnmanaged(), "_addAssetVault: E3");
         
         vm.startPrank(manager);

@@ -31,6 +31,8 @@ contract AddressesArbi {
     address constant sGLP = 0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf;
     // The address of wstETH token.
     address constant WSTETH = 0x5979D7b546E38E414F7E9822514be443A4800529;
+    // The address of Y2K token.
+    address constant Y2K = 0x65c936f008BC34fE819bce9Fa5afD9dc2d49977f;
     
     // ------------------------------------- Curve LP Tokens -------------------------------------
 
