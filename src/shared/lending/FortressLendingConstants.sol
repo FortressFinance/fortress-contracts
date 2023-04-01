@@ -50,6 +50,16 @@ abstract contract FortressLendingConstants {
     error InsufficientBalance();
     error NotOwner();
 
+    /// @notice The ```WithdrawFees``` event fires when the fees are withdrawn
+    /// @param _shares Number of _shares (fTokens) redeemed
+    /// @param _recipient To whom the assets were sent
+    /// @param _amountToTransfer The amount of fees redeemed
+    event WithdrawFees(uint256 _shares, address _recipient, uint256 _amountToTransfer);
+
+    /// @notice The ```UpdateFee``` event is emitted when the fee is updated
+    /// @param _newFee The new fee
+    event UpdateFee(uint64 _newFee);
+
     /// @notice The ```BorrowAsset``` event is emitted when a borrower increases their position
     /// @param _borrower The borrower whose account was debited
     /// @param _borrowAmount The amount of Asset Tokens transferred

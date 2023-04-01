@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {ERC4626} from "@solmate/mixins/ERC4626.sol";
+import {ERC4626, ERC20} from "@solmate/mixins/ERC4626.sol";
 import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -47,8 +47,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Owner
     address public owner;
 
-    // Dependencies
-    address public immutable FORTRESS_WHITELIST_ADDRESS;
+    // // Dependencies
+    // address public immutable FORTRESS_WHITELIST_ADDRESS;
 
     // Pause Settings
     bool public pauseDeposit;
@@ -103,43 +103,43 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _configData abi.encode(address _asset, address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract, bytes memory _rateInitData)
     /// @param _maxLTV The Maximum Loan-To-Value for a borrower to be considered solvent (1e5 precision)
     /// @param _liquidationFee The fee paid to liquidators given as a % of the repayment (1e5 precision)
-    constructor(bytes memory _configData, address _owner, address _whitelistAddress, uint256 _maxLTV, uint256 _liquidationFee) {
+    constructor(ERC20 _asset, string memory _name, string memory _symbol, bytes memory _configData, address _owner, uint256 _maxLTV, uint256 _liquidationFee)
+        ERC4626(_asset, _name, _symbol) {
+
+        (address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract,)
+            = abi.decode(_configData, (address, address, address, uint256, address, bytes));
+
+        // Pair Settings
+        assetContract = IERC20(address(_asset));
+        collateralContract = IERC20(_collateral);
+        currentRateInfo.feeToProtocolRate = DEFAULT_PROTOCOL_FEE;
+        cleanLiquidationFee = _liquidationFee;
+        dirtyLiquidationFee = (_liquidationFee * 90000) / LIQ_PRECISION; // 90% of clean fee
+
+        maxLTV = _maxLTV;
+
+        // Oracle Settings
         {
-            (address _asset, address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract,)
-             = abi.decode(_configData, (address, address, address, address, uint256, address, bytes));
+            // IFortressWhitelist _fortressWhitelist = IFortressWhitelist(FORTRESS_WHITELIST_ADDRESS);
+            
+            // // Check that oracles are on the whitelist
+            // if (_oracleMultiply != address(0) && !_fortressWhitelist.oracleContractWhitelist(_oracleMultiply)) revert NotOnWhitelist(_oracleMultiply);
+            // if (_oracleDivide != address(0) && !_fortressWhitelist.oracleContractWhitelist(_oracleDivide)) revert NotOnWhitelist(_oracleDivide);
 
-            // Pair Settings
-            assetContract = IERC20(_asset);
-            collateralContract = IERC20(_collateral);
-            currentRateInfo.feeToProtocolRate = DEFAULT_PROTOCOL_FEE;
-            cleanLiquidationFee = _liquidationFee;
-            dirtyLiquidationFee = (_liquidationFee * 90000) / LIQ_PRECISION; // 90% of clean fee
+            // Write oracleData to storage
+            oracleMultiply = _oracleMultiply;
+            oracleDivide = _oracleDivide;
+            oracleNormalization = _oracleNormalization;
 
-            maxLTV = _maxLTV;
-
-            // Oracle Settings
-            {
-                // IFortressWhitelist _fortressWhitelist = IFortressWhitelist(FORTRESS_WHITELIST_ADDRESS);
-                
-                // // Check that oracles are on the whitelist
-                // if (_oracleMultiply != address(0) && !_fortressWhitelist.oracleContractWhitelist(_oracleMultiply)) revert NotOnWhitelist(_oracleMultiply);
-                // if (_oracleDivide != address(0) && !_fortressWhitelist.oracleContractWhitelist(_oracleDivide)) revert NotOnWhitelist(_oracleDivide);
-
-                // Write oracleData to storage
-                oracleMultiply = _oracleMultiply;
-                oracleDivide = _oracleDivide;
-                oracleNormalization = _oracleNormalization;
-
-                // Rate Settings
-                // if (!_fortressWhitelist.rateContractWhitelist(_rateContract)) revert NotOnWhitelist(_rateContract);
-            }
-
-            rateContract = IRateCalculator(_rateContract);
+            // Rate Settings
+            // if (!_fortressWhitelist.rateContractWhitelist(_rateContract)) revert NotOnWhitelist(_rateContract);
         }
+
+        rateContract = IRateCalculator(_rateContract);
 
         // Set admins
         owner = _owner;
-        FORTRESS_WHITELIST_ADDRESS = _whitelistAddress;
+        // FORTRESS_WHITELIST_ADDRESS = _whitelistAddress;
     }
 
     /// @notice The ```initialize``` function is called immediately after deployment
@@ -258,8 +258,42 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     }
 
     // ============================================================================================
-    // Functions: Settings Set By Owner
+    // Functions: Configuration
     // ============================================================================================
+
+    /// @notice The ```withdrawFees``` function withdraws fees accumulated
+    /// @param _shares Number of fTokens to redeem
+    /// @param _recipient Address to send the assets
+    /// @return _amountToTransfer Amount of assets sent to recipient
+    function withdrawFees(uint256 _shares, address _recipient) external onlyOwner returns (uint256 _amountToTransfer) {
+        // Grab some data from state to save gas
+        // VaultAccount memory _totalAsset = totalAsset;
+        // VaultAccount memory _totalBorrow = totalBorrow;
+
+        // Take all available if 0 value passed
+        if (_shares == 0) _shares = balanceOf[address(this)];
+
+        // We must calculate this before we subtract from _totalAsset or invoke _burn
+        // _amountToTransfer = _totalAsset.toAmount(_shares, true);
+        _amountToTransfer = convertToAssets(totalAssets(), totalSupply, _shares, true);
+
+        // Check for sufficient withdraw liquidity
+        uint256 _assetsAvailable = _totalAssetAvailable();
+        if (_assetsAvailable < _amountToTransfer) revert InsufficientAssetsInContract();
+
+        // Effects: bookkeeping
+        totalAUM -= _amountToTransfer;
+        totalSupply -= _shares;
+
+        // Effects: write to states
+        // NOTE: will revert if _shares > balanceOf(address(this))
+        _burn(address(this), _shares);
+
+        // Interactions
+        assetContract.safeTransfer(_recipient, _amountToTransfer);
+        
+        emit WithdrawFees(_shares, _recipient, _amountToTransfer);
+    }
 
     /// @dev Updates the address of Swap contract.
     /// @param _swap - The new swap address.
@@ -275,6 +309,16 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         owner = _owner;
         
         emit UpdateOwner(_owner);
+    }
+
+    function updateFee(uint64 _newFee) external onlyOwner {
+        if (_newFee > MAX_PROTOCOL_FEE) revert BadProtocolFee();
+
+        _addInterest();
+
+        currentRateInfo.feeToProtocolRate = _newFee;
+        
+        emit UpdateFee(_newFee);
     }
 
     /// @dev Pauses withdrawals for the vault.
