@@ -588,7 +588,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _underlyingAmount = _asset != _underlyingAsset ? IFortressSwap(swap).swap(_asset, _underlyingAsset, _borrowAmount) : _borrowAmount;
         
         uint256 _amountCollateralOut = IFortressVault(address(collateralContract)).depositSingleUnderlying(_underlyingAmount, _underlyingAsset, address(this), 0);
-        if (_amountCollateralOut < _minAmount) revert SlippageTooHigh(_minAmount, _amountCollateralOut);
+        if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
 
         // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
         _addCollateral(address(this), _amountCollateralOut, msg.sender);
@@ -615,7 +615,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         
         address _asset = address(assetContract);
         if (_underlyingAsset != _asset) _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
-        if (_amountAssetOut < _minAmount) revert SlippageTooHigh(_minAmount, _amountAssetOut);
+        if (_amountAssetOut < _minAmount) revert SlippageTooHigh();
 
         BorrowAccount memory _totalBorrow = totalBorrow;
         uint256 _sharesToRepay = convertToShares(_totalBorrow.amount, _totalBorrow.shares, _amountAssetOut, false);

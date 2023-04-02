@@ -26,20 +26,15 @@ contract LinearInterestRate is IRateCalculator {
     /// @notice The ```requireValidInitData``` function reverts if initialization data fails to be validated
     /// @param _initData abi.encode(uint256 _minInterest, uint256 _vertexInterest, uint256 _maxInterest, uint256 _vertexUtilization)
     function requireValidInitData(bytes calldata _initData) public pure {
-        (uint256 _minInterest, uint256 _vertexInterest, uint256 _maxInterest, uint256 _vertexUtilization) = abi.decode(
-            _initData,
-            (uint256, uint256, uint256, uint256)
-        );
-        require(
-            _minInterest < MAX_INT && _minInterest <= _vertexInterest && _minInterest >= MIN_INT,
+        (uint256 _minInterest, uint256 _vertexInterest, uint256 _maxInterest, uint256 _vertexUtilization) = abi.decode(_initData,(uint256, uint256, uint256, uint256));
+        
+        require(_minInterest < MAX_INT && _minInterest <= _vertexInterest && _minInterest >= MIN_INT,
             "LinearInterestRate: _minInterest < MAX_INT && _minInterest <= _vertexInterest && _minInterest >= MIN_INT"
         );
-        require(
-            _maxInterest <= MAX_INT && _vertexInterest <= _maxInterest && _maxInterest > MIN_INT,
+        require(_maxInterest <= MAX_INT && _vertexInterest <= _maxInterest && _maxInterest > MIN_INT,
             "LinearInterestRate: _maxInterest <= MAX_INT && _vertexInterest <= _maxInterest && _maxInterest > MIN_INT"
         );
-        require(
-            _vertexUtilization < MAX_VERTEX_UTIL && _vertexUtilization > 0,
+        require(_vertexUtilization < MAX_VERTEX_UTIL && _vertexUtilization > 0,
             "LinearInterestRate: _vertexUtilization < MAX_VERTEX_UTIL && _vertexUtilization > 0"
         );
     }

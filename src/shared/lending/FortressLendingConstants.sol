@@ -23,22 +23,10 @@ abstract contract FortressLendingConstants {
 
     error Insolvent();
     error BorrowerSolvent();
-    error OnlyApprovedBorrowers();
-    error OnlyApprovedLenders();
-    error PastMaturity();
-    error ProtocolOrOwnerOnly();
     error OracleLTEZero(address _oracle);
     error InsufficientAssetsInContract();
-    error NotOnWhitelist(address _address);
-    error NotDeployer();
-    error NameEmpty();
-    error AlreadyInitialized();
-    error SlippageTooHigh(uint256 _minOut, uint256 _actual);
-    error BadSwapper();
-    error InvalidPath(address _expected, address _actual);
-    error BadProtocolFee();
-    error BorrowerWhitelistRequired();
-    error OnlyTimeLock();
+    error SlippageTooHigh();
+    error InvalidProtocolFee();
     error PriceTooLarge();
     error PastDeadline(uint256 _blockTimestamp, uint256 _deadline);
     error LiquidationsPaused();
@@ -102,21 +90,6 @@ abstract contract FortressLendingConstants {
     /// @param _amountToRepay The amount of Asset token to be transferred
     /// @param _shares The amount of Borrow Shares which will be debited from the borrower after repayment
     event RepayAsset(address indexed _payer, address indexed _borrower, uint256 _amountToRepay, uint256 _shares);
-
-    // /// @notice The ```Deposit``` event fires when a user deposits assets to the pair
-    // /// @param caller the msg.sender
-    // /// @param owner the account the fTokens are sent to
-    // /// @param assets the amount of assets deposited
-    // /// @param shares the number of fTokens minted
-    // event Deposit(address indexed caller, address indexed owner, uint256 assets, uint256 shares);
-
-    // /// @notice The ```Withdraw``` event fires when a user redeems their fTokens for the underlying asset
-    // /// @param caller the msg.sender
-    // /// @param receiver The address to which the underlying asset will be transferred to
-    // /// @param owner The owner of the fTokens
-    // /// @param assets The assets transferred
-    // /// @param shares The number of fTokens burned
-    // event Withdraw(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares);
 
     /// @notice The ```AddInterest``` event is emitted when interest is accrued by borrowers
     /// @param _interestEarned The total interest accrued by all borrowers
