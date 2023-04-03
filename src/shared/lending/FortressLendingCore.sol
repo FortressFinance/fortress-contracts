@@ -312,7 +312,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     }
 
     function updateFee(uint64 _newFee) external onlyOwner {
-        if (_newFee > MAX_PROTOCOL_FEE) revert BadProtocolFee();
+        if (_newFee > MAX_PROTOCOL_FEE) revert InvalidProtocolFee();
 
         _addInterest();
 
