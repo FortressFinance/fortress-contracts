@@ -80,6 +80,11 @@ contract AddressesArbi {
     // The address of LINK/WETH pool
     address constant GMX_ROUTER = 0xaBBc5F99639c9B6bCb58544ddf04EFA6802F4064;
 
+    // ------------------------------------- oracles -------------------------------------
+
+    // The address of Chainlink USD/USDC price feed
+    address constant USD_USDC_FEED = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3;
+
     // ------------------------------------- Fortress -------------------------------------
 
     // The address of first FortressSwap contract.
