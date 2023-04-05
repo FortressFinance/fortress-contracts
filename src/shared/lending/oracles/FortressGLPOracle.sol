@@ -1,11 +1,6 @@
 // // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-// // NOTES
-//     // 1 - consider implementing a delay between users entering and existing a position
-//     // 2 - consider implementing a implementing a spread limit to fcGLP exchange rate (i.e. if price of fcGLP is bigger than X% of the price of GLP - make sure the spread % needs to be updated)
-// https://arbiscan.io/address/0xb199351f83c4a5145c5144fbda8d63934b0250fe#code
-
 import {ERC4626} from "@solmate/mixins/ERC4626.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
@@ -13,7 +8,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IGlpManager} from "../interfaces/IGlpManager.sol";
 
-contract GLPVaultOracle is AggregatorV3Interface {
+import "forge-std/console.sol";
+
+contract FortressGLPOracle is AggregatorV3Interface {
 
     using SafeCast for uint256;
 
@@ -24,6 +21,9 @@ contract GLPVaultOracle is AggregatorV3Interface {
     uint256 public maxSpread;
 
     address public owner;
+
+    uint256 constant private DECIMAL_DIFFERENCE = 1e6;
+    uint256 constant private BASE = 1e18;
 
     /********************************** Constructor **********************************/
 
@@ -68,13 +68,11 @@ contract GLPVaultOracle is AggregatorV3Interface {
     }
 
     function _getPrice() internal view returns (int256) {
-        // uint256 glpPrice = (uint256(glpManager.getAum(false)) / glp.totalSupply());
-        // return 1e30 / vault.convertToAssets(glpPrice);
-        uint256 _glpPrice = glpManager.getPrice(false);
+        uint256 _glpPrice = glpManager.getPrice(false) * DECIMAL_DIFFERENCE;
 
         _checkVaultSpread();
         
-        return fcGLP.convertToAssets(_glpPrice).toInt256();
+        return (fcGLP.convertToAssets(_glpPrice) / BASE).toInt256();
     }
 
     /// @dev make sure that fcGLP/GLP exchange rate is not bigger than maxSpread
