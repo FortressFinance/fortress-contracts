@@ -4,14 +4,18 @@ pragma solidity 0.8.17;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
+import {ERC4626, ERC20} from "@solmate/mixins/ERC4626.sol";
+
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {FortressArbiSwap} from "src/arbitrum/utils/FortressArbiSwap.sol";
 import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 
 import {IWETH} from "src/shared/interfaces/IWETH.sol";
+
+import {FortressLendingPair} from "src/shared/lending/FortressLendingPair.sol";
+import {VariableInterestRate, IRateCalculator} from "src/shared/lending/VariableInterestRate.sol";
 
 abstract contract BaseTest is Test, AddressesArbi {
 
@@ -27,6 +31,7 @@ abstract contract BaseTest is Test, AddressesArbi {
     uint256 arbitrumFork;
 
     FortressArbiSwap fortressSwap;
+    IRateCalculator rateCalculator;
     
     function _setUp() internal {
         
@@ -55,7 +60,25 @@ abstract contract BaseTest is Test, AddressesArbi {
 
         fortressSwap = new FortressArbiSwap(address(owner));
         vm.stopPrank();
+
+        // --------------------------------- deploy interest rate contract ---------------------------------
+
+        rateCalculator = new VariableInterestRate();
     }
+
+    // --------------------------------- Tests ---------------------------------
+
+    function _testInitialize(address _pair) internal {
+        vm.prank(owner);
+
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+        bytes memory _rateInitCallData;
+        _lendingPair.initialize(_rateInitCallData);
+
+        vm.stopPrank();
+    }
+
+    // --------------------------------- Internal functions ---------------------------------
 
     function _getAssetFromETH(address _owner, address _asset, uint256 _amount) internal returns (uint256 _assetOut) {
         vm.prank(_owner);

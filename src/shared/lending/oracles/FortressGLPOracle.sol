@@ -19,6 +19,7 @@ contract FortressGLPOracle is AggregatorV3Interface {
     uint256 public lastSharePrice;
     uint256 public lowerBoundPercentage;
     uint256 public upperBoundPercentage;
+    uint256 public vaultMaxSpread;
 
     address public owner;
 
@@ -39,6 +40,9 @@ contract FortressGLPOracle is AggregatorV3Interface {
         
         owner = _owner;
 
+        uint256 _vaultSpread = fcGLP.convertToAssets(1e18);
+        vaultMaxSpread = _vaultSpread * 110 / 100; // limit to 10% of the vault spread
+
         lastSharePrice = uint256(_getPrice());
 
         isCheckPriceDeviation = true;
@@ -47,7 +51,7 @@ contract FortressGLPOracle is AggregatorV3Interface {
     /********************************** Modifiers **********************************/
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
+        if (msg.sender != owner) revert notOwner();
         _;
     }
 
@@ -82,6 +86,7 @@ contract FortressGLPOracle is AggregatorV3Interface {
 
         // check that fcGLP price deviation did not exceed the configured bounds
         if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
+        _checkVaultSpread();
 
         return _sharePrice.toInt256();
     }
@@ -96,27 +101,55 @@ contract FortressGLPOracle is AggregatorV3Interface {
         if (_sharePrice < _lowerBound || _sharePrice > _upperBound) revert priceDeviationTooHigh();
     }
 
+    function _checkVaultSpread() internal view {
+        if (fcGLP.convertToAssets(1e18) > vaultMaxSpread) revert vaultMaxSpreadExceeded();
+    }
+
     /********************************** Owner Functions **********************************/
 
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external onlyOwner {
         lastSharePrice = ((fcGLP.convertToAssets(glpManager.getPrice(false)) * DECIMAL_DIFFERENCE) / BASE);
+
+        emit LastSharePriceUpdated(lastSharePrice);
     }
 
     function shouldCheckPriceDeviation(bool _check) external onlyOwner {
         isCheckPriceDeviation = _check;
+
+        emit PriceDeviationCheckUpdated(_check);
     }
 
     function updatePriceDeviationBounds(uint256 _lowerBoundPercentage, uint256 _upperBoundPercentage) external onlyOwner {
         lowerBoundPercentage = _lowerBoundPercentage;
         upperBoundPercentage = _upperBoundPercentage;
+
+        emit PriceDeviationBoundsUpdated(_lowerBoundPercentage, _upperBoundPercentage);
+    }
+
+    function updateVaultMaxSpread(uint256 _vaultMaxSpread) external onlyOwner {
+        vaultMaxSpread = _vaultMaxSpread;
+
+        emit VaultMaxSpreadUpdated(_vaultMaxSpread);
     }
 
     function updateOwner(address _owner) external onlyOwner {
         owner = _owner;
+
+        emit OwnershipTransferred(owner, _owner);
     }
+
+    /********************************** Events **********************************/
+
+    event LastSharePriceUpdated(uint256 lastSharePrice);
+    event PriceDeviationCheckUpdated(bool isCheckPriceDeviation);
+    event PriceDeviationBoundsUpdated(uint256 lowerBoundPercentage, uint256 upperBoundPercentage);
+    event VaultMaxSpreadUpdated(uint256 vaultMaxSpread);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /********************************** Errors **********************************/
 
     error priceDeviationTooHigh();
+    error vaultMaxSpreadExceeded();
+    error notOwner();
 }

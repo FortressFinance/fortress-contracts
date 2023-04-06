@@ -5,7 +5,7 @@ import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3
 
 import {FortressGLPOracle} from "src/shared/lending/oracles/FortressGLPOracle.sol";
 
-import "test/arbitrum/concentrators/BaseTest.sol";
+import "test/arbitrum/lending/BaseTest.sol";
 
 contract TestFortressGLPOracle is BaseTest {
 
@@ -15,6 +15,40 @@ contract TestFortressGLPOracle is BaseTest {
         _setUp();
 
         oracle = new FortressGLPOracle(address(owner));
+    }
+
+    /********************************** Tests **********************************/
+
+    function testVaultMaxSpread() public {
+        uint256 _maxSpread = oracle.vaultMaxSpread();
+
+        uint256 _spread = ERC4626(fcGLP).convertToAssets(1e18);
+
+        // add 10% to _spread
+        uint256 _localMaxSpread = _spread * 110 / 100;
+
+        assertEq(_maxSpread, _localMaxSpread, "testVaultMaxSpread: E1");
+    }
+
+    function testUpdateLastSharePrice() public {
+        uint256 _lastSharePrice1 = oracle.lastSharePrice();
+        
+        (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
+
+        assertEq(_lastSharePrice1, uint256(_answer), "testUpdateLastSharePrice: E1");
+
+        vm.startPrank(owner);
+        oracle.updateLastSharePrice();
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        vm.expectRevert();
+        oracle.updateLastSharePrice();
+        vm.stopPrank();
+
+        uint256 _lastSharePrice2 = oracle.lastSharePrice();
+        
+        assertEq(_lastSharePrice2, uint256(_answer), "testUpdateLastSharePrice: E2");
     }
 
     function testDownSidePriceDeviation() public {
@@ -35,8 +69,10 @@ contract TestFortressGLPOracle is BaseTest {
         _checkPriceDeviation(_maxPrice + 1, uint256(_answer));
     }
 
+    /********************************** Internal Functions **********************************/
+
     // mock - assumes 10% bounds
-    function _checkPriceDeviation(uint256 _sharePrice, uint256 _lastSharePrice) internal view {
+    function _checkPriceDeviation(uint256 _sharePrice, uint256 _lastSharePrice) internal pure {
         uint256 _lowerBound = (_lastSharePrice * (100 - 10)) / 100;
         uint256 _upperBound = (_lastSharePrice * (100 + 10)) / 100;
 

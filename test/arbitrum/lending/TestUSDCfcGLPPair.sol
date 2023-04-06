@@ -1,14 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "test/arbitrum/concentrators/BaseTest.sol";
+import {FortressGLPOracle} from "src/shared/lending/oracles/FortressGLPOracle.sol";
 
-import "src/shared/lending/FortressLendingPair.sol";
+import "test/arbitrum/lending/BaseTest.sol";
 
-contract TestLendingPair is BaseTest {
+contract TestUSDCfcGLPPair is BaseTest {
+
+    FortressGLPOracle oracle;
+    FortressLendingPair lendingPair;
 
     function setUp() public {
         _setUp();
+
+        oracle = new FortressGLPOracle(address(owner));
+
+        // --------------------------------- deploy pair ---------------------------------
+
+        // USDC asset (1e18 precision), fcGLP collateral (1e18 precision)
+        ERC20 _asset = ERC20(address(USDC)); // asset
+        address _collateral = address(fcGLP); // collateral
+        string memory _name = "Fortress USDC/fcGLP Lending Pair";
+        string memory _symbol = "fUSDC/fcGLP";
+        address _oracleMultiply = address(USD_USDC_FEED); // denominator oracle (1e8 precision)
+        address _oracleDivide = address(oracle); // numerator oracle (1e18 precision)
+        uint256 _oracleNormalization = 1e28; // 1^(18 + 18 - 8 + 18 - 18)
+        address _rateContract = address(rateCalculator);
+        
+        bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
+        
+        address _owner = address(owner);
+        uint256 _maxLTV = 75000; // 75%
+        uint256 _liquidationFee = 10000; // 10%
+        
+        lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, _maxLTV, _liquidationFee);
     }
 
     // -- Dual Oracle --
@@ -32,25 +57,9 @@ contract TestLendingPair is BaseTest {
 
     // NOTES
     // 1 - consider implementing a delay between users entering and existing a position
-    // 2 - consider implementing a implementing a spread limit to fcGLP exchange rate (i.e. if price of fcGLP is bigger than X% of the price of GLP - make sure the spread % needs to be updated)
-    
+
     function testSanity() public {
         assertTrue(true);
-
-        // ERC20 _asset, string memory _name, string memory _symbol, bytes memory _configData, address _owner, uint256 _maxLTV, uint256 _liquidationFee
-        ERC20 _asset = ERC20(address(USDC));
-        string memory _name = "Fortress USDC/fcGLP Lending Pair";
-        string memory _symbol = "fUSDC/fcGLP";
-        address _oracleMultiply = address(USD_USDC_FEED);
-        address _oracleDivide = address(USD_fcGLP_FEED); // todo
-        uint256 _oracleNormalization = 1e18; // todo - wrong decimals
-        address _rateContract = address(0); // todo
-        // (address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract,)
-        //     = abi.decode(_configData, (address, address, address, uint256, address, bytes));
-        bytes memory _configData = abi.encode(fcGLP, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
-        address _owner = address(owner);
-        uint256 _maxLTV = 75000; // 75%
-        uint256 _liquidationFee = 10000; // 10%
-        FortressLendingPair _lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, _maxLTV, _liquidationFee);
+        _testInitialize(address(lendingPair));
     }
 }
