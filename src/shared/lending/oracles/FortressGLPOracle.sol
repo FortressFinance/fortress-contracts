@@ -16,34 +16,32 @@ contract FortressGLPOracle is AggregatorV3Interface {
     IERC20 public immutable glp;
     ERC4626 public immutable fcGLP;
 
-    uint256 public maxSpread;
-    uint256 public lastGlpPrice;
+    uint256 public lastSharePrice;
     uint256 public lowerBoundPercentage;
     uint256 public upperBoundPercentage;
 
     address public owner;
 
-    bool public isCheckGlpPrice;
+    bool public isCheckPriceDeviation;
 
     uint256 constant private DECIMAL_DIFFERENCE = 1e6;
     uint256 constant private BASE = 1e18;
 
     /********************************** Constructor **********************************/
 
-    constructor(uint256 _maxSpread, address _owner) {
+    constructor(address _owner) {
         glpManager = IGlpManager(address(0x3963FfC9dff443c2A94f21b129D429891E32ec18));
         glp = IERC20(address(0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258));
         fcGLP = ERC4626(address(0x86eE39B28A7fDea01b53773AEE148884Db311B46));
 
-        maxSpread = _maxSpread;
-        lowerBoundPercentage = 10; // 10% of lastGlpPrice
-        upperBoundPercentage = 10; // 10% of lastGlpPrice
+        lowerBoundPercentage = 20;
+        upperBoundPercentage = 20;
         
         owner = _owner;
 
-        lastGlpPrice = glpManager.getPrice(false);
+        lastSharePrice = uint256(_getPrice());
 
-        isCheckGlpPrice = true;
+        isCheckPriceDeviation = true;
     }
 
     /********************************** Modifiers **********************************/
@@ -78,57 +76,47 @@ contract FortressGLPOracle is AggregatorV3Interface {
     /********************************** Internal Functions **********************************/
 
     function _getPrice() internal view returns (int256) {
-        uint256 _glpPrice = glpManager.getPrice(false);
+        uint256 _assetPrice = glpManager.getPrice(false);
 
-        // check glp price deviation from last recorded price
-        if (isCheckGlpPrice) _checkGlpPriceDeviation(_glpPrice);
-        // check fcGLP/GLP exchange rate
-        _checkVaultSpread();
-        
-        return ((fcGLP.convertToAssets(_glpPrice) * DECIMAL_DIFFERENCE) / BASE).toInt256();
-    }
+        uint256 _sharePrice = ((fcGLP.convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
 
-    /// @dev make sure that fcGLP/GLP exchange rate is not bigger than maxSpread
-    /// @dev used to limit the risk of fcGLP vault manipulation  
-    function _checkVaultSpread() internal view {
-        uint256 _vaultSpread = fcGLP.convertToAssets(1e18);
+        // check that fcGLP price deviation did not exceed the configured bounds
+        if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
 
-        if (_vaultSpread > maxSpread) revert("vault spread too big");
+        return _sharePrice.toInt256();
     }
 
     /// @dev make sure that GLP price has not deviated by more than x% since last recorded price
     /// @dev used to limit the risk of GLP price manipulation
-    function _checkGlpPriceDeviation(uint256 _glpPrice) internal view {
-        uint256 _lastGlpPrice = lastGlpPrice;
-        uint256 lowerBound = (_lastGlpPrice * (100 - lowerBoundPercentage)) / 100;
-        uint256 upperBound = (_lastGlpPrice * (100 + upperBoundPercentage)) / 100;
+    function _checkPriceDeviation(uint256 _sharePrice) internal view {
+        uint256 _lastSharePrice = lastSharePrice;
+        uint256 _lowerBound = (_lastSharePrice * (100 - lowerBoundPercentage)) / 100;
+        uint256 _upperBound = (_lastSharePrice * (100 + upperBoundPercentage)) / 100;
 
-        if (_glpPrice < lowerBound) revert("glp price too low");
-        if (_glpPrice > upperBound) revert("glp price too high");
-
-        lastGlpPrice = _glpPrice; 
+        if (_sharePrice < _lowerBound || _sharePrice > _upperBound) revert priceDeviationTooHigh();
     }
 
     /********************************** Owner Functions **********************************/
 
-    /// @dev should be called at least once a day
-    function updateLastGlpPrice() external onlyOwner {
-        lastGlpPrice = glpManager.getPrice(false);
+    /// @notice this function needs to be called periodically to update the last share price
+    function updateLastSharePrice() external onlyOwner {
+        lastSharePrice = ((fcGLP.convertToAssets(glpManager.getPrice(false)) * DECIMAL_DIFFERENCE) / BASE);
     }
 
-    function shouldCheckGlpPrice(bool _check) external onlyOwner {
-        isCheckGlpPrice = _check;
+    function shouldCheckPriceDeviation(bool _check) external onlyOwner {
+        isCheckPriceDeviation = _check;
     }
 
-    function updateMaxSpread(uint256 _maxSpread) external onlyOwner {
-        maxSpread = _maxSpread;
+    function updatePriceDeviationBounds(uint256 _lowerBoundPercentage, uint256 _upperBoundPercentage) external onlyOwner {
+        lowerBoundPercentage = _lowerBoundPercentage;
+        upperBoundPercentage = _upperBoundPercentage;
     }
-
-    // function updateMaxPriceDeviationPercentage(uint256 _maxPriceDeviationPercentage) external onlyOwner {
-    //     maxPriceDeviationPercentage = _maxPriceDeviationPercentage;
-    // }
 
     function updateOwner(address _owner) external onlyOwner {
         owner = _owner;
     }
+
+    /********************************** Errors **********************************/
+
+    error priceDeviationTooHigh();
 }
