@@ -800,7 +800,9 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         console.log("_exchangeRate", _exchangeRate);
         console.log("oracleNormalization", oracleNormalization);
         console.log("testy ", uint256(101757704720708598950851302) / uint256(100000000)); // todo - something is wrong here 
-
+        console.log("testy2 ", 1e10);
+        // 1017577047207085989
+        // 1016336101477398652
         // write to storage, if no overflow
         if (_exchangeRate > type(uint224).max) revert PriceTooLarge();
         _exchangeRateInfo.exchangeRate = uint224(_exchangeRate);

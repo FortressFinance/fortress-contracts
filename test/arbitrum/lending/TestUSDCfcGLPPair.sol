@@ -22,9 +22,12 @@ contract TestUSDCfcGLPPair is BaseTest {
         address _collateral = address(fcGLP); // collateral
         string memory _name = "Fortress USDC/fcGLP Lending Pair";
         string memory _symbol = "fUSDC/fcGLP";
+        // address _oracleMultiply = address(oracle); // denominator oracle (1e8 precision)
+        // address _oracleDivide = address(USD_USDC_FEED); // numerator oracle (1e18 precision)
+        // uint256 _oracleNormalization = 1e8; // 1^(18 + 8 - 18 + 18 - 18)
         address _oracleMultiply = address(USD_USDC_FEED); // denominator oracle (1e8 precision)
         address _oracleDivide = address(oracle); // numerator oracle (1e18 precision)
-        uint256 _oracleNormalization = 1e28; // 1^(18 + 18 - 8 + 18 - 18)
+        uint256 _oracleNormalization = 1e8; // 1^(18 + 18 - 8 + 18 - 18)
         address _rateContract = address(rateCalculator);
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
