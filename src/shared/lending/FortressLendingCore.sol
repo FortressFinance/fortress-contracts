@@ -8,12 +8,12 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import "./FortressLendingConstants.sol";
-import "./interfaces/IRateCalculator.sol";
-import "../fortress-interfaces/IFortressSwap.sol";
-import "../fortress-interfaces/IFortressVault.sol";
+import {FortressLendingConstants} from "./FortressLendingConstants.sol";
+import {IRateCalculator} from "./interfaces/IRateCalculator.sol";
+import {IFortressSwap} from "../fortress-interfaces/IFortressSwap.sol";
+import {IFortressVault} from "../fortress-interfaces/IFortressVault.sol";
 
-import "forge-std/console.sol";
+import "forge-std/console.sol"; // todo: remove
 
 /// @notice  An abstract contract which contains the core logic and storage for the FortressLendingPair
 abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGuard, ERC4626 {
@@ -266,6 +266,11 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
         return _ltv <= maxLTV;
+    }
+
+    function _approve(address _token, address _spender, uint256 _amount) internal {
+        IERC20(_token).safeApprove(_spender, 0);
+        IERC20(_token).safeApprove(_spender, _amount);
     }
 
     // ============================================================================================
@@ -615,8 +620,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         uint256 _underlyingAmount;
         address _asset = address(assetContract);
         _underlyingAmount = _asset != _underlyingAsset ? IFortressSwap(swap).swap(_asset, _underlyingAsset, _borrowAmount) : _borrowAmount;
-        
-        uint256 _amountCollateralOut = IFortressVault(address(collateralContract)).depositSingleUnderlying(_underlyingAmount, _underlyingAsset, address(this), 0);
+
+        address _collateralContract = address(collateralContract);
+        _approve(_underlyingAsset, _collateralContract, _underlyingAmount);
+        uint256 _amountCollateralOut = IFortressVault(_collateralContract).depositUnderlying(_underlyingAsset, address(this), _underlyingAmount, 0);
         if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
 
         // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
@@ -639,8 +646,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         // Note: Debit users collateral balance in preparation for swap, setting _recipient to address(this) means no transfer occurs
         _removeCollateral(_collateralToSwap, address(this), msg.sender);
-
-        _amountAssetOut = IFortressVault(address(collateralContract)).redeemSingleUnderlying(_collateralToSwap, _underlyingAsset, address(this), address(this), 0);
+        _amountAssetOut = IFortressVault(address(collateralContract)).redeemUnderlying(_underlyingAsset, address(this), address(this), _collateralToSwap, 0);
         
         address _asset = address(assetContract);
         if (_underlyingAsset != _asset) _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
@@ -772,39 +778,26 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         uint256 _price = uint256(1e36);
         address _oracleMultiply = oracleMultiply;
-        console.log("oracleMultiply", _oracleMultiply);
-        console.log("_price", _price);
         if (_oracleMultiply != address(0)) {
             (, int256 _answer, , , ) = AggregatorV3Interface(_oracleMultiply).latestRoundData();
             if (_answer <= 0) {
                 revert OracleLTEZero(_oracleMultiply);
             }
             _price = _price * uint256(_answer);
-            console.log("_price1", _price);
-            console.log("_answer", uint256(_answer));
         }
 
         address _oracleDivide = oracleDivide;
-        console.log("oracleDivide", _oracleDivide);
         if (_oracleDivide != address(0)) {
             (, int256 _answer, , , ) = AggregatorV3Interface(_oracleDivide).latestRoundData();
             if (_answer <= 0) {
                 revert OracleLTEZero(_oracleDivide);
             }
             _price = _price / uint256(_answer);
-            console.log("_price3", _price);
-            console.log("_answer2", uint256(_answer));
         }
 
         _exchangeRate = _price / oracleNormalization;
-        console.log("_exchangeRate", _exchangeRate);
-        console.log("oracleNormalization", oracleNormalization);
-        console.log("testy ", uint256(101757704720708598950851302) / uint256(100000000)); // todo - something is wrong here 
-        console.log("testy2 ", 1e10);
-        // 1017577047207085989
-        // 1016336101477398652
-        // write to storage, if no overflow
         if (_exchangeRate > type(uint224).max) revert PriceTooLarge();
+
         _exchangeRateInfo.exchangeRate = uint224(_exchangeRate);
         _exchangeRateInfo.lastTimestamp = uint32(block.timestamp);
         exchangeRateInfo = _exchangeRateInfo;

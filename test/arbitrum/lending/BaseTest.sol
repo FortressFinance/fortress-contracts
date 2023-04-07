@@ -4,6 +4,8 @@ pragma solidity 0.8.17;
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
+import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 import {ERC4626, ERC20} from "@solmate/mixins/ERC4626.sol";
 
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -20,6 +22,7 @@ import {VariableInterestRate, IRateCalculator} from "src/shared/lending/Variable
 abstract contract BaseTest is Test, AddressesArbi {
 
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     address owner;
     address alice;
@@ -68,6 +71,8 @@ abstract contract BaseTest is Test, AddressesArbi {
 
     // --------------------------------- Tests ---------------------------------
 
+    // --------------------------------- Init ---------------------------------
+
     function _testInitialize(address _pair) internal {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
@@ -89,13 +94,12 @@ abstract contract BaseTest is Test, AddressesArbi {
 
         (_lastBlock, _feeToProtocolRate, _lastTimestamp, _ratePerSec) = _lendingPair.currentRateInfo();
         (_lastTimestampRateInfo, _exchangeRate) = _lendingPair.exchangeRateInfo();
-        console.log("_exchangeRate ", _exchangeRate);
-
-        uint256 _hey = _lendingPair.updateExchangeRate();
-        console.log("_hey ", _hey);
-        revert("stop");
+        
+        uint256 _updatedExchangeRate = _lendingPair.updateExchangeRate();
+        
         assertEq(uint256(_lastTimestampRateInfo), block.timestamp, "_testInitialize: E05");
-        assertEq(uint256(_exchangeRate), 1e18, "_testInitialize: E005"); // todo
+        assertEq(uint256(_exchangeRate), _updatedExchangeRate, "_testInitialize: E005");
+        assertTrue(uint256(_exchangeRate) > 0, "_testInitialize: E0005");
         assertEq(uint256(_lastTimestamp), block.timestamp, "_testInitialize: E5");
         assertEq(uint256(_lastBlock), block.number, "_testInitialize: E6");
         assertEq(uint256(_feeToProtocolRate), _DEFAULT_PROTOCOL_FEE, "_testInitialize: E7");
@@ -104,89 +108,129 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_lendingPair.totalSupply(), 0, "_testInitialize: E10");
     }
 
-    // function _updateExchangeRate() internal returns (uint256 _exchangeRate) {
-    //     ExchangeRateInfo memory _exchangeRateInfo = exchangeRateInfo;
-    //     if (_exchangeRateInfo.lastTimestamp == block.timestamp) {
-    //         return _exchangeRate = _exchangeRateInfo.exchangeRate;
-    //     }
+    // --------------------------------- Lending ---------------------------------
 
-    //     // -- Dual Oracle --
-    //     // 
-    //     // Asset MKR is 1e18
-    //     // Collateral WBTC 1e8
-    //     // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
-    //     // ETH MKR Feed ==> ETH/MKR (returns ETH per MKR) --> MKR already at denomminator --> ETH/MKR will be oracleMultiply
-    //     // ETH BTC Feed ==> ETH/WBTC (returns ETH per WBTC) --> WBTC also at denomminator, but we want it at numerator  --> ETH/WBTC will be oracleDivide
-    //     // rate = ETHMKRFeed / ETHWBTCFeed --> WBTC/MKR
-    //     // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
+    function _testDepositLiquidity(address _pair, uint256 _amount) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
-    //     // -- single oracle --
-    //     // 
-    //     // Asset WETH is 1e18
-    //     // Collateral FXS 1e18
-    //     // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
-    //     // ETH FXS Feed => ETH/FXS --> (returns ETH per FXS) --> FXS is at denomminator, but we want it at numerator --> ETH/FXS will be oracleDivide (oracleMultiply is address(0))
-    //     // rate = 1 / ETHFXSFeed --> FXS/ETH 
-    //     // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
+        uint256 _totalAssetsBefore = _lendingPair.totalAssets();
+        uint256 _totalSupplyBefore = _lendingPair.totalSupply();
 
-    //     uint256 _price = uint256(1e36);
-    //     address _oracleMultiply = oracleMultiply;
-    //     if (_oracleMultiply != address(0)) {
-    //         (, int256 _answer, , , ) = AggregatorV3Interface(_oracleMultiply).latestRoundData();
-    //         if (_answer <= 0) {
-    //             revert OracleLTEZero(_oracleMultiply);
-    //         }
-    //         _price = _price * uint256(_answer);
-    //     }
+        {
+            (,,,,, uint64 _DEFAULT_INT, uint16 _DEFAULT_PROTOCOL_FEE,) = _lendingPair.getConstants();
+            (uint64 _lastBlock, uint64 _feeToProtocolRate, uint64 _lastTimestamp, uint64 _ratePerSec) = _lendingPair.currentRateInfo();
+            assertEq(uint256(_ratePerSec), _DEFAULT_INT, "_testDepositLiquidity: E0");
+            assertEq(uint256(_lastTimestamp), block.timestamp, "_testDepositLiquidity: E01");
+            assertEq(uint256(_lastBlock), block.number, "_testDepositLiquidity: E02");
+            assertEq(uint256(_feeToProtocolRate), _DEFAULT_PROTOCOL_FEE, "_testDepositLiquidity: E03");
+        }
 
-    //     address _oracleDivide = oracleDivide;
-    //     if (_oracleDivide != address(0)) {
-    //         (, int256 _answer, , , ) = AggregatorV3Interface(_oracleDivide).latestRoundData();
-    //         if (_answer <= 0) {
-    //             revert OracleLTEZero(_oracleDivide);
-    //         }
-    //         _price = _price / uint256(_answer);
-    //     }
+        vm.startPrank(alice);
+        _dealERC20(address(_lendingPair.asset()), alice, _amount);
+        IERC20(address(_lendingPair.asset())).approve(address(_lendingPair), _amount);
+        uint256 _aliceShares = _lendingPair.deposit(_amount, address(alice));
+        vm.stopPrank();
 
-    //     _exchangeRate = _price / oracleNormalization;
+        uint256 _totalAssetsAfter = _lendingPair.totalAssets();
+        uint256 _totalSupplyAfter = _lendingPair.totalSupply();
 
-    //     // write to storage, if no overflow
-    //     if (_exchangeRate > type(uint224).max) revert PriceTooLarge();
-    //     _exchangeRateInfo.exchangeRate = uint224(_exchangeRate);
-    //     _exchangeRateInfo.lastTimestamp = uint32(block.timestamp);
-    //     exchangeRateInfo = _exchangeRateInfo;
-        
-    //     emit UpdateExchangeRate(_exchangeRate);
-    // }
+        assertEq(_totalAssetsAfter, _totalAssetsBefore + _amount, "_testDepositLiquidity: E1");
+        assertEq(_totalSupplyAfter, _totalSupplyBefore + _aliceShares, "_testDepositLiquidity: E2");
+        assertEq(_lendingPair.balanceOf(address(alice)), _aliceShares, "_testDepositLiquidity: E3");
+        assertEq(IERC20(address(_lendingPair.asset())).balanceOf(address(_lendingPair)), _totalAssetsBefore + _amount, "_testDepositLiquidity: E4");
 
-    // function initialize(bytes calldata _rateInitCallData) external onlyOwner {
-    //     // Reverts if init data is not valid
-    //     IRateCalculator(rateContract).requireValidInitData(_rateInitCallData);
+        vm.startPrank(bob);
+        _dealERC20(address(_lendingPair.asset()), bob, _amount);
+        IERC20(address(_lendingPair.asset())).approve(address(_lendingPair), _amount);
+        uint256 _bobShares = _lendingPair.deposit(_amount, address(bob));
+        vm.stopPrank();
 
-    //     // Set rate init Data
-    //     rateInitCallData = _rateInitCallData;
+        _totalAssetsAfter = _lendingPair.totalAssets();
+        _totalSupplyAfter = _lendingPair.totalSupply();
 
-    //     // Instantiate Interest
+        assertEq(_totalAssetsAfter, _totalAssetsBefore + _amount * 2, "_testDepositLiquidity: E5");
+        assertEq(_totalSupplyAfter, _totalSupplyBefore + _aliceShares + _bobShares, "_testDepositLiquidity: E6");
+        assertEq(_lendingPair.balanceOf(address(bob)), _bobShares, "_testDepositLiquidity: E7");
+        assertEq(IERC20(address(_lendingPair.asset())).balanceOf(address(_lendingPair)), _totalAssetsBefore + _amount * 2, "_testDepositLiquidity: E8");
+
+        vm.startPrank(charlie);
+        _dealERC20(address(_lendingPair.asset()), charlie, _amount);
+        IERC20(address(_lendingPair.asset())).approve(address(_lendingPair), _amount);
+        uint256 _charlieShares = _lendingPair.deposit(_amount, address(charlie));
+        vm.stopPrank();
+
+        _totalAssetsAfter = _lendingPair.totalAssets();
+        _totalSupplyAfter = _lendingPair.totalSupply();
+
+        assertEq(_totalAssetsAfter, _totalAssetsBefore + _amount * 3, "_testDepositLiquidity: E9");
+        assertEq(_totalSupplyAfter, _totalSupplyBefore + _aliceShares + _bobShares + _charlieShares, "_testDepositLiquidity: E10");
+        assertEq(_lendingPair.balanceOf(address(charlie)), _charlieShares, "_testDepositLiquidity: E11");
+        assertEq(IERC20(address(_lendingPair.asset())).balanceOf(address(_lendingPair)), _totalAssetsBefore + _amount * 3, "_testDepositLiquidity: E12");
+
+        {
+            (,,,,, uint64 _DEFAULT_INT, uint16 _DEFAULT_PROTOCOL_FEE,) = _lendingPair.getConstants();
+            (uint64 _lastBlock, uint64 _feeToProtocolRate, uint64 _lastTimestamp, uint64 _ratePerSec) = _lendingPair.currentRateInfo();
+            assertEq(uint256(_ratePerSec), _DEFAULT_INT, "_testDepositLiquidity: E13");
+            assertEq(uint256(_lastTimestamp), block.timestamp, "_testDepositLiquidity: E14");
+            assertEq(uint256(_lastBlock), block.number, "_testDepositLiquidity: E15");
+            assertEq(uint256(_feeToProtocolRate), _DEFAULT_PROTOCOL_FEE, "_testDepositLiquidity: E16");
+        }
+    }
+
+    // function _testRedeemLiquidity
+
+    // --------------------------------- Borrowing --------------------------------
+
+    function _testLeveragePosition(address _pair, address _underlyingAsset) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        uint256 _borrowAmount = _lendingPair.totalAssets() / 3;
+        uint256 _initialCollateralAmount = ((_borrowAmount * 1e5) / _lendingPair.maxLTV()) - _borrowAmount;
+
+        // uint256 _totalAssetsBefore = _lendingPair.totalAssets();
+        // uint256 _totalSupplyBefore = _lendingPair.totalSupply();
+
+        vm.startPrank(alice);
+        _dealERC20(address(_lendingPair.collateralContract()), alice, _initialCollateralAmount);
+        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _initialCollateralAmount, "_testLeveragePosition: E0");
+        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _initialCollateralAmount);
+        _lendingPair.leveragePosition(_borrowAmount, _initialCollateralAmount, 0, _underlyingAsset);
+    }
+
+    // function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
+    //     if (pauseAddLeverage) revert AddLeveragePaused();
+
     //     _addInterest();
-
-    //     // Instantiate Exchange Rate
     //     _updateExchangeRate();
+
+    //     // Add initial collateral
+    //     if (_initialCollateralAmount > 0) _addCollateral(msg.sender, _initialCollateralAmount, msg.sender);
+
+    //     // Debit borrowers (msg.sender) account
+    //     uint256 _borrowShares = _borrowAsset(_borrowAmount);
+
+    //     uint256 _underlyingAmount;
+    //     address _asset = address(assetContract);
+    //     _underlyingAmount = _asset != _underlyingAsset ? IFortressSwap(swap).swap(_asset, _underlyingAsset, _borrowAmount) : _borrowAmount;
+        
+    //     uint256 _amountCollateralOut = IFortressVault(address(collateralContract)).depositSingleUnderlying(_underlyingAmount, _underlyingAsset, address(this), 0);
+    //     if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
+
+    //     // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
+    //     _addCollateral(address(this), _amountCollateralOut, msg.sender);
+        
+    //     emit LeveragedPosition(msg.sender, _borrowAmount, _borrowShares, _initialCollateralAmount, _amountCollateralOut);
+
+    //     return _initialCollateralAmount + _amountCollateralOut;
     // }
 
     // --------------------------------- Internal functions ---------------------------------
 
-    function _getAssetFromETH(address _owner, address _asset, uint256 _amount) internal returns (uint256 _assetOut) {
-        vm.prank(_owner);
-
-        if (_asset == WETH) {
-            IWETH(WETH).deposit{ value: _amount }();
-            _assetOut = _amount;
-            require(_assetOut > 0, "BaseTest: E1");
-            assertEq(IERC20(_asset).balanceOf(_owner), _assetOut, "BaseTest: E2");
-        } else {
-            _assetOut = fortressSwap.swap{ value: _amount }(ETH, _asset, _amount);
-        }
-        
-        assertEq(IERC20(_asset).balanceOf(_owner), _assetOut, "_getAssetFromETH: E1");
+    function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
+        deal({ token: address(_token), to: _recipient, give: _amount});
     }
+
+    // function getfcTokens(uint256 _amount, address _vault) internal view returns (address _fcToken) {
+    //     _fcToken = FortressLendingPair(_pair).fcToken();
+    // }
 }
