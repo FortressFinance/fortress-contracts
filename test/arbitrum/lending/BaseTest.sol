@@ -69,14 +69,109 @@ abstract contract BaseTest is Test, AddressesArbi {
     // --------------------------------- Tests ---------------------------------
 
     function _testInitialize(address _pair) internal {
-        vm.prank(owner);
-
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        (uint64 _lastBlock, uint64 _feeToProtocolRate, uint64 _lastTimestamp, uint64 _ratePerSec) = _lendingPair.currentRateInfo();
+        (,,,,, uint64 _DEFAULT_INT, uint16 _DEFAULT_PROTOCOL_FEE,) = _lendingPair.getConstants();
+        (uint32 _lastTimestampRateInfo, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
+
+        assertEq(uint256(_lastTimestampRateInfo), 0, "_testInitialize: E0");
+        assertEq(uint256(_exchangeRate), 0, "_testInitialize: E01");
+        assertEq(uint256(_lastTimestamp), 0, "_testInitialize: E1");
+        assertEq(uint256(_lastBlock), 0, "_testInitialize: E2");
+        assertEq(uint256(_feeToProtocolRate), _DEFAULT_PROTOCOL_FEE, "_testInitialize: E3");
+        assertEq(uint256(_lastTimestamp), 0, "_testInitialize: E4");
+
+        vm.startPrank(owner);
         bytes memory _rateInitCallData;
         _lendingPair.initialize(_rateInitCallData);
-
         vm.stopPrank();
+
+        (_lastBlock, _feeToProtocolRate, _lastTimestamp, _ratePerSec) = _lendingPair.currentRateInfo();
+        (_lastTimestampRateInfo, _exchangeRate) = _lendingPair.exchangeRateInfo();
+        console.log("_exchangeRate ", _exchangeRate);
+
+        uint256 _hey = _lendingPair.updateExchangeRate();
+        console.log("_hey ", _hey);
+        revert("stop");
+        assertEq(uint256(_lastTimestampRateInfo), block.timestamp, "_testInitialize: E05");
+        assertEq(uint256(_exchangeRate), 1e18, "_testInitialize: E005"); // todo
+        assertEq(uint256(_lastTimestamp), block.timestamp, "_testInitialize: E5");
+        assertEq(uint256(_lastBlock), block.number, "_testInitialize: E6");
+        assertEq(uint256(_feeToProtocolRate), _DEFAULT_PROTOCOL_FEE, "_testInitialize: E7");
+        assertEq(uint256(_ratePerSec), _DEFAULT_INT, "_testInitialize: E8");
+        assertEq(_lendingPair.totalAssets(), 0, "_testInitialize: E9");
+        assertEq(_lendingPair.totalSupply(), 0, "_testInitialize: E10");
     }
+
+    // function _updateExchangeRate() internal returns (uint256 _exchangeRate) {
+    //     ExchangeRateInfo memory _exchangeRateInfo = exchangeRateInfo;
+    //     if (_exchangeRateInfo.lastTimestamp == block.timestamp) {
+    //         return _exchangeRate = _exchangeRateInfo.exchangeRate;
+    //     }
+
+    //     // -- Dual Oracle --
+    //     // 
+    //     // Asset MKR is 1e18
+    //     // Collateral WBTC 1e8
+    //     // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
+    //     // ETH MKR Feed ==> ETH/MKR (returns ETH per MKR) --> MKR already at denomminator --> ETH/MKR will be oracleMultiply
+    //     // ETH BTC Feed ==> ETH/WBTC (returns ETH per WBTC) --> WBTC also at denomminator, but we want it at numerator  --> ETH/WBTC will be oracleDivide
+    //     // rate = ETHMKRFeed / ETHWBTCFeed --> WBTC/MKR
+    //     // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
+
+    //     // -- single oracle --
+    //     // 
+    //     // Asset WETH is 1e18
+    //     // Collateral FXS 1e18
+    //     // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
+    //     // ETH FXS Feed => ETH/FXS --> (returns ETH per FXS) --> FXS is at denomminator, but we want it at numerator --> ETH/FXS will be oracleDivide (oracleMultiply is address(0))
+    //     // rate = 1 / ETHFXSFeed --> FXS/ETH 
+    //     // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
+
+    //     uint256 _price = uint256(1e36);
+    //     address _oracleMultiply = oracleMultiply;
+    //     if (_oracleMultiply != address(0)) {
+    //         (, int256 _answer, , , ) = AggregatorV3Interface(_oracleMultiply).latestRoundData();
+    //         if (_answer <= 0) {
+    //             revert OracleLTEZero(_oracleMultiply);
+    //         }
+    //         _price = _price * uint256(_answer);
+    //     }
+
+    //     address _oracleDivide = oracleDivide;
+    //     if (_oracleDivide != address(0)) {
+    //         (, int256 _answer, , , ) = AggregatorV3Interface(_oracleDivide).latestRoundData();
+    //         if (_answer <= 0) {
+    //             revert OracleLTEZero(_oracleDivide);
+    //         }
+    //         _price = _price / uint256(_answer);
+    //     }
+
+    //     _exchangeRate = _price / oracleNormalization;
+
+    //     // write to storage, if no overflow
+    //     if (_exchangeRate > type(uint224).max) revert PriceTooLarge();
+    //     _exchangeRateInfo.exchangeRate = uint224(_exchangeRate);
+    //     _exchangeRateInfo.lastTimestamp = uint32(block.timestamp);
+    //     exchangeRateInfo = _exchangeRateInfo;
+        
+    //     emit UpdateExchangeRate(_exchangeRate);
+    // }
+
+    // function initialize(bytes calldata _rateInitCallData) external onlyOwner {
+    //     // Reverts if init data is not valid
+    //     IRateCalculator(rateContract).requireValidInitData(_rateInitCallData);
+
+    //     // Set rate init Data
+    //     rateInitCallData = _rateInitCallData;
+
+    //     // Instantiate Interest
+    //     _addInterest();
+
+    //     // Instantiate Exchange Rate
+    //     _updateExchangeRate();
+    // }
 
     // --------------------------------- Internal functions ---------------------------------
 

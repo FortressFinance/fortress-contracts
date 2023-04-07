@@ -13,6 +13,8 @@ import "./interfaces/IRateCalculator.sol";
 import "../fortress-interfaces/IFortressSwap.sol";
 import "../fortress-interfaces/IFortressVault.sol";
 
+import "forge-std/console.sol";
+
 /// @notice  An abstract contract which contains the core logic and storage for the FortressLendingPair
 abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGuard, ERC4626 {
     
@@ -160,34 +162,12 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     }
 
     // ============================================================================================
-    // Internal Helpers
+    // External Helpers
     // ============================================================================================
-
-    /// @notice The ```_totalAssetAvailable``` function returns the total balance of Asset Tokens in the contract
-    /// @return The balance of Asset Tokens held by contract
-    function _totalAssetAvailable() internal view returns (uint256) {
-        return totalAssets() - totalBorrow.amount;
-    }
 
     /// @notice Returns the total amount of assets managed by Vault (including lent assets).
     function totalAssets() public view override returns (uint256) {
         return totalAUM;
-    }
-
-    /// @notice The ```_isSolvent``` function determines if a given borrower is solvent given an exchange rate
-    /// @param _borrower The borrower address to check
-    /// @param _exchangeRate The exchange rate, i.e. the amount of collateral to buy 1e18 asset
-    /// @return Whether borrower is solvent
-    function _isSolvent(address _borrower, uint256 _exchangeRate) internal view returns (bool) {
-        if (maxLTV == 0) return true;
-        BorrowAccount memory _totalBorrow = totalBorrow;
-        uint256 _borrowerAmount = convertToAssets(_totalBorrow.amount, _totalBorrow.shares, userBorrowShares[_borrower], true);
-        if (_borrowerAmount == 0) return true;
-        uint256 _collateralAmount = userCollateralBalance[_borrower];
-        if (_collateralAmount == 0) return false;
-
-        uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
-        return _ltv <= maxLTV;
     }
 
     /// @notice Calculates the shares value in relationship to `amount` and `total`
@@ -238,6 +218,54 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         }
 
         return convertToShares(_assets);
+    }
+
+    function getConstants() external pure
+        returns (
+            uint256 _LTV_PRECISION,
+            uint256 _LIQ_PRECISION,
+            uint256 _UTIL_PREC,
+            uint256 _FEE_PRECISION,
+            uint256 _EXCHANGE_PRECISION,
+            uint64 _DEFAULT_INT,
+            uint16 _DEFAULT_PROTOCOL_FEE,
+            uint256 _MAX_PROTOCOL_FEE
+        )
+    {
+        _LTV_PRECISION = LTV_PRECISION;
+        _LIQ_PRECISION = LIQ_PRECISION;
+        _UTIL_PREC = UTIL_PREC;
+        _FEE_PRECISION = FEE_PRECISION;
+        _EXCHANGE_PRECISION = EXCHANGE_PRECISION;
+        _DEFAULT_INT = DEFAULT_INT;
+        _DEFAULT_PROTOCOL_FEE = DEFAULT_PROTOCOL_FEE;
+        _MAX_PROTOCOL_FEE = MAX_PROTOCOL_FEE;
+    }
+
+    // ============================================================================================
+    // Internal Helpers
+    // ============================================================================================
+
+    /// @notice The ```_totalAssetAvailable``` function returns the total balance of Asset Tokens in the contract
+    /// @return The balance of Asset Tokens held by contract
+    function _totalAssetAvailable() internal view returns (uint256) {
+        return totalAssets() - totalBorrow.amount;
+    }
+
+    /// @notice The ```_isSolvent``` function determines if a given borrower is solvent given an exchange rate
+    /// @param _borrower The borrower address to check
+    /// @param _exchangeRate The exchange rate, i.e. the amount of collateral to buy 1e18 asset
+    /// @return Whether borrower is solvent
+    function _isSolvent(address _borrower, uint256 _exchangeRate) internal view returns (bool) {
+        if (maxLTV == 0) return true;
+        BorrowAccount memory _totalBorrow = totalBorrow;
+        uint256 _borrowerAmount = convertToAssets(_totalBorrow.amount, _totalBorrow.shares, userBorrowShares[_borrower], true);
+        if (_borrowerAmount == 0) return true;
+        uint256 _collateralAmount = userCollateralBalance[_borrower];
+        if (_collateralAmount == 0) return false;
+
+        uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
+        return _ltv <= maxLTV;
     }
 
     // ============================================================================================
@@ -457,6 +485,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit Withdraw(msg.sender, _receiver, _owner, _assets, _shares);
     }
 
+    // TODO - remove external functions and adjust internal function accordingly (no need for _sender(?))
     // ============================================================================================
     // Functions: Borrowing
     // Visability: External
@@ -743,24 +772,34 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         uint256 _price = uint256(1e36);
         address _oracleMultiply = oracleMultiply;
+        console.log("oracleMultiply", _oracleMultiply);
+        console.log("_price", _price);
         if (_oracleMultiply != address(0)) {
             (, int256 _answer, , , ) = AggregatorV3Interface(_oracleMultiply).latestRoundData();
             if (_answer <= 0) {
                 revert OracleLTEZero(_oracleMultiply);
             }
             _price = _price * uint256(_answer);
+            console.log("_price1", _price);
+            console.log("_answer", uint256(_answer));
         }
 
         address _oracleDivide = oracleDivide;
+        console.log("oracleDivide", _oracleDivide);
         if (_oracleDivide != address(0)) {
             (, int256 _answer, , , ) = AggregatorV3Interface(_oracleDivide).latestRoundData();
             if (_answer <= 0) {
                 revert OracleLTEZero(_oracleDivide);
             }
             _price = _price / uint256(_answer);
+            console.log("_price3", _price);
+            console.log("_answer2", uint256(_answer));
         }
 
         _exchangeRate = _price / oracleNormalization;
+        console.log("_exchangeRate", _exchangeRate);
+        console.log("oracleNormalization", oracleNormalization);
+        console.log("testy ", uint256(101757704720708598950851302) / uint256(100000000)); // todo - something is wrong here 
 
         // write to storage, if no overflow
         if (_exchangeRate > type(uint224).max) revert PriceTooLarge();

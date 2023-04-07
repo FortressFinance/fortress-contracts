@@ -34,6 +34,10 @@ contract TestUSDCfcGLPPair is BaseTest {
         uint256 _liquidationFee = 10000; // 10%
         
         lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, _maxLTV, _liquidationFee);
+
+        // --------------------------------- init pair ---------------------------------
+
+        // _testInitialize(address(lendingPair));
     }
 
     // -- Dual Oracle --
@@ -57,6 +61,8 @@ contract TestUSDCfcGLPPair is BaseTest {
 
     // NOTES
     // 1 - consider implementing a delay between users entering and existing a position
+    // 101757704720708598950851302
+    // 982716741444437407
 
     function testSanity() public {
         assertTrue(true);
