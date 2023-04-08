@@ -84,6 +84,8 @@ contract AddressesArbi {
 
     // The address of Chainlink USD/USDC price feed
     address constant USD_USDC_FEED = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3;
+    // The address of Chainlink USD/FRAX price feed
+    address constant USD_FRAX_FEED = 0x0809E3d38d1B4214958faf06D8b1B1a2b73f2ab8;
 
     // ------------------------------------- Fortress -------------------------------------
 

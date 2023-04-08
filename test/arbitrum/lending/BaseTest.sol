@@ -96,7 +96,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         (_lastTimestampRateInfo, _exchangeRate) = _lendingPair.exchangeRateInfo();
         
         uint256 _updatedExchangeRate = _lendingPair.updateExchangeRate();
-        
+
         assertEq(uint256(_lastTimestampRateInfo), block.timestamp, "_testInitialize: E05");
         assertEq(uint256(_exchangeRate), _updatedExchangeRate, "_testInitialize: E005");
         assertTrue(uint256(_exchangeRate) > 0, "_testInitialize: E0005");
@@ -185,20 +185,20 @@ abstract contract BaseTest is Test, AddressesArbi {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
         uint256 _borrowAmount = _lendingPair.totalAssets() / 3;
-        // use exchange rate to calculate borrow amount in collateral
+        // use exchange rate to calculate borrow amount in collateral // todo
         // uint256 _borrowAmountInCollateral = _borrowAmount * 1e5 / _lendingPair.exchangeRateStored();
         uint256 _initialCollateralAmount = ((_borrowAmount * 1e5) / _lendingPair.maxLTV()) - _borrowAmount;
-        console.log("borrowAmount1: %s", _borrowAmount);
-        console.log("initialCollateralAmount1: %s", _initialCollateralAmount);
+
         // uint256 _totalAssetsBefore = _lendingPair.totalAssets();
         // uint256 _totalSupplyBefore = _lendingPair.totalSupply();
 
         vm.startPrank(alice);
-        // _dealERC20(address(_lendingPair.collateralContract()), alice, _initialCollateralAmount);
-        // assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _initialCollateralAmount, "_testLeveragePosition: E0");
-        // IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _initialCollateralAmount);
-        // _lendingPair.leveragePosition(_borrowAmount, _initialCollateralAmount, 0, _underlyingAsset);
-        _lendingPair.leveragePosition(_borrowAmount, 0, 0, _underlyingAsset);
+        _initialCollateralAmount += 1e18;
+        _dealERC20(address(_lendingPair.collateralContract()), alice, _initialCollateralAmount);
+        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _initialCollateralAmount, "_testLeveragePosition: E0");
+        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _initialCollateralAmount);
+        _lendingPair.leveragePosition(_borrowAmount, _initialCollateralAmount, 0, _underlyingAsset);
+        // _lendingPair.leveragePosition(_borrowAmount, 0, 0, _underlyingAsset);
     }
 
     // function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {

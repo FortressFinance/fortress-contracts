@@ -37,6 +37,7 @@ abstract contract FortressLendingConstants {
     error Paused();
     error InsufficientBalance();
     error NotOwner();
+    error InvalidUnderlyingAsset();
 
     /// @notice The ```WithdrawFees``` event fires when the fees are withdrawn
     /// @param _shares Number of _shares (fTokens) redeemed

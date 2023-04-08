@@ -268,24 +268,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_collateralAmount == 0) return false;
 
         uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
-        console.log("1: %s", (_borrowerAmount * _exchangeRate));
-        console.log("2: %s", (_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION);
-        console.log("3: %s", ((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION);
-        console.log("4: %s", ((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION / _collateralAmount);
         
-        // 1016532336624474192000000
-        // 101650858710821068600000
-
-        // 2704819293264437470492671
-        // 2704756099849342911994568
-
-        console.log("_borrowerAmount: %s", _borrowerAmount);
-        console.log("_collateralAmount: %s", _collateralAmount);
-        console.log("_exchangeRate: %s", _exchangeRate);
-        console.log("LTV: %s", _ltv);
-        console.log("maxLTV: %s", maxLTV);
-        console.log("_ltv <= maxLTV: %s", (_ltv <= maxLTV));
-        revert("test");
         return _ltv <= maxLTV;
     }
 
@@ -627,6 +610,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _minAmount The minimum amount of Collateral Tokens to be received in exchange for the borrowed Asset Tokens
     /// @return _totalCollateralAdded The total amount of Collateral Tokens added to a users account (initial + swap)
     function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
+        if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
         if (pauseAddLeverage) revert AddLeveragePaused();
 
         _addInterest();
@@ -643,21 +627,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_asset != _underlyingAsset) {
             address _swap = address(swap);
             _approve(_asset, _swap, _borrowAmount);
-            // USDC
-            require(IERC20(address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8)).balanceOf(address(this)) >= _borrowAmount, "E0");
-            // frax
-            require(IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)) == 0, "E1");
-            console.log("usdc balanceOf0", IERC20(address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8)).balanceOf(address(this)));
-            console.log("frax balanceOf0", IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)));
             _underlyingAmount = IFortressSwap(_swap).swap(_asset, _underlyingAsset, _borrowAmount);
-            // FRAX
-            require(IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)) == _underlyingAmount, "E2");
-            console.log("usdc balanceOf1", IERC20(address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8)).balanceOf(address(this)));
-            console.log("frax balanceOf1", IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)));
-            console.log("_underlyingAmount66", _underlyingAmount);
-            console.log("_borrowAmount66", _borrowAmount);
-            require(_underlyingAmount == _borrowAmount, "Swap failed");
-            // TODO - usdc has 6 decimals, frax has 18 decimals
         } else {
             _underlyingAmount = _borrowAmount;
         }
@@ -665,12 +635,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         address _collateralContract = address(collateralContract);
         _approve(_underlyingAsset, _collateralContract, _underlyingAmount);
         uint256 _amountCollateralOut = IFortressVault(_collateralContract).depositUnderlying(_underlyingAsset, address(this), _underlyingAmount, 0);
-        console.log("amountCollateralOut9", _amountCollateralOut);
-        console.log("_underlyingAmount9", _underlyingAmount);
-        console.log("_borrowAmount9", _borrowAmount);
-        // 2704579277928982693872398
-        // 2661243694737965314731251
-        // 1000000000000000000
         if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
 
         // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
@@ -686,6 +650,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _minAmount The minimum amount of Asset Tokens to receive during the swap
     /// @return _amountAssetOut The amount of Asset Tokens received for the Collateral Tokens, the amount the borrowers account was credited
     function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
+        if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
         if (pauseRemoveLeverage) revert RemoveLeveragePaused();
 
         _addInterest();

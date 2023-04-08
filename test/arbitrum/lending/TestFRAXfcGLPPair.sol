@@ -5,7 +5,7 @@ import {FortressGLPOracle} from "src/shared/lending/oracles/FortressGLPOracle.so
 
 import "test/arbitrum/lending/BaseTest.sol";
 
-contract TestUSDCfcGLPPair is BaseTest {
+contract TestFRAXfcGLPPair is BaseTest {
 
     FortressGLPOracle oracle;
     FortressLendingPair lendingPair;
@@ -18,12 +18,13 @@ contract TestUSDCfcGLPPair is BaseTest {
         // --------------------------------- deploy pair ---------------------------------
 
         // USDC asset (1e18 precision), fcGLP collateral (1e18 precision)
-        ERC20 _asset = ERC20(address(USDC)); // asset
+        ERC20 _asset = ERC20(address(FRAX)); // asset
         address _collateral = address(fcGLP); // collateral
-        string memory _name = "Fortress USDC/fcGLP Lending Pair";
-        string memory _symbol = "fUSDC/fcGLP";
-        address _oracleMultiply = address(USD_USDC_FEED); // denominator oracle (1e8 precision)
+        string memory _name = "Fortress FRAX/fcGLP Lending Pair";
+        string memory _symbol = "fFRAX/fcGLP";
+        address _oracleMultiply = address(USD_FRAX_FEED); // denominator oracle (1e8 precision)
         address _oracleDivide = address(oracle); // numerator oracle (1e18 precision)
+        // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
         uint256 _oracleNormalization = 1e8; // 1^(18 + 18 - 8 + 18 - 18)
         address _rateContract = address(rateCalculator);
         
