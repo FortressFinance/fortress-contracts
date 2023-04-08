@@ -273,8 +273,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_lendingPair.totalAssets() - _totalBorrowAmount, 0, "_testLeveragePosition: E24");
 
         assertTrue(IERC20(address(_lendingPair)).balanceOf(alice) > 0, "_testLeveragePosition: E25");
-        // vm.expectRevert(InsufficientAssetsInContract.selector);
-        // vm.expectRevert()
+        // vm.expectRevert(); // reverts with InsufficientAssetsInContract
         // _lendingPair.redeem(IERC20(address(_lendingPair)).balanceOf(alice), alice, alice);
         
         vm.startPrank(charlie);
@@ -288,34 +287,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         
         vm.stopPrank();
     }
-    error InsufficientAssetsInContract();
 
-    // function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
-    //     if (pauseAddLeverage) revert AddLeveragePaused();
-
-    //     _addInterest();
-    //     _updateExchangeRate();
-
-    //     // Add initial collateral
-    //     if (_initialCollateralAmount > 0) _addCollateral(msg.sender, _initialCollateralAmount, msg.sender);
-
-    //     // Debit borrowers (msg.sender) account
-    //     uint256 _borrowShares = _borrowAsset(_borrowAmount);
-
-    //     uint256 _underlyingAmount;
-    //     address _asset = address(assetContract);
-    //     _underlyingAmount = _asset != _underlyingAsset ? IFortressSwap(swap).swap(_asset, _underlyingAsset, _borrowAmount) : _borrowAmount;
-        
-    //     uint256 _amountCollateralOut = IFortressVault(address(collateralContract)).depositSingleUnderlying(_underlyingAmount, _underlyingAsset, address(this), 0);
-    //     if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
-
-    //     // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
-    //     _addCollateral(address(this), _amountCollateralOut, msg.sender);
-        
-    //     emit LeveragedPosition(msg.sender, _borrowAmount, _borrowShares, _initialCollateralAmount, _amountCollateralOut);
-
-    //     return _initialCollateralAmount + _amountCollateralOut;
-    // }
+    // function removeLeverage
 
     // --------------------------------- Internal functions ---------------------------------
 
