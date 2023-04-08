@@ -268,7 +268,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_collateralAmount == 0) return false;
 
         uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
-        
+
         return _ltv <= maxLTV;
     }
 

@@ -185,21 +185,110 @@ abstract contract BaseTest is Test, AddressesArbi {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
         uint256 _borrowAmount = _lendingPair.totalAssets() / 3;
-        // use exchange rate to calculate borrow amount in collateral // todo
-        // uint256 _borrowAmountInCollateral = _borrowAmount * 1e5 / _lendingPair.exchangeRateStored();
-        uint256 _initialCollateralAmount = ((_borrowAmount * 1e5) / _lendingPair.maxLTV()) - _borrowAmount;
+        (, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
+        uint256 _minCollateral = (((_borrowAmount * 1e5) / _lendingPair.maxLTV()) - _borrowAmount) * uint256(_exchangeRate) / 1e18; 
+        
+        uint256 _totalAssetsBefore = _lendingPair.totalAssets();
+        uint256 _totalSupplyBefore = _lendingPair.totalSupply();
+        (uint256 _totalBorrowAmount, uint256 _totalBorrowSupply) = _lendingPair.totalBorrow();
+        uint256 _totalCollateral = _lendingPair.totalCollateral();
 
-        // uint256 _totalAssetsBefore = _lendingPair.totalAssets();
-        // uint256 _totalSupplyBefore = _lendingPair.totalSupply();
-
+        assertEq(_totalCollateral, 0, "_testLeveragePosition: E00");
+        assertEq(_totalBorrowAmount, 0, "_testLeveragePosition: E0");
+        assertEq(_totalBorrowSupply, 0, "_testLeveragePosition: E1");
+        assertTrue(_totalAssetsBefore > 0, "_testLeveragePosition: E2");
+        assertTrue(_totalSupplyBefore > 0, "_testLeveragePosition: E3");
+        
         vm.startPrank(alice);
-        _initialCollateralAmount += 1e18;
-        _dealERC20(address(_lendingPair.collateralContract()), alice, _initialCollateralAmount);
-        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _initialCollateralAmount, "_testLeveragePosition: E0");
-        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _initialCollateralAmount);
-        _lendingPair.leveragePosition(_borrowAmount, _initialCollateralAmount, 0, _underlyingAsset);
-        // _lendingPair.leveragePosition(_borrowAmount, 0, 0, _underlyingAsset);
+        _dealERC20(address(_lendingPair.collateralContract()), alice, _minCollateral);
+        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _minCollateral, "_testLeveragePosition: E03");
+        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
+
+        vm.expectRevert();
+        // remove 10% of collateral
+        _lendingPair.leveragePosition(_borrowAmount, (_minCollateral * 9 / 10), 0, _underlyingAsset);
+
+        uint256 _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
+        _totalCollateral += _userAddedCollateral;
+
+        (_totalBorrowAmount, _totalBorrowSupply) = _lendingPair.totalBorrow();
+        
+        assertEq(_lendingPair.totalCollateral(), _totalCollateral, "_testLeveragePosition: E4");
+        assertEq(_lendingPair.totalAssets(), _totalAssetsBefore, "_testLeveragePosition: E5");
+        assertEq(_lendingPair.totalSupply(), _totalSupplyBefore, "_testLeveragePosition: E6");
+        assertEq(_totalBorrowAmount, _borrowAmount, "_testLeveragePosition: E7");
+        assertEq(_totalBorrowSupply, _lendingPair.convertToShares(_totalBorrowAmount, _totalBorrowSupply, _borrowAmount, true), "_testLeveragePosition: E8");
+        assertEq(_userAddedCollateral, _lendingPair.userCollateralBalance(alice), "_testLeveragePosition: E9");
+
+        vm.stopPrank();
+
+        _totalAssetsBefore = _lendingPair.totalAssets();
+        _totalSupplyBefore = _lendingPair.totalSupply();
+        (_totalBorrowAmount, _totalBorrowSupply) = _lendingPair.totalBorrow();
+        _totalCollateral = _lendingPair.totalCollateral();
+
+        vm.startPrank(bob);
+        _dealERC20(address(_lendingPair.collateralContract()), bob, _minCollateral);
+        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(bob)), _minCollateral, "_testLeveragePosition: E10");
+        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
+
+        _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
+        _totalCollateral += _userAddedCollateral;
+
+        (_totalBorrowAmount, _totalBorrowSupply) = _lendingPair.totalBorrow();
+
+        assertEq(_lendingPair.totalCollateral(), _totalCollateral, "_testLeveragePosition: E11");
+        assertEq(_lendingPair.totalAssets(), _totalAssetsBefore, "_testLeveragePosition: E12");
+        assertEq(_lendingPair.totalSupply(), _totalSupplyBefore, "_testLeveragePosition: E13");
+        assertEq(_totalBorrowAmount, _borrowAmount * 2, "_testLeveragePosition: E14");
+        assertEq(_totalBorrowSupply, _lendingPair.convertToShares(_totalBorrowAmount, _totalBorrowSupply, _borrowAmount, true) * 2, "_testLeveragePosition: E15");
+        assertEq(_userAddedCollateral, _lendingPair.userCollateralBalance(bob), "_testLeveragePosition: E16");
+
+        vm.stopPrank();
+
+        _totalAssetsBefore = _lendingPair.totalAssets();
+        _totalSupplyBefore = _lendingPair.totalSupply();
+        (_totalBorrowAmount, _totalBorrowSupply) = _lendingPair.totalBorrow();
+        _totalCollateral = _lendingPair.totalCollateral();
+
+        vm.startPrank(charlie);
+        _dealERC20(address(_lendingPair.collateralContract()), charlie, _minCollateral);
+        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(charlie)), _minCollateral, "_testLeveragePosition: E17");
+        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
+
+        _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
+        _totalCollateral += _userAddedCollateral;
+
+        (_totalBorrowAmount, _totalBorrowSupply) = _lendingPair.totalBorrow();
+
+        assertEq(_lendingPair.totalCollateral(), _totalCollateral, "_testLeveragePosition: E18");
+        assertEq(_lendingPair.totalAssets(), _totalAssetsBefore, "_testLeveragePosition: E19");
+        assertEq(_lendingPair.totalSupply(), _totalSupplyBefore, "_testLeveragePosition: E20");
+        assertEq(_totalBorrowAmount, _borrowAmount * 3, "_testLeveragePosition: E21");
+        assertEq(_totalBorrowSupply, _lendingPair.convertToShares(_totalBorrowAmount, _totalBorrowSupply, _borrowAmount, true) * 3, "_testLeveragePosition: E22");
+        assertEq(_userAddedCollateral, _lendingPair.userCollateralBalance(charlie), "_testLeveragePosition: E23");
+
+        vm.stopPrank();
+
+        assertEq(_lendingPair.totalAssets() - _totalBorrowAmount, 0, "_testLeveragePosition: E24");
+
+        assertTrue(IERC20(address(_lendingPair)).balanceOf(alice) > 0, "_testLeveragePosition: E25");
+        // vm.expectRevert(InsufficientAssetsInContract.selector);
+        // vm.expectRevert()
+        // _lendingPair.redeem(IERC20(address(_lendingPair)).balanceOf(alice), alice, alice);
+        
+        vm.startPrank(charlie);
+        _minCollateral = 1 ether;
+        _dealERC20(address(_lendingPair.collateralContract()), charlie, _minCollateral);
+        assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(charlie)), _minCollateral, "_testLeveragePosition: E26");
+        IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
+
+        vm.expectRevert(); // reverts with InsufficientAssetsInContract
+        _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
+        
+        vm.stopPrank();
     }
+    error InsufficientAssetsInContract();
 
     // function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
     //     if (pauseAddLeverage) revert AddLeveragePaused();
