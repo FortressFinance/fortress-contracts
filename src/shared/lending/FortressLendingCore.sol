@@ -105,7 +105,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _configData abi.encode(address _asset, address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract, bytes memory _rateInitData)
     /// @param _maxLTV The Maximum Loan-To-Value for a borrower to be considered solvent (1e5 precision)
     /// @param _liquidationFee The fee paid to liquidators given as a % of the repayment (1e5 precision)
-    constructor(ERC20 _asset, string memory _name, string memory _symbol, bytes memory _configData, address _owner, uint256 _maxLTV, uint256 _liquidationFee)
+    constructor(ERC20 _asset, string memory _name, string memory _symbol, bytes memory _configData, address _owner, address _swap, uint256 _maxLTV, uint256 _liquidationFee)
         ERC4626(_asset, _name, _symbol) {
 
         (address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract,)
@@ -138,6 +138,9 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         }
 
         rateContract = IRateCalculator(_rateContract);
+
+        // Set swap
+        swap = _swap;
 
         // Set admins
         owner = _owner;
@@ -265,6 +268,24 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_collateralAmount == 0) return false;
 
         uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
+        console.log("1: %s", (_borrowerAmount * _exchangeRate));
+        console.log("2: %s", (_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION);
+        console.log("3: %s", ((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION);
+        console.log("4: %s", ((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION / _collateralAmount);
+        
+        // 1016532336624474192000000
+        // 101650858710821068600000
+
+        // 2704819293264437470492671
+        // 2704756099849342911994568
+
+        console.log("_borrowerAmount: %s", _borrowerAmount);
+        console.log("_collateralAmount: %s", _collateralAmount);
+        console.log("_exchangeRate: %s", _exchangeRate);
+        console.log("LTV: %s", _ltv);
+        console.log("maxLTV: %s", maxLTV);
+        console.log("_ltv <= maxLTV: %s", (_ltv <= maxLTV));
+        revert("test");
         return _ltv <= maxLTV;
     }
 
@@ -619,11 +640,37 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         uint256 _underlyingAmount;
         address _asset = address(assetContract);
-        _underlyingAmount = _asset != _underlyingAsset ? IFortressSwap(swap).swap(_asset, _underlyingAsset, _borrowAmount) : _borrowAmount;
+        if (_asset != _underlyingAsset) {
+            address _swap = address(swap);
+            _approve(_asset, _swap, _borrowAmount);
+            // USDC
+            require(IERC20(address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8)).balanceOf(address(this)) >= _borrowAmount, "E0");
+            // frax
+            require(IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)) == 0, "E1");
+            console.log("usdc balanceOf0", IERC20(address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8)).balanceOf(address(this)));
+            console.log("frax balanceOf0", IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)));
+            _underlyingAmount = IFortressSwap(_swap).swap(_asset, _underlyingAsset, _borrowAmount);
+            // FRAX
+            require(IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)) == _underlyingAmount, "E2");
+            console.log("usdc balanceOf1", IERC20(address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8)).balanceOf(address(this)));
+            console.log("frax balanceOf1", IERC20(address(0x17FC002b466eEc40DaE837Fc4bE5c67993ddBd6F)).balanceOf(address(this)));
+            console.log("_underlyingAmount66", _underlyingAmount);
+            console.log("_borrowAmount66", _borrowAmount);
+            require(_underlyingAmount == _borrowAmount, "Swap failed");
+            // TODO - usdc has 6 decimals, frax has 18 decimals
+        } else {
+            _underlyingAmount = _borrowAmount;
+        }
 
         address _collateralContract = address(collateralContract);
         _approve(_underlyingAsset, _collateralContract, _underlyingAmount);
         uint256 _amountCollateralOut = IFortressVault(_collateralContract).depositUnderlying(_underlyingAsset, address(this), _underlyingAmount, 0);
+        console.log("amountCollateralOut9", _amountCollateralOut);
+        console.log("_underlyingAmount9", _underlyingAmount);
+        console.log("_borrowAmount9", _borrowAmount);
+        // 2704579277928982693872398
+        // 2661243694737965314731251
+        // 1000000000000000000
         if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
 
         // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
