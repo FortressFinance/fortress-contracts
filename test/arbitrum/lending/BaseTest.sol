@@ -110,7 +110,7 @@ abstract contract BaseTest is Test, AddressesArbi {
 
     // --------------------------------- Lending ---------------------------------
 
-    function _testDepositLiquidity(address _pair, uint256 _amount) internal {
+    function _testDepositLiquidity(address _pair, uint256 _amount) internal returns (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
         uint256 _totalAssetsBefore = _lendingPair.totalAssets();
@@ -131,8 +131,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         uint256 _aliceShares = _lendingPair.deposit(_amount, address(alice));
         vm.stopPrank();
 
-        uint256 _totalAssetsAfter = _lendingPair.totalAssets();
-        uint256 _totalSupplyAfter = _lendingPair.totalSupply();
+        _totalAssetsAfter = _lendingPair.totalAssets();
+        _totalSupplyAfter = _lendingPair.totalSupply();
 
         assertEq(_totalAssetsAfter, _totalAssetsBefore + _amount, "_testDepositLiquidity: E1");
         assertEq(_totalSupplyAfter, _totalSupplyBefore + _aliceShares, "_testDepositLiquidity: E2");
@@ -175,13 +175,15 @@ abstract contract BaseTest is Test, AddressesArbi {
             assertEq(uint256(_lastBlock), block.number, "_testDepositLiquidity: E15");
             assertEq(uint256(_feeToProtocolRate), _DEFAULT_PROTOCOL_FEE, "_testDepositLiquidity: E16");
         }
+
+        return (_totalAssetsAfter, _totalSupplyAfter);
     }
 
     // function _testRedeemLiquidity
 
     // --------------------------------- Borrowing --------------------------------
 
-    function _testLeveragePosition(address _pair, address _underlyingAsset) internal {
+    function _testLeveragePosition(address _pair, address _underlyingAsset) internal returns (uint256 _totalCollateral) {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
         uint256 _borrowAmount = _lendingPair.totalAssets() / 3;
@@ -192,7 +194,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         uint256 _totalAssetsBefore = _lendingPair.totalAssets();
         uint256 _totalSupplyBefore = _lendingPair.totalSupply();
         (uint256 _totalBorrowAmount, uint256 _totalBorrowSupply) = _lendingPair.totalBorrow();
-        uint256 _totalCollateral = _lendingPair.totalCollateral();
+        _totalCollateral = _lendingPair.totalCollateral();
 
         assertEq(_totalCollateral, 0, "_testLeveragePosition: E00");
         assertEq(_totalBorrowAmount, 0, "_testLeveragePosition: E0");
@@ -289,9 +291,112 @@ abstract contract BaseTest is Test, AddressesArbi {
         _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
         
         vm.stopPrank();
+
+        return _totalCollateral;
     }
 
-    // function removeLeverage
+    function _testWindDownLeverage(address _pair, address _underlyingAsset, uint256 _totalAssets, uint256 _totalSupply, uint256 _totalCollateral) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E1");
+        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E2");
+        assertEq(_lendingPair.totalCollateral(), _totalCollateral, "_testCloseLeveragePosition: E3");
+        assertEq(_lendingPair.userCollateralBalance(alice), _lendingPair.userCollateralBalance(bob), "_testCloseLeveragePosition: E4");
+        assertEq(_lendingPair.userCollateralBalance(charlie), _lendingPair.userCollateralBalance(bob), "_testCloseLeveragePosition: E5");
+
+        (uint256 _borrowAmountBefore, uint256 _borrowSharesBefore) = _lendingPair.totalBorrow();
+        
+        vm.startPrank(alice);
+        uint256 _userCollateralBalance = (_lendingPair.userCollateralBalance(alice) / 4) * 3;
+        
+        vm.expectRevert(); // reverts with Insolvent
+        _lendingPair.removeCollateral(_userCollateralBalance, alice);
+        
+        assertEq(IERC20(address(_lendingPair.assetContract())).balanceOf(alice), 0, "_testCloseLeveragePosition: E6");
+        
+        uint256 _userBorrowShare = _lendingPair.userBorrowShares(alice);
+        console.log("_lendingPair.userBorrowShares(alice)0", _lendingPair.userBorrowShares(alice));
+
+        uint256 _amountAssetOut = _lendingPair.repayAssetWithCollateral(_userCollateralBalance, 0, _underlyingAsset);
+        
+        (uint256 _borrowAmountAfter, uint256 _borrowSharesAfter) = _lendingPair.totalBorrow();
+        _userBorrowShare = _userBorrowShare - _lendingPair.userBorrowShares(alice);
+        
+        assertEq(_borrowAmountBefore - _amountAssetOut, _borrowAmountAfter, "_testCloseLeveragePosition: E7");
+        assertEq(_borrowSharesBefore - _userBorrowShare, _borrowSharesAfter, "_testCloseLeveragePosition: E8");
+        assertApproxEqAbs(_lendingPair.userCollateralBalance(alice), _userCollateralBalance / 3, 1e5, "_testCloseLeveragePosition: E9");
+        assertEq(_lendingPair.totalCollateral(), _totalCollateral - _userCollateralBalance, "_testCloseLeveragePosition: E10");
+        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E11");
+        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E12");
+
+        // vm.expectRevert(); // reverts with Insolvent
+        // console.log("_lendingPair.userBorrowShares(alice)1", _lendingPair.userBorrowShares(alice));
+        // _lendingPair.removeCollateral(_lendingPair.userCollateralBalance(alice), alice);
+        // todo - need to repay the exact amount that was borrowed
+        // userBorrowAmount = _lendingPair.userBorrowShares(alice);
+        
+        // uint256 _userBorrowAmount = _lendingPair.convertToAssets(_borrowAmountAfter, _borrowSharesAfter, _lendingPair.userBorrowShares(alice), true);
+        _clearDebt(_pair, alice);
+        // (, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
+        // console.log("_userBorrowAmountInCollateral: ", _lendingPair.convertToAssets(_borrowAmountAfter, _borrowSharesAfter, _lendingPair.userBorrowShares(alice), true) * uint256(_exchangeRate) / 1e18);
+        // // user borrow amount in collateral
+        // // uint256 _userBorrowAmount = (_lendingPair.convertToAssets(_borrowAmountAfter, _borrowSharesAfter, _lendingPair.userBorrowShares(alice), true) * uint256(_exchangeRate) / 1e18);
+        // _lendingPair.repayAssetWithCollateral(_lendingPair.userCollateralBalance(alice) - 1, 0, _underlyingAsset);
+
+        //     /// @notice The ```removeCollateral``` function is used to remove collateral from msg.sender's borrow position
+        // /// @dev msg.sender must be solvent after invocation or transaction will revert
+        // /// @param _collateralAmount The amount of Collateral Token to transfer
+        // /// @param _receiver The address to receive the transferred funds
+        // function removeCollateral(uint256 _collateralAmount, address _receiver) external nonReentrant isSolvent(msg.sender) {
+        //     _addInterest();
+            
+        //     // Note: exchange rate is irrelevant when borrower has no debt shares
+        //     if (userBorrowShares[msg.sender] > 0) _updateExchangeRate();
+            
+        //     _removeCollateral(_collateralAmount, _receiver, msg.sender);
+        // }
+
+        vm.stopPrank();
+    }
+
+    function _clearDebt(address _pair, address _user) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        (, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
+        (uint256 _borrowAmount, uint256 _borrowShares) = _lendingPair.totalBorrow();
+
+        uint256 _userBorrowAmountInCollateral = _lendingPair.convertToAssets(_borrowAmount, _borrowShares, _lendingPair.userBorrowShares(alice), true) * uint256(_exchangeRate) / 1e18;
+        console.log("_userBorrowAmountInCollateral: ", _userBorrowAmountInCollateral);
+        _lendingPair.repayAssetWithCollateral(_userBorrowAmountInCollateral, 0, FRAX);
+    }
+        
+    // /// @notice The ```repayAssetWithCollateral``` function allows a borrower to repay their debt using existing collateral in contract
+    // /// @param _collateralToSwap The amount of Collateral Tokens to swap for Asset Tokens
+    // /// @param _minAmount The minimum amount of Asset Tokens to receive during the swap
+    // /// @return _amountAssetOut The amount of Asset Tokens received for the Collateral Tokens, the amount the borrowers account was credited
+    // function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
+    //     if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
+    //     if (pauseRemoveLeverage) revert RemoveLeveragePaused();
+
+    //     _addInterest();
+    //     _updateExchangeRate();
+
+    //     // Note: Debit users collateral balance in preparation for swap, setting _recipient to address(this) means no transfer occurs
+    //     _removeCollateral(_collateralToSwap, address(this), msg.sender);
+    //     _amountAssetOut = IFortressVault(address(collateralContract)).redeemUnderlying(_underlyingAsset, address(this), address(this), _collateralToSwap, 0);
+        
+    //     address _asset = address(assetContract);
+    //     if (_underlyingAsset != _asset) _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
+    //     if (_amountAssetOut < _minAmount) revert SlippageTooHigh();
+
+    //     BorrowAccount memory _totalBorrow = totalBorrow;
+    //     uint256 _sharesToRepay = convertToShares(_totalBorrow.amount, _totalBorrow.shares, _amountAssetOut, false);
+
+    //     // Note: Setting _payer to address(this) means no actual transfer will occur.  Contract already has funds
+    //     _repayAsset(_totalBorrow, _amountAssetOut, _sharesToRepay, address(this), msg.sender);
+
+    //     emit RepayAssetWithCollateral(msg.sender, _collateralToSwap, _amountAssetOut, _sharesToRepay);
+    // }
 
     // --------------------------------- Internal functions ---------------------------------
 

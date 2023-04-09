@@ -268,7 +268,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_collateralAmount == 0) return false;
 
         uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
-
+        console.log("LTV: %s", _ltv);
         return _ltv <= maxLTV;
     }
 
@@ -494,7 +494,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit Withdraw(msg.sender, _receiver, _owner, _assets, _shares);
     }
 
-    // TODO - remove external functions and adjust internal function accordingly (no need for _sender(?))
     // ============================================================================================
     // Functions: Borrowing
     // Visability: External
@@ -506,6 +505,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _borrower The account to be credited
     function addCollateral(uint256 _collateralAmount, address _borrower) external nonReentrant {
         _addInterest();
+
         _addCollateral(msg.sender, _collateralAmount, _borrower);
     }
 
@@ -548,6 +548,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _borrower The borrower whose account will be debited the Collateral amount
     function _removeCollateral(uint256 _collateralAmount, address _receiver, address _borrower) internal {
         // Following line will revert on underflow if _collateralAmount > userCollateralBalance
+        console.log("userCollateralBalance[_borrower]", userCollateralBalance[_borrower]);
+        console.log("_collateralAmount", _collateralAmount);
         userCollateralBalance[_borrower] -= _collateralAmount;
         // Following line will revert on underflow if totalCollateral < _collateralAmount
         totalCollateral -= _collateralAmount;
@@ -588,7 +590,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     function _repayAsset(BorrowAccount memory _totalBorrow, uint256 _amountToRepay, uint256 _shares, address _payer, address _borrower) internal {
         _totalBorrow.amount = _totalBorrow.amount - _amountToRepay;
         _totalBorrow.shares = _totalBorrow.shares - _shares;
-
+        
         userBorrowShares[_borrower] -= _shares;
         totalBorrow = _totalBorrow;
 

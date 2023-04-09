@@ -52,11 +52,13 @@ contract TestFRAXfcGLPPair is BaseTest {
         // vm.assume(_amount > 0.1 ether && _amount < 10 ether);
         uint256 _amount = 1 ether;
 
-        _addUsdcFraxRouteToSwap();
+        // _addUsdcFraxRouteToSwap();
 
-        _testDepositLiquidity(address(lendingPair), _amount);
+        (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) = _testDepositLiquidity(address(lendingPair), _amount);
 
-        _testLeveragePosition(address(lendingPair), FRAX);
+        uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), FRAX);
+
+        _testWindDownLeverage(address(lendingPair), FRAX, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
     }
 
     // --------------------------------- internal functions ---------------------------------
