@@ -186,8 +186,9 @@ abstract contract BaseTest is Test, AddressesArbi {
 
         uint256 _borrowAmount = _lendingPair.totalAssets() / 3;
         (, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
+        // _borrowAmount = (_borrowAmount * 1e18) / uint256(_exchangeRate);
         uint256 _minCollateral = (((_borrowAmount * 1e5) / _lendingPair.maxLTV()) - _borrowAmount) * uint256(_exchangeRate) / 1e18; 
-        
+
         uint256 _totalAssetsBefore = _lendingPair.totalAssets();
         uint256 _totalSupplyBefore = _lendingPair.totalSupply();
         (uint256 _totalBorrowAmount, uint256 _totalBorrowSupply) = _lendingPair.totalBorrow();
@@ -199,6 +200,9 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertTrue(_totalAssetsBefore > 0, "_testLeveragePosition: E2");
         assertTrue(_totalSupplyBefore > 0, "_testLeveragePosition: E3");
         
+        // add 1% to _minCollateral
+        _minCollateral = _minCollateral * 101 / 100;
+
         vm.startPrank(alice);
         _dealERC20(address(_lendingPair.collateralContract()), alice, _minCollateral);
         assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _minCollateral, "_testLeveragePosition: E03");
@@ -207,7 +211,6 @@ abstract contract BaseTest is Test, AddressesArbi {
         vm.expectRevert();
         // remove 10% of collateral
         _lendingPair.leveragePosition(_borrowAmount, (_minCollateral * 9 / 10), 0, _underlyingAsset);
-
         uint256 _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
         _totalCollateral += _userAddedCollateral;
 
@@ -294,9 +297,5 @@ abstract contract BaseTest is Test, AddressesArbi {
 
     function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
         deal({ token: address(_token), to: _recipient, give: _amount});
-    }
-
-    // function getfcTokens(uint256 _amount, address _vault) internal view returns (address _fcToken) {
-    //     _fcToken = FortressLendingPair(_pair).fcToken();
-    // }
+    }    
 }

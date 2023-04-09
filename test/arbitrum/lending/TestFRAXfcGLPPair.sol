@@ -48,7 +48,7 @@ contract TestFRAXfcGLPPair is BaseTest {
 
     // --------------------------------- tests ---------------------------------
 
-    function testCorrectFlowUSDC() public {
+    function testCorrectFlowFRAX() public {
         // vm.assume(_amount > 0.1 ether && _amount < 10 ether);
         uint256 _amount = 1 ether;
 
