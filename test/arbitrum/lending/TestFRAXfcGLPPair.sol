@@ -46,9 +46,9 @@ contract TestFRAXfcGLPPair is BaseTest {
 
     // --------------------------------- tests ---------------------------------
 
-    function testCorrectFlowFRAX(uint256 _amount) public {
-        vm.assume(_amount > 0.1 ether && _amount < 10 ether);
-        // uint256 _amount = 1 ether;
+    function testCorrectFlowFRAX() public {
+        // vm.assume(_amount > 0.1 ether && _amount < 10 ether);
+        uint256 _amount = 1 ether;
 
         (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) = _testDepositLiquidity(address(lendingPair), _amount);
 

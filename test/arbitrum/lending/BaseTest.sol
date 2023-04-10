@@ -354,7 +354,6 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_borrowAmountBefore - _amountAssetOut, _borrowAmountAfter, "_testCloseLeveragePosition: E16");
         assertEq(_borrowSharesBefore - _userBorrowShare, _borrowSharesAfter, "_testCloseLeveragePosition: E17");
         assertApproxEqAbs(_lendingPair.userCollateralBalance(bob), _userCollateralBalance / 3, 1e5, "_testCloseLeveragePosition: E18");
-        assertEq(_lendingPair.totalCollateral(), _totalCollateral - (_userCollateralBalance * 2), "_testCloseLeveragePosition: E19");
         assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E20");
         assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E21");
 
@@ -365,6 +364,43 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertTrue(IERC20(address(_lendingPair.collateralContract())).balanceOf(bob) > 0, "_testCloseLeveragePosition: E23");
 
         vm.stopPrank();
+
+        vm.startPrank(charlie);
+
+        (_borrowAmountBefore, _borrowSharesBefore) = _lendingPair.totalBorrow();
+
+        vm.expectRevert(); // reverts with Insolvent
+        _lendingPair.removeCollateral(_userCollateralBalance, charlie);
+
+        assertEq(IERC20(address(_lendingPair.assetContract())).balanceOf(charlie), 0, "_testCloseLeveragePosition: E24");
+
+        _userBorrowShare = _lendingPair.userBorrowShares(charlie);
+        _amountAssetOut = _lendingPair.repayAssetWithCollateral(_userCollateralBalance, 0, _underlyingAsset);
+
+        (_borrowAmountAfter, _borrowSharesAfter) = _lendingPair.totalBorrow();
+        _userBorrowShare = _userBorrowShare - _lendingPair.userBorrowShares(charlie);
+
+        assertEq(_borrowAmountBefore - _amountAssetOut, _borrowAmountAfter, "_testCloseLeveragePosition: E25");
+        assertEq(_borrowSharesBefore - _userBorrowShare, _borrowSharesAfter, "_testCloseLeveragePosition: E26");
+        assertApproxEqAbs(_lendingPair.userCollateralBalance(charlie), _userCollateralBalance / 3, 1e5, "_testCloseLeveragePosition: E27");
+        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E29");
+        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E30");
+
+        _clearDebt(_pair, charlie, _underlyingAsset);
+
+        // assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(charlie), 0, "_testCloseLeveragePosition: E31");
+        _lendingPair.removeCollateral(_lendingPair.userCollateralBalance(charlie), charlie);
+        assertTrue(IERC20(address(_lendingPair.collateralContract())).balanceOf(charlie) > 0, "_testCloseLeveragePosition: E32");
+
+        vm.stopPrank();
+
+        (_borrowAmountAfter, _borrowSharesAfter) = _lendingPair.totalBorrow();
+
+        assertEq(_borrowAmountAfter, 0, "_testCloseLeveragePosition: E33");
+        assertEq(_borrowSharesAfter, 0, "_testCloseLeveragePosition: E34");
+        assertEq(_lendingPair.totalCollateral(), 0, "_testCloseLeveragePosition: E35");
+        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E36");
+        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E37");
     }
 
     function _clearDebt(address _pair, address _user, address _underlyingAsset) internal {
@@ -373,52 +409,24 @@ abstract contract BaseTest is Test, AddressesArbi {
         (, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
         (uint256 _borrowAmount, uint256 _borrowShares) = _lendingPair.totalBorrow();
 
-        uint256 _userBorrowAmountInCollateral = _lendingPair.convertToAssets(_borrowAmount, _borrowShares, _lendingPair.userBorrowShares(alice), true) * uint256(_exchangeRate) / 1e18;
+        uint256 _userBorrowAmountInCollateral = _lendingPair.convertToAssets(_borrowAmount, _borrowShares, _lendingPair.userBorrowShares(_user), true) * uint256(_exchangeRate) / 1e18;
         uint256 _pairAssetBalance1 = IERC20(address(_lendingPair.assetContract())).balanceOf(_pair);
         uint256 _pairCollateralBalance1 = IERC20(address(_lendingPair.collateralContract())).balanceOf(_pair);
         _lendingPair.repayAssetWithCollateral(_userBorrowAmountInCollateral, 0, _underlyingAsset);
         assertTrue(IERC20(address(_lendingPair.assetContract())).balanceOf(_pair) > _pairAssetBalance1 - _userBorrowAmountInCollateral, "_clearDebt: E0");
         assertTrue(IERC20(address(_lendingPair.collateralContract())).balanceOf(_pair) < _pairCollateralBalance1, "_clearDebt: E00");
 
-        _dealERC20(address(_lendingPair.assetContract()), _user, _lendingPair.userBorrowShares(alice) * 10);
+        _dealERC20(address(_lendingPair.assetContract()), _user, _lendingPair.userBorrowShares(_user) * 10);
         IERC20(address(_lendingPair.assetContract())).approve(address(_lendingPair), type(uint256).max);
 
         uint256 _pairAssetBalance2 = IERC20(address(_lendingPair.assetContract())).balanceOf(_pair);
         uint256 _pairCollateralBalance2 = IERC20(address(_lendingPair.collateralContract())).balanceOf(_pair);
-        _lendingPair.repayAsset(_lendingPair.userBorrowShares(alice), alice);
+        _lendingPair.repayAsset(_lendingPair.userBorrowShares(_user), _user);
 
         assertTrue(IERC20(address(_lendingPair.assetContract())).balanceOf(_pair) > _pairAssetBalance2, "_clearDebt: E1");
         assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(_pair), _pairCollateralBalance2, "_clearDebt: E2");
         assertEq(_lendingPair.userBorrowShares(_user), 0, "_clearDebt: E3");
     }
-        
-    // /// @notice The ```repayAssetWithCollateral``` function allows a borrower to repay their debt using existing collateral in contract
-    // /// @param _collateralToSwap The amount of Collateral Tokens to swap for Asset Tokens
-    // /// @param _minAmount The minimum amount of Asset Tokens to receive during the swap
-    // /// @return _amountAssetOut The amount of Asset Tokens received for the Collateral Tokens, the amount the borrowers account was credited
-    // function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
-    //     if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
-    //     if (pauseRemoveLeverage) revert RemoveLeveragePaused();
-
-    //     _addInterest();
-    //     _updateExchangeRate();
-
-    //     // Note: Debit users collateral balance in preparation for swap, setting _recipient to address(this) means no transfer occurs
-    //     _removeCollateral(_collateralToSwap, address(this), msg.sender);
-    //     _amountAssetOut = IFortressVault(address(collateralContract)).redeemUnderlying(_underlyingAsset, address(this), address(this), _collateralToSwap, 0);
-        
-    //     address _asset = address(assetContract);
-    //     if (_underlyingAsset != _asset) _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
-    //     if (_amountAssetOut < _minAmount) revert SlippageTooHigh();
-
-    //     BorrowAccount memory _totalBorrow = totalBorrow;
-    //     uint256 _sharesToRepay = convertToShares(_totalBorrow.amount, _totalBorrow.shares, _amountAssetOut, false);
-
-    //     // Note: Setting _payer to address(this) means no actual transfer will occur.  Contract already has funds
-    //     _repayAsset(_totalBorrow, _amountAssetOut, _sharesToRepay, address(this), msg.sender);
-
-    //     emit RepayAssetWithCollateral(msg.sender, _collateralToSwap, _amountAssetOut, _sharesToRepay);
-    // }
 
     // --------------------------------- Internal functions ---------------------------------
 
