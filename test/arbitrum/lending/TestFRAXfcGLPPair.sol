@@ -36,8 +36,6 @@ contract TestFRAXfcGLPPair is BaseTest {
         
         lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, address(fortressSwap), _maxLTV, _liquidationFee);
 
-        // _addUsdcFraxRouteToSwap();
-
         // --------------------------------- init pair ---------------------------------
 
         _testInitialize(address(lendingPair));
@@ -48,17 +46,15 @@ contract TestFRAXfcGLPPair is BaseTest {
 
     // --------------------------------- tests ---------------------------------
 
-    function testCorrectFlowFRAX() public {
-        // vm.assume(_amount > 0.1 ether && _amount < 10 ether);
-        uint256 _amount = 1 ether;
-
-        // _addUsdcFraxRouteToSwap();
+    function testCorrectFlowFRAX(uint256 _amount) public {
+        vm.assume(_amount > 0.1 ether && _amount < 10 ether);
+        // uint256 _amount = 1 ether;
 
         (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) = _testDepositLiquidity(address(lendingPair), _amount);
 
         uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), FRAX);
 
-        _testWindDownLeverage(address(lendingPair), FRAX, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
+        _testClosePosition(address(lendingPair), FRAX, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
     }
 
     // --------------------------------- internal functions ---------------------------------

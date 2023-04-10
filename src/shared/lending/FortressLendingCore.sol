@@ -268,7 +268,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_collateralAmount == 0) return false;
 
         uint256 _ltv = (((_borrowerAmount * _exchangeRate) / EXCHANGE_PRECISION) * LTV_PRECISION) / _collateralAmount;
-        console.log("LTV: %s", _ltv);
+
         return _ltv <= maxLTV;
     }
 
@@ -522,6 +522,20 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _removeCollateral(_collateralAmount, _receiver, msg.sender);
     }
 
+    /// @notice The ```repayAsset``` function allows the caller to pay down the debt for a given borrower.
+    /// @dev Caller must first invoke ```ERC20.approve()``` for the Asset Token contract
+    /// @param _shares The number of Borrow Shares which will be repaid by the call
+    /// @param _borrower The account for which the debt will be reduced
+    /// @return _amountToRepay The amount of Asset Tokens which were transferred in order to repay the Borrow Shares
+    function repayAsset(uint256 _shares, address _borrower) external nonReentrant returns (uint256 _amountToRepay) {
+        _addInterest();
+        
+        BorrowAccount memory _totalBorrow = totalBorrow;
+        _amountToRepay = convertToAssets(_totalBorrow.amount, _totalBorrow.shares, _shares, true);
+        
+        _repayAsset(_totalBorrow, _amountToRepay, _shares, msg.sender, _borrower);
+    }
+
     // ============================================================================================
     // Functions: Borrowing
     // Visability: Internal
@@ -548,8 +562,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _borrower The borrower whose account will be debited the Collateral amount
     function _removeCollateral(uint256 _collateralAmount, address _receiver, address _borrower) internal {
         // Following line will revert on underflow if _collateralAmount > userCollateralBalance
-        console.log("userCollateralBalance[_borrower]", userCollateralBalance[_borrower]);
-        console.log("_collateralAmount", _collateralAmount);
         userCollateralBalance[_borrower] -= _collateralAmount;
         // Following line will revert on underflow if totalCollateral < _collateralAmount
         totalCollateral -= _collateralAmount;
