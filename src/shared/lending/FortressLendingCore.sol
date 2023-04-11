@@ -435,7 +435,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
 
         _addInterest();
-        
+
         _assets = previewRedeem(_shares);
 
         _withdraw(_assets, _shares, _receiver, _owner);
@@ -480,7 +480,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (!(_shares > 0)) revert ZeroAmount();
         if (!(_assets > 0)) revert ZeroAmount();
 
-        if (msg.sender != owner) {
+        if (msg.sender != _owner) {
             uint256 _allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
             // NOTE: This will revert on underflow ensuring that allowance > shares
             if (_allowed != type(uint256).max) allowance[owner][msg.sender] = _allowed - _shares;
