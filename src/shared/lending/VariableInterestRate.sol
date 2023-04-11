@@ -33,9 +33,9 @@ contract VariableInterestRate is IRateCalculator {
 
     /// @notice The ```getNewRate``` function calculates the new interest rate as a function of time and utilization
     /// @param _data abi.encode(uint64 _currentRatePerSec, uint256 _deltaTime, uint256 _utilization, uint256 _deltaBlocks)
-    /// @param _initData empty for this Rate Calculator
+    // / @param _initData empty for this Rate Calculator
     /// @return _newRatePerSec The new interest rate per second, 1e18 precision
-    function getNewRate(bytes calldata _data, bytes calldata _initData) external pure returns (uint64 _newRatePerSec) {
+    function getNewRate(bytes calldata _data, bytes calldata) external pure returns (uint64 _newRatePerSec) {
         
         (uint64 _currentRatePerSec, uint256 _deltaTime, uint256 _utilization, ) = abi.decode(_data, (uint64, uint256, uint256, uint256));
         
