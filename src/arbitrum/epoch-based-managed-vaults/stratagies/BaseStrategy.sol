@@ -38,9 +38,6 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     address public assetVault;
     /// @notice The assetVault Primary Asset
     address public assetVaultPrimaryAsset;
-    // TODO - remove this variable
-    /// @notice The assets that this strategy supports
-    address public asset;
     /// @notice The platform address
     address public platform;
     /// @notice The vault manager address
@@ -50,8 +47,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
 
     /********************************** Constructor **********************************/
     
-    constructor(address _asset, address _assetVault, address _platform, address _manager) {
-        asset = _asset;
+    constructor(address _assetVault, address _platform, address _manager) {
         assetVault = _assetVault;
         platform = _platform;
         manager = _manager;
@@ -84,6 +80,7 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
     /// @inheritdoc IStrategy
     function isActive() public view virtual returns (bool) {
         if (isStrategiesActiveOverride) return false;
+        if (IERC20(assetVaultPrimaryAsset).balanceOf(address(this)) > 0) return true;
 
         return false;
     }
@@ -137,10 +134,10 @@ abstract contract BaseStrategy is ReentrancyGuard, IStrategy {
         emit ActiveStatusOverriden(block.timestamp, _isStrategiesActive);
     }
 
-    /********************************** Internal Functions **********************************/
+    /// @inheritdoc IStrategy
+    function rescueERC20(uint256 _amount) external onlyPlatform {
+        IERC20(assetVaultPrimaryAsset).safeTransfer(platform, _amount);
 
-    function _approve(address _asset, address _spender, uint256 _amount) internal {
-        IERC20(_asset).safeApprove(_spender, 0);
-        IERC20(_asset).safeApprove(_spender, _amount);
+        emit Rescue(_amount);
     }
 }
