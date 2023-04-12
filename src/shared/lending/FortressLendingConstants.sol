@@ -38,6 +38,7 @@ abstract contract FortressLendingConstants {
     error InsufficientBalance();
     error NotOwner();
     error InvalidUnderlyingAsset();
+    error AlreadyCalledOnBlock();
 
     /// @notice The ```WithdrawFees``` event fires when the fees are withdrawn
     /// @param _shares Number of _shares (fTokens) redeemed
@@ -111,11 +112,9 @@ abstract contract FortressLendingConstants {
     /// @param _rate The new rate given as the amount of Collateral Token to buy 1e18 Asset Token
     event UpdateExchangeRate(uint256 _rate);
 
-    event PausePoolDeposit(bool _paused);
-
-    event PausePoolWithdraw(bool _paused);
-
     event UpdateOwner(address _newOwner);
 
     event UpdateSwap(address _swap);
+
+    event UpdatePauseSettings(bool _depositLiquidity, bool _withdrawLiquidity, bool _addLeverage, bool _removeLeverage, bool _addInterest, bool _liquidations, bool _addCollateral, bool _removeCollateral, bool _repayAsset);
 }

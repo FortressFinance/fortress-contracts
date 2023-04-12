@@ -13,7 +13,7 @@ import {IRateCalculator} from "./interfaces/IRateCalculator.sol";
 import {IFortressSwap} from "../fortress-interfaces/IFortressSwap.sol";
 import {IFortressVault} from "../fortress-interfaces/IFortressVault.sol";
 
-import "forge-std/console.sol"; // todo: remove
+import "forge-std/console.sol";
 
 /// @notice  An abstract contract which contains the core logic and storage for the FortressLendingPair
 abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGuard, ERC4626 {
@@ -100,6 +100,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @notice Stores the balance of borrow shares for each user
     mapping(address => uint256) public userBorrowShares; // represents the shares held by individuals
     // NOTE: user shares of assets are represented as ERC-20 tokens and accessible via balanceOf()
+
+    // Speed Bump
+    /// @notice Stores the last interaction block for each user
+    mapping(address => uint256) public lastInteractionBlock;
 
     // ============================================================================================
     // Initialize
@@ -194,7 +198,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @return - The amount of _assets in return.
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
         uint256 _assets = convertToAssets(_shares);
-
         if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract();
 
         return _assets;
@@ -273,6 +276,13 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _;
     }
 
+    /// @notice Implements a speed bump - allows only one interaction per block
+    /// @param _user The user whose interaction we are checking
+    modifier speedBump(address _user) {
+        if (lastInteractionBlock[_user] == block.number) revert AlreadyCalledOnBlock();
+        _;
+    }
+
     /// @notice Checks for solvency AFTER executing contract code
     /// @param _borrower The borrower whose solvency we will check
     modifier isSolvent(address _borrower) {
@@ -289,9 +299,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _recipient Address to send the assets
     /// @return _amountToTransfer Amount of assets sent to recipient
     function withdrawFees(uint256 _shares, address _recipient) external onlyOwner returns (uint256 _amountToTransfer) {
-        // Grab some data from state to save gas
-        // VaultAccount memory _totalAsset = totalAsset;
-        // VaultAccount memory _totalBorrow = totalBorrow;
 
         // Take all available if 0 value passed
         if (_shares == 0) _shares = balanceOf[address(this)];
@@ -306,7 +313,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         // Effects: bookkeeping
         totalAUM -= _amountToTransfer;
-        totalSupply -= _shares;
+        // totalSupply -= _shares; // NOTE: this is done in _burn
 
         // Effects: write to states
         // NOTE: will revert if _shares > balanceOf(address(this))
@@ -362,6 +369,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
             removeCollateral: _removeCollateral,
             repayAsset: _repayAsset
         });
+
+        emit UpdatePauseSettings(_depositLiquidity, _withdrawLiquidity, _addLeverage, _removeLeverage, _addInterest, _liquidations, _addCollateral, _removeCollateral, _repayAsset);
     }
 
     // ============================================================================================
@@ -471,9 +480,9 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (!(_assets > 0)) revert ZeroAmount();
 
         if (msg.sender != _owner) {
-            uint256 _allowed = allowance[owner][msg.sender]; // Saves gas for limited approvals.
+            uint256 _allowed = allowance[_owner][msg.sender]; // Saves gas for limited approvals.
             // NOTE: This will revert on underflow ensuring that allowance > shares
-            if (_allowed != type(uint256).max) allowance[owner][msg.sender] = _allowed - _shares;
+            if (_allowed != type(uint256).max) allowance[_owner][msg.sender] = _allowed - _shares;
         }
 
         _burn(_owner, _shares);
@@ -493,8 +502,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @dev msg.sender must call ERC20.approve() on the Collateral Token contract prior to invocation
     /// @param _collateralAmount The amount of Collateral Token to be added to borrower's position
     /// @param _borrower The account to be credited
-    function addCollateral(uint256 _collateralAmount, address _borrower) external nonReentrant {
+    function addCollateral(uint256 _collateralAmount, address _borrower) external nonReentrant speedBump(_borrower) {
         if (pauseSettings.addCollateral) revert Paused();
+
+        lastInteractionBlock[_borrower] = block.number;
 
         _addInterest();
 
@@ -505,8 +516,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @dev msg.sender must be solvent after invocation or transaction will revert
     /// @param _collateralAmount The amount of Collateral Token to transfer
     /// @param _receiver The address to receive the transferred funds
-    function removeCollateral(uint256 _collateralAmount, address _receiver) external nonReentrant isSolvent(msg.sender) {
+    function removeCollateral(uint256 _collateralAmount, address _receiver) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) {
         if (pauseSettings.removeCollateral) revert Paused();
+        
+        lastInteractionBlock[msg.sender] = block.number;
 
         _addInterest();
         
@@ -521,8 +534,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _shares The number of Borrow Shares which will be repaid by the call
     /// @param _borrower The account for which the debt will be reduced
     /// @return _amountToRepay The amount of Asset Tokens which were transferred in order to repay the Borrow Shares
-    function repayAsset(uint256 _shares, address _borrower) external nonReentrant returns (uint256 _amountToRepay) {
+    function repayAsset(uint256 _shares, address _borrower) external nonReentrant speedBump(_borrower) returns (uint256 _amountToRepay) {
         if (pauseSettings.repayAsset) revert Paused();
+
+        lastInteractionBlock[_borrower] = block.number;
 
         _addInterest();
         
@@ -619,9 +634,11 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _initialCollateralAmount The initial amount of Collateral Tokens supplied by the borrower
     /// @param _minAmount The minimum amount of Collateral Tokens to be received in exchange for the borrowed Asset Tokens
     /// @return _totalCollateralAdded The total amount of Collateral Tokens added to a users account (initial + swap)
-    function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
+    function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
         if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
         if (pauseSettings.addLeverage) revert Paused();
+
+        lastInteractionBlock[msg.sender] = block.number;
 
         _addInterest();
         _updateExchangeRate();
@@ -659,9 +676,11 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _collateralToSwap The amount of Collateral Tokens to swap for Asset Tokens
     /// @param _minAmount The minimum amount of Asset Tokens to receive during the swap
     /// @return _amountAssetOut The amount of Asset Tokens received for the Collateral Tokens, the amount the borrowers account was credited
-    function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external nonReentrant isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
+    function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
         if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
         if (pauseSettings.removeLeverage) revert Paused();
+
+        lastInteractionBlock[msg.sender] = block.number;
 
         _addInterest();
         _updateExchangeRate();
@@ -778,25 +797,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_exchangeRateInfo.lastTimestamp == block.timestamp) {
             return _exchangeRate = _exchangeRateInfo.exchangeRate;
         }
-
-        // -- Dual Oracle --
-        // 
-        // Asset MKR is 1e18
-        // Collateral WBTC 1e8
-        // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
-        // ETH MKR Feed ==> ETH/MKR (returns ETH per MKR) --> MKR already at denomminator --> ETH/MKR will be oracleMultiply
-        // ETH BTC Feed ==> ETH/WBTC (returns ETH per WBTC) --> WBTC also at denomminator, but we want it at numerator  --> ETH/WBTC will be oracleDivide
-        // rate = ETHMKRFeed / ETHWBTCFeed --> WBTC/MKR
-        // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
-
-        // -- single oracle --
-        // 
-        // Asset WETH is 1e18
-        // Collateral FXS 1e18
-        // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
-        // ETH FXS Feed => ETH/FXS --> (returns ETH per FXS) --> FXS is at denomminator, but we want it at numerator --> ETH/FXS will be oracleDivide (oracleMultiply is address(0))
-        // rate = 1 / ETHFXSFeed --> FXS/ETH 
-        // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
 
         uint256 _price = uint256(1e36);
         address _oracleMultiply = oracleMultiply;

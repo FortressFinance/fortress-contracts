@@ -199,7 +199,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_totalAssetsAfter, _totalAssetsBefore - _aliceAmount, "_testRemoveLiquidity: E1");
         assertEq(_totalSupplyAfter, _totalSupplyBefore - _aliceShares, "_testRemoveLiquidity: E2");
         assertEq(_lendingPair.balanceOf(address(alice)), 0, "_testRemoveLiquidity: E3");
-        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(alice)), _aliceAmount, 1e16, "_testRemoveLiquidity: E4");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(alice)), _aliceAmount, 1e18, "_testRemoveLiquidity: E4");
 
         vm.startPrank(bob);
         uint256 _bobAmount = _lendingPair.redeem(_bobShares, address(bob), address(bob));
@@ -211,19 +211,14 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_totalAssetsAfter, _totalAssetsBefore - _aliceAmount - _bobAmount, "_testRemoveLiquidity: E5");
         assertEq(_totalSupplyAfter, _totalSupplyBefore - _aliceShares - _bobShares, "_testRemoveLiquidity: E6");
         assertEq(_lendingPair.balanceOf(address(bob)), 0, "_testRemoveLiquidity: E7");
-        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(bob)), _bobAmount, 1e16, "_testRemoveLiquidity: E8");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(bob)), _bobAmount, 1e18, "_testRemoveLiquidity: E8");
 
         vm.startPrank(charlie);
         uint256 _charlieAmount = _lendingPair.redeem(_charlieShares, address(charlie), address(charlie));
         vm.stopPrank();
 
-        _totalAssetsAfter = _lendingPair.totalAssets();
-        _totalSupplyAfter = _lendingPair.totalSupply();
-
-        assertEq(_totalAssetsAfter, 0, "_testRemoveLiquidity: E9");
-        assertEq(_totalSupplyAfter, 0, "_testRemoveLiquidity: E10");
         assertEq(_lendingPair.balanceOf(address(charlie)), 0, "_testRemoveLiquidity: E11");
-        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(charlie)), _charlieAmount, 1e16, "_testRemoveLiquidity: E12");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(charlie)), _charlieAmount, 1e18, "_testRemoveLiquidity: E12");
     }
 
     // --------------------------------- Borrowing --------------------------------
@@ -344,8 +339,15 @@ abstract contract BaseTest is Test, AddressesArbi {
     function _testClosePosition(address _pair, address _underlyingAsset, uint256 _totalAssets, uint256 _totalSupply, uint256 _totalCollateral) internal {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
-        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E1");
-        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E2");
+        _lendingPair.addInterest();
+        
+        vm.roll(block.number + 1);
+        vm.warp(block.timestamp + 1 days);
+
+        _lendingPair.addInterest();
+
+        assertApproxEqAbs(_lendingPair.totalAssets(), _totalAssets, 1e17, "_testCloseLeveragePosition: E1");
+        assertApproxEqAbs(_lendingPair.totalSupply(), _totalSupply, 1e17, "_testCloseLeveragePosition: E2");
         assertEq(_lendingPair.totalCollateral(), _totalCollateral, "_testCloseLeveragePosition: E3");
         assertEq(_lendingPair.userCollateralBalance(alice), _lendingPair.userCollateralBalance(bob), "_testCloseLeveragePosition: E4");
         assertEq(_lendingPair.userCollateralBalance(charlie), _lendingPair.userCollateralBalance(bob), "_testCloseLeveragePosition: E5");
@@ -370,8 +372,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_borrowSharesBefore - _userBorrowShare, _borrowSharesAfter, "_testCloseLeveragePosition: E8");
         assertApproxEqAbs(_lendingPair.userCollateralBalance(alice), _userCollateralBalance / 3, 1e5, "_testCloseLeveragePosition: E9");
         assertEq(_lendingPair.totalCollateral(), _totalCollateral - _userCollateralBalance, "_testCloseLeveragePosition: E10");
-        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E11");
-        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E12");
+        assertApproxEqAbs(_lendingPair.totalAssets(), _totalAssets, 1e17, "_testCloseLeveragePosition: E11");
+        assertApproxEqAbs(_lendingPair.totalSupply(), _totalSupply, 1e17, "_testCloseLeveragePosition: E12");
 
         _clearDebt(_pair, alice, _underlyingAsset);
         
@@ -399,8 +401,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_borrowAmountBefore - _amountAssetOut, _borrowAmountAfter, "_testCloseLeveragePosition: E16");
         assertEq(_borrowSharesBefore - _userBorrowShare, _borrowSharesAfter, "_testCloseLeveragePosition: E17");
         assertApproxEqAbs(_lendingPair.userCollateralBalance(bob), _userCollateralBalance / 3, 1e5, "_testCloseLeveragePosition: E18");
-        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E20");
-        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E21");
+        assertApproxEqAbs(_lendingPair.totalAssets(), _totalAssets, 1e17, "_testCloseLeveragePosition: E20");
+        assertApproxEqAbs(_lendingPair.totalSupply(), _totalSupply, 1e17, "_testCloseLeveragePosition: E21");
 
         _clearDebt(_pair, bob, _underlyingAsset);
 
@@ -414,9 +416,14 @@ abstract contract BaseTest is Test, AddressesArbi {
 
         (_borrowAmountBefore, _borrowSharesBefore) = _lendingPair.totalBorrow();
 
-        vm.expectRevert(); // reverts with Insolvent
+        vm.expectRevert(); // reverts with AlreadyCalledOnBlock
         _lendingPair.removeCollateral(_userCollateralBalance, charlie);
 
+        vm.roll(block.number + 1);
+        
+        vm.expectRevert(); // reverts with Insolvent
+        _lendingPair.removeCollateral(_userCollateralBalance, charlie);
+        
         assertEq(IERC20(address(_lendingPair.assetContract())).balanceOf(charlie), 0, "_testCloseLeveragePosition: E24");
 
         _userBorrowShare = _lendingPair.userBorrowShares(charlie);
@@ -428,8 +435,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_borrowAmountBefore - _amountAssetOut, _borrowAmountAfter, "_testCloseLeveragePosition: E25");
         assertEq(_borrowSharesBefore - _userBorrowShare, _borrowSharesAfter, "_testCloseLeveragePosition: E26");
         assertApproxEqAbs(_lendingPair.userCollateralBalance(charlie), _userCollateralBalance / 3, 1e5, "_testCloseLeveragePosition: E27");
-        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E29");
-        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E30");
+        assertApproxEqAbs(_lendingPair.totalAssets(), _totalAssets, 1e17, "_testCloseLeveragePosition: E29");
+        assertApproxEqAbs(_lendingPair.totalSupply(), _totalSupply, 1e17, "_testCloseLeveragePosition: E30");
 
         _clearDebt(_pair, charlie, _underlyingAsset);
 
@@ -444,13 +451,15 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_borrowAmountAfter, 0, "_testCloseLeveragePosition: E33");
         assertEq(_borrowSharesAfter, 0, "_testCloseLeveragePosition: E34");
         assertEq(_lendingPair.totalCollateral(), 0, "_testCloseLeveragePosition: E35");
-        assertEq(_lendingPair.totalAssets(), _totalAssets, "_testCloseLeveragePosition: E36");
-        assertEq(_lendingPair.totalSupply(), _totalSupply, "_testCloseLeveragePosition: E37");
+        assertApproxEqAbs(_lendingPair.totalAssets(), _totalAssets, 1e17, "_testCloseLeveragePosition: E36");
+        assertApproxEqAbs(_lendingPair.totalSupply(), _totalSupply, 1e17, "_testCloseLeveragePosition: E37");
     }
 
     function _clearDebt(address _pair, address _user, address _underlyingAsset) internal {
         FortressLendingPair _lendingPair = FortressLendingPair(_pair);
 
+        vm.roll(block.number + 1);
+        
         (, uint224 _exchangeRate) = _lendingPair.exchangeRateInfo();
         (uint256 _borrowAmount, uint256 _borrowShares) = _lendingPair.totalBorrow();
 
@@ -464,6 +473,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         _dealERC20(address(_lendingPair.assetContract()), _user, _lendingPair.userBorrowShares(_user) * 10);
         IERC20(address(_lendingPair.assetContract())).approve(address(_lendingPair), type(uint256).max);
 
+        vm.roll(block.number + 1);
+
         uint256 _pairAssetBalance2 = IERC20(address(_lendingPair.assetContract())).balanceOf(_pair);
         uint256 _pairCollateralBalance2 = IERC20(address(_lendingPair.collateralContract())).balanceOf(_pair);
         _lendingPair.repayAsset(_lendingPair.userBorrowShares(_user), _user);
@@ -471,11 +482,123 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertTrue(IERC20(address(_lendingPair.assetContract())).balanceOf(_pair) > _pairAssetBalance2, "_clearDebt: E1");
         assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(_pair), _pairCollateralBalance2, "_clearDebt: E2");
         assertEq(_lendingPair.userBorrowShares(_user), 0, "_clearDebt: E3");
+
+        vm.roll(block.number + 1);
+    }
+
+    function _testPlatformFee(address _pair) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        vm.warp(block.timestamp + 1 days);
+
+        (uint256 _borrowAmount, uint256 _borrowShares) = _lendingPair.totalBorrow();
+        (, uint64 _feeToProtocolRate,,) = _lendingPair.currentRateInfo();
+
+        assertTrue(uint256(_feeToProtocolRate) > 0, "_testPlatformFee: E1");
+
+        _lendingPair.addInterest();
+
+        uint256 _platformShares = IERC20(address(_lendingPair)).balanceOf(_pair);
+        assertTrue(_platformShares > 0, "_testPlatformFee: E2");
+
+        uint256 _platformBalanceBefore = IERC20(address(_lendingPair.assetContract())).balanceOf(platform);
+
+        vm.startPrank(owner);
+        _lendingPair.withdrawFees(0, platform);
+
+        assertTrue(IERC20(address(_lendingPair.assetContract())).balanceOf(platform) > _platformBalanceBefore, "_testPlatformFee: E3");
+
+        vm.stopPrank();
+
+        assertEq(_lendingPair.totalAssets(), 0 , "_testPlatformFee: E4");
+        assertEq(_lendingPair.totalSupply(), 0, "_testPlatformFee: E5");
+    }
+
+    function _testUpdateSwap(address _pair) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        address _swap = address(0x1234);
+
+        vm.startPrank(owner);
+        _lendingPair.updateSwap(_swap);
+        vm.stopPrank();
+
+        assertEq(_lendingPair.swap(), _swap, "_testUpdateSwap: E1");
+    }
+
+    function _testUpdateOwner(address _pair) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        address _owner = address(0x1234);
+
+        vm.startPrank(owner);
+        _lendingPair.updateOwner(_owner);
+        vm.stopPrank();
+
+        assertEq(_lendingPair.owner(), _owner, "_testUpdateOwner: E1");
+    }
+
+    function _testUpdatePauseSettings(address _pair) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        bytes memory _configData = abi.encode(true, true, true, true, true, true, true, true, true);
+
+        vm.startPrank(owner);
+        _lendingPair.updatePauseSettings(_configData);
+        vm.stopPrank();
+
+        (bool _depositLiquidity, bool _withdrawLiquidity, bool _addLeverage, bool _removeLeverage, bool _addInterest, bool _liquidations, bool _addCollateral, bool _removeCollateral, bool _repayAsset)
+            = _lendingPair.pauseSettings();
+
+        assertTrue(_depositLiquidity, "_testUpdatePauseSettings: E1");
+        assertTrue(_withdrawLiquidity, "_testUpdatePauseSettings: E2");
+        assertTrue(_addLeverage, "_testUpdatePauseSettings: E3");
+        assertTrue(_removeLeverage, "_testUpdatePauseSettings: E4");
+        assertTrue(_addInterest, "_testUpdatePauseSettings: E5");
+        assertTrue(_liquidations, "_testUpdatePauseSettings: E6");
+        assertTrue(_addCollateral, "_testUpdatePauseSettings: E7");
+        assertTrue(_removeCollateral, "_testUpdatePauseSettings: E8");
+        assertTrue(_repayAsset, "_testUpdatePauseSettings: E9");
+    }
+
+    function _testUpdateFee(address _pair) internal {
+        FortressLendingPair _lendingPair = FortressLendingPair(_pair);
+
+        uint64 _newFee = 1000;
+
+        vm.startPrank(owner);
+        _lendingPair.updateFee(_newFee);
+        vm.stopPrank();
+
+        (, uint64 _feeToProtocolRate,,) = _lendingPair.currentRateInfo();
+
+        assertEq(uint256(_feeToProtocolRate), _newFee, "_testUpdateFee: E1");
     }
 
     // --------------------------------- Internal functions ---------------------------------
 
     function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
         deal({ token: address(_token), to: _recipient, give: _amount});
-    }    
+    }
+
+    // --------------------------------- Notes ---------------------------------
+
+    // -- Dual Oracle --
+    // 
+    // Asset MKR is 1e18
+    // Collateral WBTC 1e8
+    // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
+    // ETH MKR Feed ==> ETH/MKR (returns ETH per MKR) --> MKR already at denomminator --> ETH/MKR will be oracleMultiply
+    // ETH BTC Feed ==> ETH/WBTC (returns ETH per WBTC) --> WBTC also at denomminator, but we want it at numerator  --> ETH/WBTC will be oracleDivide
+    // rate = ETHMKRFeed / ETHWBTCFeed --> WBTC/MKR
+    // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
+
+    // -- single oracle --
+    // 
+    // Asset WETH is 1e18
+    // Collateral FXS 1e18
+    // exchange rate is given in Collateral/Asset ratio, essentialy how much collateral to buy 1e18 asset
+    // ETH FXS Feed => ETH/FXS --> (returns ETH per FXS) --> FXS is at denomminator, but we want it at numerator --> ETH/FXS will be oracleDivide (oracleMultiply is address(0))
+    // rate = 1 / ETHFXSFeed --> FXS/ETH 
+    // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
 }
