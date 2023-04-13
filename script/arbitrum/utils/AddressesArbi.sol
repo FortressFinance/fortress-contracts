@@ -82,12 +82,19 @@ contract AddressesArbi {
     // The address of LINK/WETH pool
     address constant GMX_ROUTER = 0xaBBc5F99639c9B6bCb58544ddf04EFA6802F4064;
 
+    // ------------------------------------- oracles -------------------------------------
+
+    // The address of Chainlink USD/USDC price feed
+    address constant USD_USDC_FEED = 0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3;
+    // The address of Chainlink USD/FRAX price feed
+    address constant USD_FRAX_FEED = 0x0809E3d38d1B4214958faf06D8b1B1a2b73f2ab8;
+
     // ------------------------------------- Fortress -------------------------------------
 
-    // The address of first FortressSwap contract.
-    address constant FortressSwapV1 = 0xd2DA200a79AbC6526EABACF98F8Ea4C26F34796F;
+    // The address of FortressSwap contract.
+    address constant FortressSwap = 0xBbF847A344ceBC46DD226dc2682A703ebe37eB9e;
     // The address of first FortressRegistry contract.
     address constant FortressRegistryV1 = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
-    // The address of fortGLP contract.
-    address constant FortGLP = 0x9363e5e4a7aDfB346BEA0fe87a8BD02fddA48855;
+    // The address of fcGLP contract.
+    address constant fcGLP = 0x86eE39B28A7fDea01b53773AEE148884Db311B46;
 }
