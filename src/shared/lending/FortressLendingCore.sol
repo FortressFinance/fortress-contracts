@@ -13,11 +13,9 @@ import {IRateCalculator} from "./interfaces/IRateCalculator.sol";
 import {IFortressSwap} from "../fortress-interfaces/IFortressSwap.sol";
 import {IFortressVault} from "../fortress-interfaces/IFortressVault.sol";
 
-import "forge-std/console.sol";
-
 /// @notice  An abstract contract which contains the core logic and storage for the FortressLendingPair
 abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGuard, ERC4626 {
-    
+
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
 
@@ -67,13 +65,13 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /********************************** Storage **********************************/
 
     /// @notice Stores information about the current interest rate
-    /// @dev struct is packed to reduce SLOADs. feeToProtocolRate is 1e5 precision, ratePerSec is 1e18 precision
+    /// @dev struct is packed to reduce SLOADs
     CurrentRateInfo public currentRateInfo;
     struct CurrentRateInfo {
         uint64 lastBlock;
-        uint64 feeToProtocolRate; // Fee amount 1e5 precision
+        uint64 feeToProtocolRate; // 1e5 precision
         uint64 lastTimestamp;
-        uint64 ratePerSec;
+        uint64 ratePerSec; // 1e18 precision
     }
 
     /// @notice Stores information about the current exchange rate. Collateral:Asset ratio
@@ -109,8 +107,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Initialize
     // ============================================================================================
 
-    /// @notice The ```constructor``` function is called on deployment
-    /// @param _configData abi.encode(address _asset, address _collateral, address _oracleMultiply, address _oracleDivide, uint256 _oracleNormalization, address _rateContract, bytes memory _rateInitData)
+    /// @notice Called on deployment
+    /// @param _configData abi.encoded config data
     /// @param _maxLTV The Maximum Loan-To-Value for a borrower to be considered solvent (1e5 precision)
     /// @param _liquidationFee The fee paid to liquidators given as a % of the repayment (1e5 precision)
     constructor(ERC20 _asset, string memory _name, string memory _symbol, bytes memory _configData, address _owner, address _swap, uint256 _maxLTV, uint256 _liquidationFee)
@@ -126,12 +124,15 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         cleanLiquidationFee = _liquidationFee;
         dirtyLiquidationFee = (_liquidationFee * 90000) / LIQ_PRECISION; // 90% of clean fee
 
+        // LTV Settings
         maxLTV = _maxLTV;
 
+        // Oracle Settings
         oracleMultiply = _oracleMultiply;
         oracleDivide = _oracleDivide;
         oracleNormalization = _oracleNormalization;
 
+        // Rate Calculator Settings
         rateContract = IRateCalculator(_rateContract);
 
         // Set swap
@@ -141,7 +142,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         owner = _owner;
     }
 
-    /// @notice The ```initialize``` function is called immediately after deployment
+    /// @notice Called immediately after deployment
     /// @dev This function can only be called by the owner
     /// @param _rateInitCallData The configuration data for the Rate Calculator contract
     function initialize(bytes calldata _rateInitCallData) external onlyOwner {
@@ -162,13 +163,18 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // External Helpers
     // ============================================================================================
 
-    /// @notice Returns the total amount of assets managed by Vault (including lent assets).
+    /// @notice Returns the total amount of assets managed by Vault (including lent assets)
     function totalAssets() public view override returns (uint256) {
         return totalAUM;
     }
 
     /// @notice Calculates the shares value in relationship to `amount` and `total`
     /// @dev Given an amount, return the appropriate number of shares
+    /// @param _totalAmount The total amount of assets
+    /// @param _totalSupply The total supply of shares
+    /// @param _amount The amount of assets to convert to shares
+    /// @param _roundUp Whether to round up or down
+    /// @return _shares The number of shares
     function convertToShares(uint256 _totalAmount, uint256 _totalSupply, uint256 _amount, bool _roundUp) public pure returns (uint256 _shares) {
         if (_totalAmount == 0) {
             _shares = _amount;
@@ -182,6 +188,11 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
     /// @notice Calculates the amount value in relationship to `shares` and `total`
     /// @dev Given a number of shares, returns the appropriate amount
+    /// @param _totalAmount The total amount of assets
+    /// @param _totalSupply The total supply of shares
+    /// @param _shares The number of shares to convert to amount
+    /// @param _roundUp Whether to round up or down
+    /// @return _amount The amount of assets
     function convertToAssets(uint256 _totalAmount, uint256 _totalSupply, uint256 _shares, bool _roundUp) public pure returns (uint256 _amount) {
         if (_totalSupply == 0) {
             _amount = _shares;
@@ -193,9 +204,9 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         }
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions.
-    /// @param _shares - The amount of _shares to redeem.
-    /// @return - The amount of _assets in return.
+    /// @notice Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions
+    /// @param _shares - The amount of _shares to redeem
+    /// @return - The amount of _assets in return
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
         uint256 _assets = convertToAssets(_shares);
         if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract();
@@ -203,15 +214,16 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         return _assets;
     }
 
-    /// @dev Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions.
-    /// @param _assets - The amount of _assets to withdraw.
-    /// @return - The amount of shares to burn.
+    /// @notice Allows an on-chain or off-chain user to simulate the effects of their withdrawal at the current block, given current on-chain conditions
+    /// @param _assets - The amount of _assets to withdraw
+    /// @return - The amount of shares to burn
     function previewWithdraw(uint256 _assets) public view override returns (uint256) {
         if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract();
 
         return convertToShares(_assets);
     }
 
+    /// @notice Returns the values of all constants used in the contract
     function getConstants() external pure
         returns (
             uint256 _LTV_PRECISION,
@@ -238,13 +250,13 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Internal Helpers
     // ============================================================================================
 
-    /// @notice The ```_totalAssetAvailable``` function returns the total balance of Asset Tokens in the contract
+    /// @notice Returns the total balance of Asset Tokens in the contract
     /// @return The balance of Asset Tokens held by contract
     function _totalAssetAvailable() internal view returns (uint256) {
         return totalAssets() - totalBorrow.amount;
     }
 
-    /// @notice The ```_isSolvent``` function determines if a given borrower is solvent given an exchange rate
+    /// @notice Determines if a given borrower is solvent given an exchange rate
     /// @param _borrower The borrower address to check
     /// @param _exchangeRate The exchange rate, i.e. the amount of collateral to buy 1e18 asset
     /// @return Whether borrower is solvent
@@ -261,6 +273,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         return _ltv <= maxLTV;
     }
 
+    /// @notice Approves a spender to spend a given amount of a token
+    /// @param _token The token to approve
+    /// @param _spender The spender to approve
+    /// @param _amount The amount to approve
     function _approve(address _token, address _spender, uint256 _amount) internal {
         IERC20(_token).safeApprove(_spender, 0);
         IERC20(_token).safeApprove(_spender, _amount);
@@ -276,9 +292,9 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _;
     }
 
-    /// @notice Implements a speed bump - allows only one interaction per block
-    /// @param _user The user whose interaction we are checking
-    modifier speedBump(address _user) {
+    /// @notice Allows a borrower to interact with the contract only once per block
+    /// @param _borrower The borrower whose interaction we are checking
+    modifier speedBump(address _borrower) {
         if (lastInteractionBlock[_user] == block.number) revert AlreadyCalledOnBlock();
         _;
     }
@@ -294,7 +310,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Functions: Configuration
     // ============================================================================================
 
-    /// @notice The ```withdrawFees``` function withdraws fees accumulated
+    /// @notice Withdraws accumulated fees
     /// @param _shares Number of fTokens to redeem
     /// @param _recipient Address to send the assets
     /// @return _amountToTransfer Amount of assets sent to recipient
@@ -304,7 +320,6 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (_shares == 0) _shares = balanceOf[address(this)];
 
         // We must calculate this before we subtract from _totalAsset or invoke _burn
-        // _amountToTransfer = _totalAsset.toAmount(_shares, true);
         _amountToTransfer = convertToAssets(totalAssets(), totalSupply, _shares, true);
 
         // Check for sufficient withdraw liquidity
@@ -313,11 +328,10 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
 
         // Effects: bookkeeping
         totalAUM -= _amountToTransfer;
-        // totalSupply -= _shares; // NOTE: this is done in _burn
+        // totalSupply -= _shares; // NOTE: this is done in `_burn` below
 
         // Effects: write to states
-        // NOTE: will revert if _shares > balanceOf(address(this))
-        _burn(address(this), _shares);
+        _burn(address(this), _shares); // NOTE: will revert if _shares > balanceOf(address(this))
 
         // Interactions
         assetContract.safeTransfer(_recipient, _amountToTransfer);
@@ -325,22 +339,24 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit WithdrawFees(_shares, _recipient, _amountToTransfer);
     }
 
-    /// @dev Updates the address of Swap contract.
-    /// @param _swap - The new swap address.
+    /// @notice Updates the address of Swap contract
+    /// @param _swap The new swap address
     function updateSwap(address _swap) external onlyOwner {
         swap = _swap;
 
         emit UpdateSwap(_swap);
     }
 
-    /// @dev Updates the owner of the contract.
-    /// @param _owner - The address of the new owner.
+    /// @notice Updates the owner of the contract
+    /// @param _owner The address of the new owner
     function updateOwner(address _owner) external onlyOwner {
         owner = _owner;
         
         emit UpdateOwner(_owner);
     }
 
+    /// @notice Updates protocol fee amount
+    /// @param _newFee The new fee amount
     function updateFee(uint64 _newFee) external onlyOwner {
         if (_newFee > MAX_PROTOCOL_FEE) revert InvalidProtocolFee();
 
@@ -351,6 +367,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit UpdateFee(_newFee);
     }
 
+    /// @notice Updates the pause settings
+    /// @param _configData The abi.encoded new pause settings
     function updatePauseSettings(bytes memory _configData) external onlyOwner {
         
         _addInterest();
@@ -378,8 +396,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Visability: External
     // ============================================================================================
 
-    /// @notice The ```deposit``` function allows a user to Lend Assets by specifying the amount of Asset Tokens to lend
-    /// @dev Caller must invoke ```ERC20.approve``` on the Asset Token contract prior to calling function
+    /// @notice Allows a user to Lend Assets by specifying the amount of Asset Tokens to lend
+    /// @dev Caller must invoke `ERC20.approve` on the Asset Token contract prior to calling function
     /// @param _assets The amount of Asset Token to transfer to Pair
     /// @param _receiver The address to receive the Asset Shares (fTokens)
     /// @return _shares The number of fTokens received for the deposit
@@ -393,11 +411,11 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         return _shares;
     }
 
-    /// @dev Mints exact vault shares to _receiver by depositing assets.
-    /// @param _shares - The amount of shares to mint.
-    /// @param _receiver - The address of the receiver of shares.
-    /// @return _assets - The amount of assets deposited.
-    // slither-disable-next-line reentrancy-no-eth
+    /// @notice Mints exact vault shares to _receiver by depositing assets
+    /// @dev Caller must invoke `ERC20.approve` on the Asset Token contract prior to calling function
+    /// @param _shares The amount of shares to mint
+    /// @param _receiver The address of the receiver of shares
+    /// @return _assets The amount of assets deposited
     function mint(uint256 _shares, address _receiver) public override nonReentrant returns (uint256 _assets) {
         _addInterest();
 
@@ -408,11 +426,11 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         return _assets;
     }
 
-    /// @dev Burns shares from owner and sends exact amount of assets to _receiver.
-    /// @param _assets - The amount of assets to receive.
-    /// @param _receiver - The address of the receiver of assets.
-    /// @param _owner - The owner of shares.
-    /// @return _shares - The amount of shares burned.
+    /// @notice Burns shares from owner and sends exact amount of assets to _receiver
+    /// @param _assets The amount of assets to receive
+    /// @param _receiver The address of the receiver of assets
+    /// @param _owner The owner of shares
+    /// @return _shares The amount of shares burned
     function withdraw(uint256 _assets, address _receiver, address _owner) public override nonReentrant returns (uint256 _shares) {
         if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
 
@@ -425,7 +443,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         return _shares;
     }
 
-    /// @notice The ```redeem``` function allows the caller to redeem their Asset Shares for Asset Tokens
+    /// @notice Allows the caller to redeem their Asset Shares for Asset Tokens
     /// @param _shares The number of Asset Shares (fTokens) to burn for Asset Tokens
     /// @param _receiver The address to which the Asset Tokens will be transferred
     /// @param _owner The owner of the Asset Shares (fTokens)
@@ -447,8 +465,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Visability: Internal
     // ============================================================================================
 
-    /// @notice The ```_deposit``` function is the internal implementation for lending assets
-    /// @dev Caller must invoke ```ERC20.approve``` on the Asset Token contract prior to calling function
+    /// @notice The nternal implementation for lending assets
+    /// @dev Caller must invoke `ERC20.approve` on the Asset Token contract prior to calling function
     /// @param _assets The amount of Asset Token to be transferred
     /// @param _shares The amount of Asset Shares (fTokens) to be minted
     /// @param _receiver The address to receive the Asset Shares (fTokens)
@@ -466,8 +484,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit Deposit(msg.sender, _receiver, _assets, _shares);
     }
 
-    /// @notice The ```_redeem``` function is an internal implementation which allows a Lender to pull their Asset Tokens out of the Pair
-    /// @dev Caller must invoke ```ERC20.approve``` on the Asset Token contract prior to calling function
+    /// @notice The internal implementation which allows a Lender to pull their Asset Tokens out of the Pair
+    /// @dev Caller must invoke `ERC20.approve` on the Asset Token contract prior to calling function
     /// @param _assets The number of Asset Tokens to return
     /// @param _shares The number of Asset Shares (fTokens) to burn
     /// @param _receiver The address to which the Asset Tokens will be transferred
@@ -480,7 +498,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         if (!(_assets > 0)) revert ZeroAmount();
 
         if (msg.sender != _owner) {
-            uint256 _allowed = allowance[_owner][msg.sender]; // Saves gas for limited approvals.
+            uint256 _allowed = allowance[_owner][msg.sender]; // Saves gas for limited approvals
             // NOTE: This will revert on underflow ensuring that allowance > shares
             if (_allowed != type(uint256).max) allowance[_owner][msg.sender] = _allowed - _shares;
         }
@@ -498,7 +516,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Visability: External
     // ============================================================================================
 
-    /// @notice The ```addCollateral``` function allows the caller to add Collateral Token to a borrowers position
+    /// @notice Allows the caller to add Collateral Token to a borrowers position
     /// @dev msg.sender must call ERC20.approve() on the Collateral Token contract prior to invocation
     /// @param _collateralAmount The amount of Collateral Token to be added to borrower's position
     /// @param _borrower The account to be credited
@@ -512,7 +530,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _addCollateral(msg.sender, _collateralAmount, _borrower);
     }
 
-    /// @notice The ```removeCollateral``` function is used to remove collateral from msg.sender's borrow position
+    /// @notice Removes collateral from msg.sender's borrow position
     /// @dev msg.sender must be solvent after invocation or transaction will revert
     /// @param _collateralAmount The amount of Collateral Token to transfer
     /// @param _receiver The address to receive the transferred funds
@@ -529,8 +547,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _removeCollateral(_collateralAmount, _receiver, msg.sender);
     }
 
-    /// @notice The ```repayAsset``` function allows the caller to pay down the debt for a given borrower.
-    /// @dev Caller must first invoke ```ERC20.approve()``` for the Asset Token contract
+    /// @notice Allows the caller to pay down the debt for a given borrower
+    /// @dev Caller must first invoke `ERC20.approve()` for the Asset Token contract
     /// @param _shares The number of Borrow Shares which will be repaid by the call
     /// @param _borrower The account for which the debt will be reduced
     /// @return _amountToRepay The amount of Asset Tokens which were transferred in order to repay the Borrow Shares
@@ -552,7 +570,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Visability: Internal
     // ============================================================================================
 
-    /// @notice The ```_addCollateral``` function is an internal implementation for adding collateral to a borrowers position
+    /// @notice The nternal implementation for adding collateral to a borrowers position
     /// @param _sender The source of funds for the new collateral
     /// @param _collateralAmount The amount of Collateral Token to be transferred
     /// @param _borrower The borrower account for which the collateral should be credited
@@ -567,7 +585,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit AddCollateral(_sender, _borrower, _collateralAmount);
     }
     
-    /// @notice The ```_removeCollateral``` function is the internal implementation for removing collateral from a borrower's position
+    /// @notice The internal implementation for removing collateral from a borrower's position
     /// @param _collateralAmount The amount of Collateral Token to remove from the borrower's position
     /// @param _receiver The address to receive the Collateral Token transferred
     /// @param _borrower The borrower whose account will be debited the Collateral amount
@@ -584,10 +602,9 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit RemoveCollateral(msg.sender, _collateralAmount, _receiver, _borrower);
     }
 
-    /// @notice The ```_borrowAsset``` function is the internal implementation for borrowing assets
+    /// @notice The internal implementation for borrowing assets
     /// @param _borrowAmount The amount of the Asset Token to borrow
     /// @return _sharesAdded The amount of borrow shares the msg.sender will be debited
-    // function _borrowAsset(uint128 _borrowAmount, address _receiver) internal returns (uint256 _sharesAdded) {
     function _borrowAsset(uint256 _borrowAmount) internal returns (uint256 _sharesAdded) {
         if (_borrowAmount > _totalAssetAvailable()) revert InsufficientAssetsInContract();
         
@@ -603,7 +620,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         emit BorrowAsset(msg.sender, _borrowAmount, _sharesAdded);
     }
 
-    /// @notice The ```_repayAsset``` function is the internal implementation for repaying a borrow position
+    /// @notice The internal implementation for repaying a borrow position
     /// @dev The payer must have called ERC20.approve() on the Asset Token contract prior to invocation
     /// @param _totalBorrow An in memory copy of the totalBorrow VaultAccount struct
     /// @param _amountToRepay The amount of Asset Token to transfer
@@ -628,8 +645,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Functions: Under Collateralized Leverage
     // ============================================================================================
 
-    /// @notice The ```leveragePosition``` function allows a user to enter a leveraged borrow position with minimal upfront Collateral (effectively take an under collateralized loan)
-    /// @dev Caller must invoke ```ERC20.approve()``` on the Collateral Token contract prior to calling function
+    /// @notice Allows a user to enter a leveraged borrow position with minimal upfront Collateral (effectively take an under collateralized loan)
+    /// @dev Caller must invoke `ERC20.approve()` on the Collateral Token contract prior to calling function
     /// @param _borrowAmount The amount of Asset Tokens borrowed
     /// @param _initialCollateralAmount The initial amount of Collateral Tokens supplied by the borrower
     /// @param _minAmount The minimum amount of Collateral Tokens to be received in exchange for the borrowed Asset Tokens
@@ -672,7 +689,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         return _initialCollateralAmount + _amountCollateralOut;
     }
 
-    /// @notice The ```repayAssetWithCollateral``` function allows a borrower to repay their debt using existing collateral in contract
+    /// @notice Allows a borrower to repay their debt using existing collateral in contract
     /// @param _collateralToSwap The amount of Collateral Tokens to swap for Asset Tokens
     /// @param _minAmount The minimum amount of Asset Tokens to receive during the swap
     /// @return _amountAssetOut The amount of Asset Tokens received for the Collateral Tokens, the amount the borrowers account was credited
@@ -706,13 +723,13 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Functions: Interest Accumulation and Adjustment
     // ============================================================================================
 
-    /// @notice The ```addInterest``` function is a public implementation of _addInterest and allows 3rd parties to trigger interest accrual
+    /// @notice The public implementation of `_addInterest` and allows 3rd parties to trigger interest accrual
     /// @return _interestEarned The amount of interest accrued by all borrowers
     function addInterest() external nonReentrant returns (uint256 _interestEarned, uint256 _feesAmount, uint256 _feesShare, uint64 _newRate) {
         return _addInterest();
     }
 
-    /// @notice The ```_addInterest``` function is invoked prior to every external function and is used to accrue interest and update interest rate
+    /// @notice Invoked prior to every external function and is used to accrue interest and update interest rate
     /// @dev Can only called once per block
     /// @return _interestEarned The amount of interest accrued by all borrowers
     function _addInterest() internal returns (uint256 _interestEarned, uint256 _feesAmount, uint256 _feesShare, uint64 _newRate) {
@@ -782,14 +799,14 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Functions: ExchangeRate
     // ============================================================================================
 
-    /// @notice The ```updateExchangeRate``` function is the external implementation of _updateExchangeRate.
+    /// @notice The external implementation of `_updateExchangeRate`
     /// @dev This function is invoked at most once per block as these queries can be expensive
     /// @return _exchangeRate The new exchange rate
     function updateExchangeRate() external nonReentrant returns (uint256 _exchangeRate) {
         _exchangeRate = _updateExchangeRate();
     }
 
-    /// @notice The ```_updateExchangeRate``` function retrieves the latest exchange rate. i.e how much collateral to buy 1e18 asset.
+    /// @notice Retrieves the latest exchange rate. i.e how much collateral to buy 1e18 asset
     /// @dev This function is invoked at most once per block as these queries can be expensive
     /// @return _exchangeRate The new exchange rate
     function _updateExchangeRate() internal returns (uint256 _exchangeRate) {
@@ -831,8 +848,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     // Functions: Liquidations
     // ============================================================================================
 
-    /// @notice The ```liquidate``` function allows a third party to repay a borrower's debt if they have become insolvent
-    /// @dev Caller must invoke ```ERC20.approve``` on the Asset Token contract prior to calling ```Liquidate()```
+    /// @notice Allows a third party to repay a borrower's debt if they have become insolvent
+    /// @dev Caller must invoke `ERC20.approve` on the Asset Token contract prior to calling `Liquidate()`
     /// @param _sharesToLiquidate The number of Borrow Shares repaid by the liquidator
     /// @param _deadline The timestamp after which tx will revert
     /// @param _borrower The account for which the repayment is credited and from whom collateral will be taken
