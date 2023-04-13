@@ -2,8 +2,8 @@
 pragma solidity 0.8.17;
 
 import {ERC4626} from "@solmate/mixins/ERC4626.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {IGlpManager} from "../interfaces/IGlpManager.sol";
