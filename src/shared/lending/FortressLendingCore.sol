@@ -13,7 +13,7 @@ import {IRateCalculator} from "./interfaces/IRateCalculator.sol";
 import {IFortressSwap} from "../fortress-interfaces/IFortressSwap.sol";
 import {IFortressVault} from "../fortress-interfaces/IFortressVault.sol";
 
-/// @notice  An abstract contract which contains the core logic and storage for the FortressLendingPair
+/// @notice An abstract contract which contains the core logic and storage for the FortressLendingPair
 abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGuard, ERC4626 {
 
     using SafeERC20 for IERC20;
@@ -209,7 +209,8 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @return - The amount of _assets in return
     function previewRedeem(uint256 _shares) public view override returns (uint256) {
         uint256 _assets = convertToAssets(_shares);
-        if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract();
+
+        if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract(_assets, _totalAssetAvailable());
 
         return _assets;
     }
@@ -218,7 +219,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _assets - The amount of _assets to withdraw
     /// @return - The amount of shares to burn
     function previewWithdraw(uint256 _assets) public view override returns (uint256) {
-        if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract();
+        if (_assets > _totalAssetAvailable()) revert InsufficientAssetsInContract(_assets, _totalAssetAvailable());
 
         return convertToShares(_assets);
     }
@@ -295,7 +296,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @notice Allows a borrower to interact with the contract only once per block
     /// @param _borrower The borrower whose interaction we are checking
     modifier speedBump(address _borrower) {
-        if (lastInteractionBlock[_user] == block.number) revert AlreadyCalledOnBlock();
+        if (lastInteractionBlock[_borrower] == block.number) revert AlreadyCalledOnBlock(_borrower);
         _;
     }
 
@@ -303,7 +304,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _borrower The borrower whose solvency we will check
     modifier isSolvent(address _borrower) {
         _;
-        if (!_isSolvent(_borrower, exchangeRateInfo.exchangeRate)) revert Insolvent();
+        if (!_isSolvent(_borrower, exchangeRateInfo.exchangeRate)) revert Insolvent(_borrower);
     }
 
     // ============================================================================================
@@ -323,8 +324,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _amountToTransfer = convertToAssets(totalAssets(), totalSupply, _shares, true);
 
         // Check for sufficient withdraw liquidity
-        uint256 _assetsAvailable = _totalAssetAvailable();
-        if (_assetsAvailable < _amountToTransfer) revert InsufficientAssetsInContract();
+        if (_totalAssetAvailable() < _amountToTransfer) revert InsufficientAssetsInContract(_amountToTransfer, _totalAssetAvailable());
 
         // Effects: bookkeeping
         totalAUM -= _amountToTransfer;
@@ -373,7 +373,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         
         _addInterest();
 
-        (bool _depositLiquidity, bool _withdrawLiquidity, bool _addLeverage, bool _removeLeverage, bool _addInterest, bool _liquidations, bool _addCollateral, bool _removeCollateral, bool _repayAsset)
+        (bool _depositLiquidity, bool _withdrawLiquidity, bool _addLeverage, bool _removeLeverage, bool _interest, bool _liquidations, bool _addCol, bool _removeCol, bool _repay)
             = abi.decode(_configData, (bool, bool, bool, bool, bool, bool, bool, bool, bool));
         
         pauseSettings = PauseSettings({
@@ -381,14 +381,14 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
             withdrawLiquidity: _withdrawLiquidity,
             addLeverage: _addLeverage,
             removeLeverage: _removeLeverage,
-            addInterest: _addInterest,
+            addInterest: _interest,
             liquidations: _liquidations,
-            addCollateral: _addCollateral,
-            removeCollateral: _removeCollateral,
-            repayAsset: _repayAsset
+            addCollateral: _addCol,
+            removeCollateral: _removeCol,
+            repayAsset: _repay
         });
 
-        emit UpdatePauseSettings(_depositLiquidity, _withdrawLiquidity, _addLeverage, _removeLeverage, _addInterest, _liquidations, _addCollateral, _removeCollateral, _repayAsset);
+        emit UpdatePauseSettings(_depositLiquidity, _withdrawLiquidity, _addLeverage, _removeLeverage, _interest, _liquidations, _addCol, _removeCol, _repay);
     }
 
     // ============================================================================================
@@ -432,7 +432,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _owner The owner of shares
     /// @return _shares The amount of shares burned
     function withdraw(uint256 _assets, address _receiver, address _owner) public override nonReentrant returns (uint256 _shares) {
-        if (_assets > maxWithdraw(_owner)) revert InsufficientBalance();
+        if (_assets > maxWithdraw(_owner)) revert InsufficientBalance(_assets, maxWithdraw(_owner));
 
         _addInterest();
 
@@ -449,7 +449,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _owner The owner of the Asset Shares (fTokens)
     /// @return _assets The amount of Asset Tokens to be transferred
     function redeem(uint256 _shares, address _receiver, address _owner) public override nonReentrant returns (uint256 _assets) {
-        if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
+        if (_shares > maxRedeem(_owner)) revert InsufficientBalance(_shares, maxRedeem(_owner));
 
         _addInterest();
 
@@ -606,7 +606,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _borrowAmount The amount of the Asset Token to borrow
     /// @return _sharesAdded The amount of borrow shares the msg.sender will be debited
     function _borrowAsset(uint256 _borrowAmount) internal returns (uint256 _sharesAdded) {
-        if (_borrowAmount > _totalAssetAvailable()) revert InsufficientAssetsInContract();
+        if (_borrowAmount > _totalAssetAvailable()) revert InsufficientAssetsInContract(_borrowAmount, _totalAssetAvailable());
         
         BorrowAccount memory _totalBorrow = totalBorrow;
 
@@ -679,7 +679,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         address _collateralContract = address(collateralContract);
         _approve(_underlyingAsset, _collateralContract, _underlyingAmount);
         uint256 _amountCollateralOut = IFortressVault(_collateralContract).depositUnderlying(_underlyingAsset, address(this), _underlyingAmount, 0);
-        if (_amountCollateralOut < _minAmount) revert SlippageTooHigh();
+        if (_amountCollateralOut < _minAmount) revert SlippageTooHigh(_amountCollateralOut, _minAmount);
 
         // address(this) as _sender means no transfer occurs as the pair has already received the collateral during swap
         _addCollateral(address(this), _amountCollateralOut, msg.sender);
@@ -708,7 +708,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         
         address _asset = address(assetContract);
         if (_underlyingAsset != _asset) _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
-        if (_amountAssetOut < _minAmount) revert SlippageTooHigh();
+        if (_amountAssetOut < _minAmount) revert SlippageTooHigh(_amountAssetOut, _minAmount);
 
         BorrowAccount memory _totalBorrow = totalBorrow;
         uint256 _sharesToRepay = convertToShares(_totalBorrow.amount, _totalBorrow.shares, _amountAssetOut, false);
@@ -835,7 +835,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         }
 
         _exchangeRate = _price / oracleNormalization;
-        if (_exchangeRate > type(uint224).max) revert PriceTooLarge();
+        if (_exchangeRate > type(uint224).max) revert PriceTooLarge(_exchangeRate);
 
         _exchangeRateInfo.exchangeRate = uint224(_exchangeRate);
         _exchangeRateInfo.lastTimestamp = uint32(block.timestamp);
@@ -856,12 +856,12 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @return _collateralForLiquidator The amount of Collateral Token transferred to the liquidator
     function liquidate(uint128 _sharesToLiquidate, uint256 _deadline, address _borrower) external nonReentrant returns (uint256 _collateralForLiquidator) {
         if (block.timestamp > _deadline) revert PastDeadline(block.timestamp, _deadline);
-        if (pauseSettings.liquidations) revert LiquidationsPaused();
+        if (pauseSettings.liquidations) revert Paused();
 
         _addInterest();
         uint256 _exchangeRate = _updateExchangeRate();
 
-        if (_isSolvent(_borrower, _exchangeRate)) revert BorrowerSolvent();
+        if (_isSolvent(_borrower, _exchangeRate)) revert BorrowerSolvent(_borrower, _exchangeRate);
 
         // Read from state
         BorrowAccount memory _totalBorrow = totalBorrow;

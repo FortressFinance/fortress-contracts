@@ -491,7 +491,6 @@ abstract contract BaseTest is Test, AddressesArbi {
 
         vm.warp(block.timestamp + 1 days);
 
-        (uint256 _borrowAmount, uint256 _borrowShares) = _lendingPair.totalBorrow();
         (, uint64 _feeToProtocolRate,,) = _lendingPair.currentRateInfo();
 
         assertTrue(uint256(_feeToProtocolRate) > 0, "_testPlatformFee: E1");
