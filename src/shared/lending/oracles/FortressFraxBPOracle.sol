@@ -30,14 +30,14 @@ import {ICurvePool} from "../interfaces/ICurvePool.sol";
 import {IChainlinkAggregator} from "../interfaces/IChainlinkAggregator.sol"; 
 
 
-contract Fortress2PoolOracle is AggregatorV3Interface {
+contract FortressFraxBPOracle is AggregatorV3Interface {
 
     using SafeCast for uint256;
 
-    ICurvePool public immutable twoPool;
-    ERC4626 public immutable fc2Pool;
+    ICurvePool public immutable fraxBP;
+    ERC4626 public immutable fcFraxBP;
+    IChainlinkAggregator public FRAX;
     IChainlinkAggregator public USDC;
-    IChainlinkAggregator public USDT;
 
     uint256 public lastSharePrice;
     uint256 public lowerBoundPercentage;
@@ -54,18 +54,18 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
     /********************************** Constructor **********************************/
 
     constructor(address _owner) {
-        twoPool = ICurvePool(address(0x7f90122BF0700F9E7e1F688fe926940E8839F353)); 
-        fc2Pool = ERC4626(address(0xe16F15266cD00c418fB63e505361de32ce90Ac9f));
+        fraxBP = ICurvePool(address(0xC9B8a3FDECB9D5b218d02555a8Baf332E5B740d5)); 
+        fcFraxBP = ERC4626(address(0xe0Ef16f92DdC7f2AA3DADC0fDd3cdEd262Df03D6));
 
         USDC = IChainlinkAggregator(address(0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3));
-        USDT = IChainlinkAggregator(address(0x3f3f5dF88dC9F13eac63DF89EC16ef6e7E25DdE7));
+        FRAX = IChainlinkAggregator(address(0x0809E3d38d1B4214958faf06D8b1B1a2b73f2ab8));
 
         lowerBoundPercentage = 20;
         upperBoundPercentage = 20;
         
         owner = _owner;
 
-        uint256 _vaultSpread = fc2Pool.convertToAssets(1e18);
+        uint256 _vaultSpread = fcFraxBP.convertToAssets(1e18);
         vaultMaxSpread = _vaultSpread * 110 / 100; // limit to 10% of the vault spread
 
         lastSharePrice = uint256(_getPrice());
@@ -87,7 +87,7 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
     }
 
     function description() external pure returns (string memory) {
-        return "fc2Pool USD Oracle";
+        return "fcFraxBP USD Oracle";
     }
 
     function version() external pure returns (uint256) {
@@ -106,11 +106,11 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
 
     function _getPrice() internal view returns (int256) {
         uint256 minAssetPrice = uint256(_getMinAssetPrice());
-        uint256 _assetPrice = twoPool.get_virtual_price() * minAssetPrice;
+        uint256 _assetPrice = fraxBP.get_virtual_price() * minAssetPrice;
 
-        uint256 _sharePrice = ((fc2Pool.convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        uint256 _sharePrice = ((fcFraxBP.convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
 
-        // check that fc2Pool price deviation did not exceed the configured bounds
+        // check that fcFraxBP price deviation did not exceed the configured bounds
         if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
         _checkVaultSpread();
 
@@ -122,11 +122,11 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
         if (usdcPrice == 0) revert zeroPrice();
         if (usdcUpdatedAt < block.timestamp - (24 * 3600)) revert stalePrice();
 
-        (, int256 usdtPrice, ,uint256 usdtUpdatedAt, ) = USDT.latestRoundData();
-        if (usdtPrice == 0) revert zeroPrice();
-        if (usdtUpdatedAt < block.timestamp - (24 * 3600)) revert stalePrice();
+        (, int256 fraxPrice, ,uint256 fraxUpdatedAt, ) = FRAX.latestRoundData();
+        if (fraxPrice == 0) revert zeroPrice();
+        if (fraxUpdatedAt < block.timestamp - (24 * 3600)) revert stalePrice();
         
-        return Math.min(uint256(usdcPrice), uint256(usdtPrice));
+        return Math.min(uint256(usdcPrice), uint256(fraxPrice));
     }
 
     /// @dev make sure that lp token price has not deviated by more than x% since last recorded price
@@ -140,7 +140,7 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
     }
 
     function _checkVaultSpread() internal view {
-        if (fc2Pool.convertToAssets(1e18) > vaultMaxSpread) revert vaultMaxSpreadExceeded();
+        if (fcFraxBP.convertToAssets(1e18) > vaultMaxSpread) revert vaultMaxSpreadExceeded();
     }
 
     /********************************** Owner Functions **********************************/
@@ -148,9 +148,9 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external onlyOwner {
         uint256 minAssetPrice = uint256(_getMinAssetPrice());
-        uint256 _assetPrice = twoPool.get_virtual_price() * minAssetPrice;
+        uint256 _assetPrice = fraxBP.get_virtual_price() * minAssetPrice;
 
-        lastSharePrice = ((fc2Pool.convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        lastSharePrice = ((fcFraxBP.convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
 
         emit LastSharePriceUpdated(lastSharePrice);
     }
@@ -174,11 +174,11 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
         emit VaultMaxSpreadUpdated(_vaultMaxSpread);
     }
 
-    function updatePriceFeed(address _usdtPriceFeed, address _usdcPriceFeed) external onlyOwner {
+    function updatePriceFeed(address _fraxPriceFeed, address _usdcPriceFeed) external onlyOwner {
         USDC = IChainlinkAggregator(_usdcPriceFeed);
-        USDT = IChainlinkAggregator(_usdtPriceFeed);
+        FRAX = IChainlinkAggregator(_fraxPriceFeed);
 
-        emit PriceFeedUpdated(_usdtPriceFeed, _usdcPriceFeed);
+        emit PriceFeedUpdated(_fraxPriceFeed, _usdcPriceFeed);
     }
 
     function updateOwner(address _owner) external onlyOwner {
@@ -194,7 +194,7 @@ contract Fortress2PoolOracle is AggregatorV3Interface {
     event PriceDeviationBoundsUpdated(uint256 lowerBoundPercentage, uint256 upperBoundPercentage);
     event VaultMaxSpreadUpdated(uint256 vaultMaxSpread);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event PriceFeedUpdated(address indexed usdtPriceFeed, address indexed usdcPriceFeed);
+    event PriceFeedUpdated(address indexed fraxPriceFeed, address indexed usdcPriceFeed);
 
     /********************************** Errors **********************************/
 

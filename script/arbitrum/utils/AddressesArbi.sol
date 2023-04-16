@@ -101,4 +101,6 @@ contract AddressesArbi {
     address constant fcTriCrypto = 0x32ED4f40ce345Eca65F24735Ad9D35c7fF3460E5;
     // The address of fc2Pool contract.
     address constant fc2Pool = 0xe16F15266cD00c418fB63e505361de32ce90Ac9f;
+    // The address of fcFraxBP contract.
+    address constant fcFraxBP = 0xe0Ef16f92DdC7f2AA3DADC0fDd3cdEd262Df03D6;
 }
