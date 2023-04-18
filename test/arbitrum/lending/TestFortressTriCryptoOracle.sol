@@ -13,7 +13,8 @@ contract TestFortressTriCryptoOracle is BaseTest {
 
     function setUp() public {
         _setUp();
-        oracle = new FortressTriCryptoOracle(address(owner));
+        address _fcTriCrypto = address(0x32ED4f40ce345Eca65F24735Ad9D35c7fF3460E5);
+        oracle = new FortressTriCryptoOracle(address(owner), _fcTriCrypto);
         // (,int256 lastPrice,,,) = oracle.latestRoundData();
         // console.log('lastPrice:',uint256(lastPrice));
     }

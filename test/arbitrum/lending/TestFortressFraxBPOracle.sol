@@ -13,7 +13,8 @@ contract TestFortressFraxBPOracle is BaseTest {
 
     function setUp() public {
         _setUp();
-        oracle = new FortressFraxBPOracle(address(owner));
+        address _fcFraxBP = address(0xe0Ef16f92DdC7f2AA3DADC0fDd3cdEd262Df03D6);
+        oracle = new FortressFraxBPOracle(address(owner), _fcFraxBP);
         // (,int256 lastPrice,,,) = oracle.latestRoundData();
         // console.log('lastPrice:',uint256(lastPrice));
     }

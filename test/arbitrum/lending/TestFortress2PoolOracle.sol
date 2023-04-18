@@ -13,7 +13,8 @@ contract TestFortress2PoolOracle is BaseTest {
 
     function setUp() public {
         _setUp();
-        oracle = new Fortress2PoolOracle(address(owner));
+        address fc2Pool = address(0xe16F15266cD00c418fB63e505361de32ce90Ac9f);
+        oracle = new Fortress2PoolOracle(address(owner), fc2Pool);
         // (,int256 lastPrice,,,) = oracle.latestRoundData();
         // console.log('lastPrice:',uint256(lastPrice));
     }
