@@ -97,4 +97,10 @@ contract AddressesArbi {
     address constant FortressRegistryV1 = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
     // The address of fcGLP contract.
     address constant fcGLP = 0x86eE39B28A7fDea01b53773AEE148884Db311B46;
+    // The address of fcTriCrypto contract.
+    address constant fcTriCrypto = 0x32ED4f40ce345Eca65F24735Ad9D35c7fF3460E5;
+    // The address of fc2Pool contract.
+    address constant fc2Pool = 0xe16F15266cD00c418fB63e505361de32ce90Ac9f;
+    // The address of fcFraxBP contract.
+    address constant fcFraxBP = 0xe0Ef16f92DdC7f2AA3DADC0fDd3cdEd262Df03D6;
 }
