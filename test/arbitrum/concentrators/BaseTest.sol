@@ -50,13 +50,13 @@ abstract contract BaseTest is Test, AddressesArbi {
         
         // --------------------------------- set accounts ---------------------------------
 
-        owner = address(0x16cAD91E1928F994816EbC5e759d8562aAc65ab2);
-        alice = address(0xFa0C696bC56AE0d256D34a307c447E80bf92Dd41);
-        bob = address(0x864e4b0c28dF7E2f317FF339CebDB5224F47220e);
-        charlie = address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc);
-        yossi = address(0x77Ee01E3d0E05b4afF42105Fe004520421248261);
-        platform = address(0x9cbD8440E5b8f116082a0F4B46802DB711592fAD);
-        harvester = address(0xBF93B898E8Eee7dd6915735eB1ea9BFc4b98BEc0);
+        owner = makeAddr("owner");
+        alice = makeAddr("alice");
+        bob = makeAddr("bob");
+        charlie = makeAddr("charlie");
+        yossi = makeAddr("yossi");
+        platform = makeAddr("platform");
+        harvester = makeAddr("harvester");
 
         vm.deal(owner, 100 ether);
         vm.deal(alice, 100 ether);
