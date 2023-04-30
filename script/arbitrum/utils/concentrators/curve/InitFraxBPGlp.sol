@@ -20,7 +20,7 @@ contract InitFraxBPGlp is InitBaseArbi {
 
         _asset = FRAXBP_LP;
         _symbol = "fctrFraxBP-fcGLP";
-        _name = "Fortress Curve FraxBP Concentrating to fcGLP";
+        _name = "Fortress Curve FraxBP Concentrating into fcGLP";
 
         _underlyingAssets2[0] = FRAX;
         _underlyingAssets2[1] = USDC;
