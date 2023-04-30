@@ -7,6 +7,9 @@ import "src/arbitrum/utils/FortressArbiSwap.sol";
 import "src/arbitrum/utils/FortressArbiRegistry.sol";
 import "src/arbitrum/utils/CurveArbiOperations.sol";
 
+
+// 2CRV    _convexPid=7 https://arbiscan.io/address/0x7f90122BF0700F9E7e1F688fe926940E8839F353
+
 contract InitTriCryptoGlp is InitBaseArbi {
     
     function _initializeTriCryptoGlp(address _owner, address _fortressArbiRegistry, address _fortressSwap, address _platform, address _compounder, address _ammOperations) public returns (address) {
@@ -36,6 +39,10 @@ contract InitTriCryptoGlp is InitBaseArbi {
 
         CurveGlpConcentrator curveGlpConcentrator = new CurveGlpConcentrator(ERC20(_asset), _name, _symbol, _settingsConfig, _boosterConfig, _compounder, _underlyingAssets4, _poolType);
         
+        // ------------------------- update reg target asset -------------------------
+
+        YieldOptimizersRegistry(_fortressArbiRegistry).updateConcentratorsTargetAssets(address(0), address(0), _compounder, address(0));
+
         // ------------------------- init registry -------------------------
 
         YieldOptimizersRegistry(_fortressArbiRegistry).registerAmmConcentrator(true, address(curveGlpConcentrator), address(_compounder), address(_asset));
