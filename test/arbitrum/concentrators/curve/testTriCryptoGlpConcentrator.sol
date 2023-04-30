@@ -25,13 +25,11 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
         address tempAddr = _initializeGlpCompounder(address(owner), platform, address(fortressRegistry), address(fortressSwap));
         glpCompounder = GlpCompounder(payable(tempAddr)); 
         
-        YieldOptimizersRegistry(fortressRegistry).updateConcentratorsTargetAssets(address(0), address(0), address(glpCompounder), address(0));
+        // YieldOptimizersRegistry(fortressRegistry).updateConcentratorsTargetAssets(address(0), address(0), address(glpCompounder), address(0));
 
         tempAddr = _initializeTriCryptoGlp(address(owner), address(fortressRegistry), address(fortressSwap), platform, address(glpCompounder), address(ammOperations));
         glpConcentrator = CurveGlpConcentrator(payable(tempAddr));
 
-        ammOperations.updateWhitelist(address(glpConcentrator), true);
-        
         vm.stopPrank();
 
         (,,,,,, compounder,,,) = AMMConcentratorBase(address(glpConcentrator)).settings();

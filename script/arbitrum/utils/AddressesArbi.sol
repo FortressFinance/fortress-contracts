@@ -103,4 +103,11 @@ contract AddressesArbi {
     address constant fc2Pool = 0xe16F15266cD00c418fB63e505361de32ce90Ac9f;
     // The address of fcFraxBP contract.
     address constant fcFraxBP = 0xe0Ef16f92DdC7f2AA3DADC0fDd3cdEd262Df03D6;
+    //
+    // address constant ammOperations = 0x860b5691C95a2698bAd732E88F95C2e947AA4aDB;
+    //
+    address constant yieldOptimizersRegistry = 0x03605C3A3dAf860774448df807742c0d0e49460C;
+    address constant multiClaimer = 0x259c2B9F14Ef98620d529feEf6d0D22269fDfbeD;
+    address constant fctrTriCryptofcGLP = 0x4cdEE506E9130f8A8947D80DCe1AbfDf0fa36fb5;
+    address constant fctrFraxBPfcGLP = 0xA7C12b4B98E6A38c51B12668773DAe855DdDecf8;
 }
