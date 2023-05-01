@@ -439,7 +439,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function addAssetVault(address _targetAsset) external onlyManager nonReentrant returns (address _assetVault) {
+    function addAssetVault(address _targetAsset) external onlyManager nonReentrant immutableVault returns (address _assetVault) {
         if (address(asset) != _targetAsset) {
             if (!IFortressSwap(swap).routeExists(address(asset), _targetAsset)) revert InvalidSwapRoute();
             if (!IFortressSwap(swap).routeExists(_targetAsset, address(asset))) revert InvalidSwapRoute();
