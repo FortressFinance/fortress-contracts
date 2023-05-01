@@ -79,6 +79,9 @@ interface IMetaVault {
     /// @param _performanceFeeLimit - The new performance fee limit
     function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external;
 
+    /// @dev Makes the Vault's settings immutable
+    function makeImmutable() external;
+
     /********************************** Platform Functions **********************************/
 
     /// @dev Charges the management fee. Can only be called by the Platform
@@ -215,6 +218,10 @@ interface IMetaVault {
     /// @param _shareSupply The share balance at this time
     event Snapshot(uint256 indexed _timestamp, uint256 indexed _blockNumber, uint256 _assetBalance, uint256 _shareSupply);
 
+    /// @notice emitted when vault is made immutable
+    event VaultImmutable();
+
+
     /********************************** Errors **********************************/
 
     error InvalidState();
@@ -247,4 +254,5 @@ interface IMetaVault {
     error EpochAlreadyInitiated();
     error platformManagementFeeInvalid();
     error ManagementFeeNotDue();
+    error Immutable();
 }

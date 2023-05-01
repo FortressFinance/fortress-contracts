@@ -374,12 +374,10 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /********************************** Manager Functions **********************************/
 
     /// @inheritdoc IMetaVault
-    function initiateVault(bytes memory _configData, bool _isImmutable) external onlyManager {
+    function initiateVault(bytes memory _configData) external onlyManager {
         _onState(State.INITIAL);
 
         currentVaultState = State.UNMANAGED;
-
-        isImmutable = _isImmutable;
 
         emit EpochCompleted(block.timestamp, block.number, 0, 0);
 
