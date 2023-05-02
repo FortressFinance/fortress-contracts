@@ -81,6 +81,8 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     bool public isWithdrawPaused;
     /// @notice Whether an epoch is initiated
     bool public isEpochinitiated;
+    /// @notice Whether the vault is immutable
+    bool public isImmutable;
     
     // Accounting
 
@@ -161,6 +163,11 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     /// @notice Platform has admin access
     modifier onlyManager() {
         if (msg.sender != manager && msg.sender != platform) revert Unauthorized();
+        _;
+    }
+
+    modifier immutableVault() {
+        if (isImmutable) revert Immutable();
         _;
     }
 
@@ -383,8 +390,12 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
 
         _onState(State.UNMANAGED);
 
-        (epochEndBlock, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
-         = abi.decode(_configData, (uint256, bool, bool, bool));
+        if (isImmutable) {
+            (epochEndBlock) = abi.decode(_configData, (uint256));
+        } else {
+            (epochEndBlock, isPenaltyEnabled, isPerformanceFeeEnabled, isCollateralRequired)
+                = abi.decode(_configData, (uint256, bool, bool, bool));
+        }
 
         if (epochEndBlock <= block.number) revert EpochEndBlockInvalid();
 
@@ -426,7 +437,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function addAssetVault(address _targetAsset) external onlyManager nonReentrant returns (address _assetVault) {
+    function addAssetVault(address _targetAsset) external onlyManager nonReentrant immutableVault returns (address _assetVault) {
         if (address(asset) != _targetAsset) {
             if (!IFortressSwap(swap).routeExists(address(asset), _targetAsset)) revert InvalidSwapRoute();
             if (!IFortressSwap(swap).routeExists(_targetAsset, address(asset))) revert InvalidSwapRoute();
@@ -505,7 +516,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external onlyManager {
+    function updateManagerSettings(uint256 _managerPerformanceFee, uint256 _vaultWithdrawFee, uint256 _collateralRequirement, uint256 _performanceFeeLimit) external onlyManager immutableVault {
         if (_managerPerformanceFee < 4) revert ManagerPerformanceFeeInvalid();
         if (_collateralRequirement < 0) revert CollateralRequirementInvalid();
         if (_performanceFeeLimit < 0) revert PerformanceFeeLimitInvalid();
@@ -519,6 +530,15 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
         performanceFeeLimit = _performanceFeeLimit;
 
         emit ManagerSettingsUpdated(_managerPerformanceFee, _vaultWithdrawFee, _collateralRequirement, _performanceFeeLimit);
+    }
+
+    /// @inheritdoc IMetaVault
+    function makeImmutable() external onlyManager {
+        _onState(State.UNMANAGED);
+
+        isImmutable = true;
+
+        emit VaultImmutable();
     }
     
     /********************************** Platform Functions **********************************/
@@ -538,7 +558,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function updateManagementFees(uint256 _platformManagementFee) external onlyPlatform {
+    function updateManagementFees(uint256 _platformManagementFee) external onlyPlatform immutableVault {
         if (_platformManagementFee < 240) revert platformManagementFeeInvalid();
 
         _onState(State.UNMANAGED);
@@ -549,7 +569,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function updatePauseInteractions(bool _isDepositPaused, bool _isWithdrawPaused) external onlyPlatform {
+    function updatePauseInteractions(bool _isDepositPaused, bool _isWithdrawPaused) external onlyPlatform immutableVault {
         isDepositPaused = _isDepositPaused;
         isWithdrawPaused = _isWithdrawPaused;
 
@@ -557,7 +577,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function updatePlatformSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external onlyPlatform {
+    function updatePlatformSettings(State _currentVaultState, address _swap, uint256 _depositLimit, uint256 _timelockDuration) external onlyPlatform immutableVault {
         if (_depositLimit <= totalSupply) revert DepositLimitExceeded();
         
         _onState(State.UNMANAGED);
@@ -571,7 +591,7 @@ contract MetaVault is ReentrancyGuard, ERC4626, IMetaVault {
     }
 
     /// @inheritdoc IMetaVault
-    function blacklistAsset(address _asset) external onlyPlatform {
+    function blacklistAsset(address _asset) external onlyPlatform immutableVault {
         _onState(State.UNMANAGED);
 
         blacklistedAssets[_asset] = true;
