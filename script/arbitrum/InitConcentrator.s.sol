@@ -6,13 +6,14 @@ import "forge-std/console.sol";
 
 import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 
-import {InitFraxBPGlp} from "script/arbitrum/utils/concentrators/curve/InitFraxBPGlp.sol";
+import {InitTriCryptoGlp} from "script/arbitrum/utils/concentrators/curve/InitTriCryptoGlp.sol";
 import {AMMConcentratorBase} from "src/shared/concentrators/AMMConcentratorBase.sol";
+import {YieldOptimizersRegistry} from "src/shared/utils/YieldOptimizersRegistry.sol";
 
-contract InitConcentrator is Script, AddressesArbi, InitFraxBPGlp {
+contract InitConcentrator is Script, AddressesArbi, InitTriCryptoGlp {
 
     function run() public {
-        
+
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.envAddress("DEPLOYER");
         address owner = vm.envAddress("OWNER");
@@ -22,8 +23,7 @@ contract InitConcentrator is Script, AddressesArbi, InitFraxBPGlp {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        AMMConcentratorBase(fctrTriCryptofcGLP).updateMultiClaimer(address(multiClaimer));
-        AMMConcentratorBase(fctrFraxBPfcGLP).updateMultiClaimer(multiClaimer);
+        YieldOptimizersRegistry(yieldOptimizersRegistry).registerAmmConcentrator(true, fctrTriCryptofcGLP, fcGLP, TRICRYPTO_LP);
 
         vm.stopBroadcast();
     }
