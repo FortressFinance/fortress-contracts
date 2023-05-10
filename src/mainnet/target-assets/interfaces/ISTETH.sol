@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-interface IWSTETH {
+interface IStETH {
     function getStETHByWstETH(uint256 _amount) external view returns (uint256);
 
     function getWstETHByStETH(uint256 _amount) external view returns (uint256);

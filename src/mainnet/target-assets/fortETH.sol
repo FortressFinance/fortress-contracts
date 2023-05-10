@@ -20,7 +20,7 @@ pragma solidity 0.8.17;
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "lib/openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
-import {IAssetVault} from "./interfaces/IAssetVault.sol";
+import {IStrategy} from "./interfaces/IStrategy.sol";
 import {ERC4626, ERC20, FixedPointMathLib} from "src/shared/interfaces/ERC4626.sol";
 
 abstract contract FortETH is ReentrancyGuard, ERC4626 {
@@ -75,22 +75,21 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
     /// @notice The mapping of whitelisted feeless redeemers
     mapping(address => bool) public feelessRedeemerWhitelist;
 
-    /// @notice The mapping of AssetVaults addresses to assets
-    /// @dev AssetVaults are standalone contracts that hold the assets
-    mapping(address => address) public assetVaults;
-    /// @dev AssetWeigth is a proportion deposited asssets are distributed between assetVaults
-    uint32[] public assetWeights;
-    /// @notice The list of addresses of AssetVaults
-    address[] public assetVaultList;
+    
+    /// @notice The address of the active strategy
+    address public activeStrategy;
+    /// @notice The address list of strategies
+    address[] public strategyList;
+
+    /// @notice The mapping of strategies
+    mapping(address => bool) public strategies;
+    /// @notice The mapping of blacklisted strategies
 
     /********************************** Constructor **********************************/
 
     constructor(
-            string memory _name,
-            string memory _symbol,
-            string memory description,
             address _owner,
-            address _platform,
+            address _platform
         )
         ERC4626(ERC20(WETH), "Fortress LSDs Primitive", "fortETH") {
 
@@ -124,6 +123,12 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
     /// @return - The description of the vault
     function getDescription() external view returns (string memory) {
         return description;
+    }
+
+    /// @dev Get the address of the active strategy
+    /// @return - The address of the active strategy
+    function getActiveStrategy() external view returns (address) {
+        return activeStrategy;
     }
 
     /// @dev Allows an on-chain or off-chain user to simulate the effects of their redeemption at the current block, given current on-chain conditions
@@ -161,7 +166,7 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
         return totalAUM;
     }
 
-    /// @dev Returns the maximum amount of the underlying asset that can be deposited into the Vault for the receiver, through a deposit call
+    /// @dev Returns the maximum amount of the primary asset asset that can be deposited into the Vault for the receiver, through a deposit call
     function maxDeposit(address) public view override returns (uint256) {
         uint256 _assetCap = convertToAssets(depositCap);
         return _assetCap == 0 ? type(uint256).max : _assetCap - totalAUM;
@@ -174,7 +179,7 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
 
     /********************************** Mutated Functions **********************************/
 
-    /// @dev Mints Vault shares to _receiver by depositing exact amount of underlying assets
+    /// @dev Mints Vault shares to _receiver by depositing exact amount of WETH
     /// @param _assets - The amount of assets to deposit
     /// @param _receiver - The receiver of minted shares
     /// @return _shares - The amount of shares minted
@@ -185,14 +190,16 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
         
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
+        IERC20(address(WETH)).safeTransferFrom(msg.sender, address(this), _assets);
         
-        _distributeAssets(_assets);
+        if (activeStrategy != address(0)) {
+        _depositToStrategy(activeStrategy, _assets);
+        }
 
         return _shares;
     }
 
-    /// @dev Mints exact Vault shares to _receiver by depositing amount of underlying assets
+    /// @dev Mints exact Vault shares to _receiver by depositing amount of WETH
     /// @param _shares - The shares to receive
     /// @param _receiver - The address of the receiver of shares
     /// @return _assets - The amount of underlying assets received
@@ -203,41 +210,20 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
 
         _deposit(msg.sender, _receiver, _assets, _shares);
 
-        IERC20(address(asset)).safeTransferFrom(msg.sender, address(this), _assets);
+        IERC20(address(WETH)).safeTransferFrom(msg.sender, address(this), _assets);
         
-        _distributeAssets(_assets);
+        if (activeStrategy != address(0)) {
+            _depositToStrategy(activeStrategy, _assets);
+        }
 
         return _assets;
     }
 
-    /// @dev Distribute buffered WETH between AssetVaults
-    function distributeBufferedAssets(address _receiver, uint256 _minBounty) external nonReentrant {
-        uint256 bufferedBalance = ERC20(WETH).balanceOf(address(this));
-        if (!bufferedBalance>0) revert ZeroAmount();
-
-        uint256 _harvestBounty = _fees.harvestBountyPercentage;
-        if (_harvestBounty > 0) {
-                _harvestBounty = (_harvestBounty * bufferedBalance) / DENOMINATOR;
-                if (!(_harvestBounty >= _minBounty)) revert InsufficientAmountOut();
-                
-                IERC20(WETH).safeTransfer(_receiver, _harvestBounty);
-            }
-         _distributeAssets(bufferedBalance - _harvestBounty);
-    }
-
-    /// @dev Burns shares from owner and sends exact assets of underlying assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _assets - The amount of underlying assets to receive
-    /// @param _receiver - The address of the receiver of underlying assets
-    /// @param _owner - The owner of shares
-    /// @return _shares - The amount of shares burned
+    /// @dev Withdraw not available
     function withdraw(uint256 _assets, address _receiver, address _owner) external override nonReentrant returns (uint256 _shares) {}
      
 
-    /// @dev Burns exact shares from owner and sends assets of underlying tokens to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
-    /// @param _shares - The shares to burn
-    /// @param _receiver - The address of the receiver of underlying assets
-    /// @param _owner - The owner of shares to burn
-    /// @return _assets - The amount of assets returned to the user
+    /// @dev Redeem not available
     function redeem(uint256 _shares, address _receiver, address _owner) external override nonReentrant returns (uint256 _assets) {}
        
     /// @dev Adds emitting of YbTokenTransfer event to the original function
@@ -276,51 +262,50 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
         return true;
     }
 
-    /// @dev Updates AUM according to assetVault actual ETH denominated balances
-    function updateAUM() public returns (uint256 totalAUM) {
-        totalAUM = ERC20(WETH).balanceOf(address(this));
-        uint256 length = assetVaultList.length;
-        
-        for(uint256 i = 0; i < length;) {
-            address assetVault = assetVaultList[i];
-            totalAUM += IAssetVault(_assetVault).getEthBalance();
-            unchecked{ ++i; }
-        }
-        return totalAUM;
+    /// @notice Platform has admin access
+    modifier onlyOwner() {
+        if (msg.sender != owner && msg.sender != platform) revert Unauthorized();
+        _;
     }
 
     /********************************** Restricted Functions **********************************/
 
-    /// @inheritdoc IMetaVault
-    function addAssetVault(address _assetVault, address _targetAsset, uint32 _weight) external nonReentrant returns (bool) {
-        if (msg.sender != owner) revert Unauthorized();
-        if (_weight > 1e9) revert WeightExcess();
-
-        assetVaults[_assetVault] = _targetAsset;
-        assetWeights.push(_weight);
-        assetVaultList.push(_assetVault);
-
-        emit AssetVaultAdded(_assetVault, _targetAsset);
-
-        return true;
-    }
-
-    /// @dev Update assetVault weights 
-    function updateAssetWeights(uint32[] memory newWeights) internal {
-        uint256 length = assetVaultList.length;
+    /// @dev Adds new strategy
+    function addStrategy(address _strategy) external onlyOwner nonReentrant {
         
-        if (newWeights.length != length) revert LengthNotMatch();
+        if (strategies[_strategy]) revert StrategyAlreadyExist(); 
 
-        for (uint256 i = 0; i < length;) {
-            assetWeights[i] = newWeights[i];
-            unchecked{ ++i; }
+        strategies[_strategy] = true;
+        strategyList.push(_strategy);
+
+        emit StrategyAdded(block.timestamp, _strategy);
+    }
+    /// @dev Set active strategy
+    function activateStrategy(address _strategy) public onlyOwner nonReentrant {
+        if (activeStrategy != address(0)) {
+            IStrategy(activeStrategy).terminateExecution();
+        } 
+
+        activeStrategy = _strategy;
+
+        uint256 balance = ERC20(WETH).balanceOf(address(this));
+        if (balance>0) {
+            _depositToStrategy(activeStrategy, balance);
         }
+
+        emit StrategyActivated(block.timestamp, _strategy);
     }
 
-    /// TODO
-    /// @dev Withdraw assets from assetVaults and deposite them back in accordance with assetWeigths
-    // function redistributeAssets() {}
-    
+    /// @dev Withdraws all funds from active strategy into this contract
+    function withdrawFromStrategy(address _strategy) external onlyOwner nonReentrant {
+        if (!strategies[_strategy]) revert StrategyNonExistent();
+        
+        uint256 _before = ERC20(WETH).balanceOf(address(this));
+        IStrategy(_strategy).terminateExecution();
+        uint256 _amount = ERC20(WETH).balanceOf(address(this))- _before;
+
+        emit WithdrawnFromStrategy(block.timestamp, _strategy, _amount);
+    }
 
     /// @dev Updates the feelessRedeemerWhitelist
     /// @param _address - The address to update
@@ -370,20 +355,8 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
         if (msg.sender != owner) revert Unauthorized();
 
         pauseDeposit = _pauseDeposit;
-        // pauseWithdraw = _pauseWithdraw;
         
         emit PauseInteractions(_pauseDeposit, _pauseWithdraw);
-    }
-
-    /// @notice WIP
-    /// @dev Converts assets of assetVault to WETH and sends to fortETH contract 
-    function returnAssets(address _assetVault) external {
-        if (msg.sender != owner) revert Unauthorized();
-
-        _balance = IAssetVault(_assetVault).getPrimaryAssetBalance();
-        _amount = IAssetVault(_assetVault).withdraw(_amount);
-
-        emit AssetsReturn(_assetVault, _amount);
     }
 
     /********************************** Internal Functions **********************************/
@@ -400,39 +373,22 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
         emit Deposit(_caller, _receiver, _assets, _shares);
     }
 
-    function _depositAssetVault(address _assetVault, uint256 _amount) internal nonReentrant returns (uint256) {
-        
-        if (assetVaults[_assetVault] == address(0)) revert AssetVaultNotAvailable();
+    function _depositToStrategy(address _strategy, uint256 _amount) internal nonReentrant {
+        if (!strategies[_strategy]) revert StrategyNonExistent();
 
-        _approve(address(asset), _assetVault, _amount);
-        _amount = IAssetVault(_assetVault).deposit(_amount);
-        
-        emit AssetDeposited(_assetVault, _asset, _amount);
+        _approve(WETH, _strategy, _amount);
+        IStrategy(_strategy).deposit(_amount);
+        IStrategy(_strategy).execute();
 
-        return _amount;
+        emit DepositedToStrategy(block.timestamp, _strategy, _amount);
     }
-    
-    function _distributeAssets(uint256 _amount) internal nonReentrant {
-        
-        uint256 length = assetVaultList.length;
-        
-        uint256 totalWeight;
-        
-        if (length == 0) revert NoAssetVaults();
-        
-        for(uint256 i = 0; i < length;) {
-            address assetVault = assetVaultList[i];
-            uint256 assetWeight = uint256(assetWeights[assetVault]);
-            totalWeight += assetWeight;
-            if (totalWeight > 1e9) revert WeightExcess();
-            uint256 depositedAsset = _assets.mul(assetWeight).div(DENOMINATOR);
-            _depositAssetVault(assetVault, depositedAsset);
-            unchecked{ ++i; }
-        } 
-    }
-    
+
     function _withdraw(address _caller, address _receiver, address _owner, uint256 _assets, uint256 _shares) internal override {}
 
+    function _approve(address _asset, address _spender, uint256 _amount) internal {
+        IERC20(_asset).safeApprove(_spender, 0);
+        IERC20(_asset).safeApprove(_spender, _amount);
+    }
 
     /********************************** Events **********************************/
 
@@ -442,7 +398,10 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
     event UpdateFees(uint256 _withdrawFeePercentage, uint256 _platformFeePercentage, uint256 _harvestBountyPercentage);
     event PauseInteractions(bool _pauseDeposit, bool _pauseWithdraw);
     event UpdateInternalUtils();
-    
+    event DepositedToStrategy(uint256 indexed _timestamp, address _strategy, uint256 _amount);
+    event WithdrawnFromStrategy(uint256 indexed _timestamp, address _strategy, uint256 _amount);
+    event StrategyActivated(uint256 indexed _timestamp, address _strategy);
+    event StrategyAdded(uint256 indexed _timestamp, address _strategy);
     /********************************** Errors **********************************/
 
     error Unauthorized();
@@ -459,4 +418,6 @@ abstract contract FortETH is ReentrancyGuard, ERC4626 {
     error NoAssetVaults();
     error AssetVaultNotAvailable();
     error LengthNotMatch();
+    error StrategyNonExistent();
+    error StrategyAlreadyExist();
 }

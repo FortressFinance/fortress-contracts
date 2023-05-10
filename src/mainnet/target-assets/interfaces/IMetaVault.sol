@@ -247,4 +247,7 @@ interface IMetaVault {
     error EpochAlreadyInitiated();
     error platformManagementFeeInvalid();
     error ManagementFeeNotDue();
+    error IncorrectWeight();
+    error StrategyAlreadyExist();
+    error StrategyNonExistent();
 }
