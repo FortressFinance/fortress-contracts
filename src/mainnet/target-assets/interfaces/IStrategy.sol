@@ -69,4 +69,5 @@ interface IStrategy {
     error NonExistent();
     error ZeroAmount();
     error IncorrectWeight();
+    error InsufficientAmountOut();
 }
