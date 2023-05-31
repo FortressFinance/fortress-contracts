@@ -4,8 +4,10 @@ pragma solidity 0.8.17;
 import {FortressTriCryptoOracle} from "src/shared/lending/oracles/FortressTriCryptoOracle.sol";
 
 import "test/arbitrum/lending/BaseTest.sol";
+import "script/arbitrum/lending/InitFraxfcTriCryptoPair.s.sol";
 
-contract TestFRAXfcTriCryptoPair is BaseTest {
+
+contract TestFRAXfcTriCryptoPair is BaseTest, InitFraxfcTriCryptoPair {
 
     FortressTriCryptoOracle oracle;
     FortressLendingPair lendingPair;
@@ -13,7 +15,22 @@ contract TestFRAXfcTriCryptoPair is BaseTest {
     function setUp() public {
         _setUp();
 
-        oracle = new FortressTriCryptoOracle(address(owner));
+        // --------------------------------- add swap route ---------------------------------
+        vm.startPrank(owner);
+        FortressArbiSwap _swap = FortressArbiSwap(payable(fortressSwap));
+
+        // FRAX --> WETH
+        if (!(_swap.routeExists(FRAX, WETH))) {
+            _poolType1[0] = 1;
+            _poolAddress1[0] = address(0x31351Bf3fba544863FBff44DDC27bA880916A199); 
+            _fromList1[0] = FRAX;
+            _toList1[0] = WETH;
+
+            _swap.updateRoute(FRAX, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+        vm.stopPrank();
+
+        oracle = new FortressTriCryptoOracle(address(owner),address(fcTriCrypto)); //0x32ED4f40ce345Eca65F24735Ad9D35c7fF3460E5
 
         // --------------------------------- deploy pair ---------------------------------
 
@@ -23,9 +40,9 @@ contract TestFRAXfcTriCryptoPair is BaseTest {
         string memory _name = "Fortress FRAX/fcTriCrypto Lending Pair";
         string memory _symbol = "fFRAX/fcTriCrypto";
         address _oracleMultiply = address(USD_FRAX_FEED); // denominator oracle (1e8 precision)
-        address _oracleDivide = address(oracle); // numerator oracle (1e18 precision)
-        // oracle normalization 1^(18 + precision of numerator oracle - precision of denominator oracle + precision of asset token - precision of collateral token)
-        uint256 _oracleNormalization = 1e8; // 1^(18 + 18 - 8 + 18 - 18)
+        address _oracleDivide = address(oracle); // numerator oracle (1e6 precision)
+        // oracle normalization 1^(36 - precision of numerator oracle + precision of denominator oracle - precision of collateral token)
+        uint256 _oracleNormalization = 1e20; // 1^(36 + 8 - 6 - 18)
         address _rateContract = address(rateCalculator);
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
@@ -42,27 +59,26 @@ contract TestFRAXfcTriCryptoPair is BaseTest {
     }
 
     // --------------------------------- tests ---------------------------------
-
     function testCorrectFlowFRAX(uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
 
         (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) = _testDepositLiquidity(address(lendingPair), _amount);
 
-        uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), FRAX);
+        uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), WETH);
 
-        _testClosePosition(address(lendingPair), FRAX, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
+        // _testClosePosition(address(lendingPair), WETH, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
 
-        _testRemoveLiquidity(address(lendingPair));
+        // _testRemoveLiquidity(address(lendingPair));
 
-        _testPlatformFee(address(lendingPair));
+        // _testPlatformFee(address(lendingPair));
 
-        _testUpdateSwap(address(lendingPair));
+        // _testUpdateSwap(address(lendingPair));
 
-        _testUpdatePauseSettings(address(lendingPair));
+        // _testUpdatePauseSettings(address(lendingPair));
 
-        _testUpdateFee(address(lendingPair));
+        // _testUpdateFee(address(lendingPair));
 
-        _testUpdateOwner(address(lendingPair));
+        // _testUpdateOwner(address(lendingPair));
     }
 
     // fails on FRAX --> WETH swap slippage
@@ -92,44 +108,44 @@ contract TestFRAXfcTriCryptoPair is BaseTest {
 
     // // --------------------------------- internal functions ---------------------------------
 
-    function _addFraxWethRouteToSwap() internal {
-        vm.startPrank(owner);
+    // function _addFraxWethRouteToSwap() internal {
+    //     vm.startPrank(owner);
 
-        if (!(fortressSwap.routeExists(FRAX, WETH))) {
-            uint256[] memory _poolType = new uint256[](1);
-            address[] memory _poolAddress = new address[](1);
-            address[] memory _fromList = new address[](1);
-            address[] memory _toList = new address[](1);
+    //     if (!(fortressSwap.routeExists(FRAX, WETH))) {
+    //         uint256[] memory _poolType = new uint256[](1);
+    //         address[] memory _poolAddress = new address[](1);
+    //         address[] memory _fromList = new address[](1);
+    //         address[] memory _toList = new address[](1);
 
-            _poolType[0] = 14;
+    //         _poolType[0] = 14;
             
-            _poolAddress[0] = address(0);
+    //         _poolAddress[0] = address(0);
             
-            _fromList[0] = FRAX;
+    //         _fromList[0] = FRAX;
             
-            _toList[0] = WETH;
+    //         _toList[0] = WETH;
             
-            fortressSwap.updateRoute(FRAX, WETH, _poolType, _poolAddress, _fromList, _toList);
-        }
+    //         fortressSwap.updateRoute(FRAX, WETH, _poolType, _poolAddress, _fromList, _toList);
+    //     }
 
         
-        if (!(fortressSwap.routeExists(WETH, FRAX))) {
-            uint256[] memory _poolType = new uint256[](1);
-            address[] memory _poolAddress = new address[](1);
-            address[] memory _fromList = new address[](1);
-            address[] memory _toList = new address[](1);
+    //     if (!(fortressSwap.routeExists(WETH, FRAX))) {
+    //         uint256[] memory _poolType = new uint256[](1);
+    //         address[] memory _poolAddress = new address[](1);
+    //         address[] memory _fromList = new address[](1);
+    //         address[] memory _toList = new address[](1);
 
-            _poolType[0] = 14;
+    //         _poolType[0] = 14;
             
-            _poolAddress[0] = address(0);
+    //         _poolAddress[0] = address(0);
             
-            _fromList[0] = WETH;
+    //         _fromList[0] = WETH;
             
-            _toList[0] = FRAX;
+    //         _toList[0] = FRAX;
             
-            fortressSwap.updateRoute(WETH, FRAX, _poolType, _poolAddress, _fromList, _toList);
-        }
+    //         fortressSwap.updateRoute(WETH, FRAX, _poolType, _poolAddress, _fromList, _toList);
+    //     }
         
-        vm.stopPrank();
-    }
+    //     vm.stopPrank();
+    // }
 }

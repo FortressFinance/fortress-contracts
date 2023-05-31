@@ -10,19 +10,25 @@ import {ERC20} from "@solmate/mixins/ERC4626.sol";
 
 import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 
+
 import {FortressLendingPair} from "src/shared/lending/FortressLendingPair.sol";
 import {VariableInterestRate, IRateCalculator} from "src/shared/lending/VariableInterestRate.sol";
 import {FortressTriCryptoOracle} from "src/shared/lending/oracles/FortressTriCryptoOracle.sol";
 
-contract InitFraxfcTriCryptoPair is Script, AddressesArbi {
+import "script/arbitrum/utils/InitBase.sol";
+import "src/arbitrum/utils/FortressArbiSwap.sol";
+
+contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
 
     IRateCalculator _rateCalculator;
     FortressLendingPair _lendingPair;
     FortressTriCryptoOracle _fcTriCryptoOracle;
-    ERC20 _asset;
+    ERC20 __asset;
 
-    function run() public {
+    function run(address _fortressSwap) public {
         
+        _initSwap(_fortressSwap);
+
         uint256 deployerPrivateKey = vm.envUint("GBC_DEPLOYER_PRIVATE_KEY");
         address deployer = vm.envAddress("GBC_DEPLOYER_ADDRESS");
         address owner = deployer;
@@ -30,10 +36,10 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi {
         vm.startBroadcast(deployerPrivateKey);
 
         _rateCalculator = new VariableInterestRate();
-        _fcTriCryptoOracle = new FortressTriCryptoOracle(address(owner));
+        _fcTriCryptoOracle = new FortressTriCryptoOracle(address(owner),address(fcTriCrypto));
 
         // FRAX asset (1e18 precision), fcTriCrypto collateral (1e18 precision)
-        _asset = ERC20(address(FRAX)); // asset
+        __asset = ERC20(address(FRAX)); // asset
         address _collateral = address(fcTriCrypto); // collateral
         string memory _name = "Fortress Lending FRAX/fcTriCrypto Pair";
         string memory _symbol = "fFRAX/fcTriCrypto";
@@ -49,7 +55,7 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi {
         uint256 _maxLTV = 81000; // 81%
         uint256 _liquidationFee = 10000; // 10%
         
-        _lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, address(FortressSwap), _maxLTV, _liquidationFee);
+        _lendingPair = new FortressLendingPair(__asset, _name, _symbol, _configData, _owner, address(FortressSwap), _maxLTV, _liquidationFee);
 
         bytes memory _rateInitCallData;
         _lendingPair.initialize(_rateInitCallData);
@@ -63,5 +69,23 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi {
         console.log("============================================================");
 
         vm.stopBroadcast();
+    }
+
+    function _initSwap(address _fortressSwap) internal {
+
+        FortressArbiSwap _swap = FortressArbiSwap(payable(_fortressSwap));
+
+        // FRAX --> WETH
+        if (!(_swap.routeExists(FRAX, WETH))) {
+            _poolType1[0] = 1; //14
+            
+            _poolAddress1[0] = address(0x31351Bf3fba544863FBff44DDC27bA880916A199); //address(0)
+            
+            _fromList1[0] = FRAX;
+            
+            _toList1[0] = WETH;
+
+            _swap.updateRoute(FRAX, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
     }
 }
