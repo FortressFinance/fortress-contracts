@@ -728,7 +728,12 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
         _amountAssetOut = IFortressVault(address(collateralContract)).redeemUnderlying(_underlyingAsset, address(this), address(this), _collateralToSwap, 0);
         
         address _asset = address(assetContract);
-        if (_underlyingAsset != _asset) _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
+
+        if (_underlyingAsset != _asset) {
+            _approve(_underlyingAsset, swap, _amountAssetOut);
+            _amountAssetOut = IFortressSwap(swap).swap(_underlyingAsset, _asset, _amountAssetOut);
+        }
+
         if (_amountAssetOut < _minAmount) revert SlippageTooHigh(_amountAssetOut, _minAmount);
 
         BorrowAccount memory _totalBorrow = totalBorrow;

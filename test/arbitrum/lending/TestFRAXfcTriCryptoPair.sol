@@ -14,21 +14,7 @@ contract TestFRAXfcTriCryptoPair is BaseTest, InitFraxfcTriCryptoPair {
 
     function setUp() public {
         _setUp();
-
-        // --------------------------------- add swap route ---------------------------------
-        vm.startPrank(owner);
-        FortressArbiSwap _swap = FortressArbiSwap(payable(fortressSwap));
-
-        // FRAX --> WETH
-        if (!(_swap.routeExists(FRAX, WETH))) {
-            _poolType1[0] = 1;
-            _poolAddress1[0] = address(0x31351Bf3fba544863FBff44DDC27bA880916A199); 
-            _fromList1[0] = FRAX;
-            _toList1[0] = WETH;
-
-            _swap.updateRoute(FRAX, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
-        }
-        vm.stopPrank();
+        _addFraxWethRouteToSwap();
 
         oracle = new FortressTriCryptoOracle(address(owner),address(fcTriCrypto)); //0x32ED4f40ce345Eca65F24735Ad9D35c7fF3460E5
 
@@ -59,93 +45,68 @@ contract TestFRAXfcTriCryptoPair is BaseTest, InitFraxfcTriCryptoPair {
     }
 
     // --------------------------------- tests ---------------------------------
-    function testCorrectFlowFRAX(uint256 _amount) public {
+    function testCorrectFlowWeth(uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
 
         (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) = _testDepositLiquidity(address(lendingPair), _amount);
 
         uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), WETH);
 
-        // _testClosePosition(address(lendingPair), WETH, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
+        _testClosePosition(address(lendingPair), WETH, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
 
-        // _testRemoveLiquidity(address(lendingPair));
+        _testRemoveLiquidity(address(lendingPair));
 
-        // _testPlatformFee(address(lendingPair));
+        _testPlatformFee(address(lendingPair));
 
-        // _testUpdateSwap(address(lendingPair));
+        _testUpdateSwap(address(lendingPair));
 
-        // _testUpdatePauseSettings(address(lendingPair));
+        _testUpdatePauseSettings(address(lendingPair));
 
-        // _testUpdateFee(address(lendingPair));
+        _testUpdateFee(address(lendingPair));
 
-        // _testUpdateOwner(address(lendingPair));
+        _testUpdateOwner(address(lendingPair));
     }
 
-    // fails on FRAX --> WETH swap slippage
-    // function testCorrectFlowWETH(uint256 _amount) public {
-    //     vm.assume(_amount > 0.1 ether && _amount < 10 ether);
+    // --------------------------------- internal functions ---------------------------------
 
-    //     _addFraxWethRouteToSwap();
+    function _addFraxWethRouteToSwap() internal {
+        vm.startPrank(owner);
 
-    //     (uint256 _totalAssetsAfter, uint256 _totalSupplyAfter) = _testDepositLiquidity(address(lendingPair), _amount);
+        if (!(fortressSwap.routeExists(FRAX, WETH))) {
+            uint256[] memory _poolType = new uint256[](1);
+            address[] memory _poolAddress = new address[](1);
+            address[] memory _fromList = new address[](1);
+            address[] memory _toList = new address[](1);
 
-    //     uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), WETH);
-
-    //     _testClosePosition(address(lendingPair), WETH, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
-
-    //     _testRemoveLiquidity(address(lendingPair));
-
-    //     _testPlatformFee(address(lendingPair));
-
-    //     _testUpdateSwap(address(lendingPair));
-
-    //     _testUpdatePauseSettings(address(lendingPair));
-
-    //     _testUpdateFee(address(lendingPair));
-
-    //     _testUpdateOwner(address(lendingPair));
-    // }
-
-    // // --------------------------------- internal functions ---------------------------------
-
-    // function _addFraxWethRouteToSwap() internal {
-    //     vm.startPrank(owner);
-
-    //     if (!(fortressSwap.routeExists(FRAX, WETH))) {
-    //         uint256[] memory _poolType = new uint256[](1);
-    //         address[] memory _poolAddress = new address[](1);
-    //         address[] memory _fromList = new address[](1);
-    //         address[] memory _toList = new address[](1);
-
-    //         _poolType[0] = 14;
+            _poolType[0] = 14;
             
-    //         _poolAddress[0] = address(0);
+            _poolAddress[0] = address(0);
             
-    //         _fromList[0] = FRAX;
+            _fromList[0] = FRAX;
             
-    //         _toList[0] = WETH;
+            _toList[0] = WETH;
             
-    //         fortressSwap.updateRoute(FRAX, WETH, _poolType, _poolAddress, _fromList, _toList);
-    //     }
+            fortressSwap.updateRoute(FRAX, WETH, _poolType, _poolAddress, _fromList, _toList);
+        }
 
         
-    //     if (!(fortressSwap.routeExists(WETH, FRAX))) {
-    //         uint256[] memory _poolType = new uint256[](1);
-    //         address[] memory _poolAddress = new address[](1);
-    //         address[] memory _fromList = new address[](1);
-    //         address[] memory _toList = new address[](1);
+        if (!(fortressSwap.routeExists(WETH, FRAX))) {
+            uint256[] memory _poolType = new uint256[](1);
+            address[] memory _poolAddress = new address[](1);
+            address[] memory _fromList = new address[](1);
+            address[] memory _toList = new address[](1);
 
-    //         _poolType[0] = 14;
+            _poolType[0] = 14;
             
-    //         _poolAddress[0] = address(0);
+            _poolAddress[0] = address(0);
             
-    //         _fromList[0] = WETH;
+            _fromList[0] = WETH;
             
-    //         _toList[0] = FRAX;
+            _toList[0] = FRAX;
             
-    //         fortressSwap.updateRoute(WETH, FRAX, _poolType, _poolAddress, _fromList, _toList);
-    //     }
+            fortressSwap.updateRoute(WETH, FRAX, _poolType, _poolAddress, _fromList, _toList);
+        }
         
-    //     vm.stopPrank();
-    // }
+        vm.stopPrank();
+    }
 }
