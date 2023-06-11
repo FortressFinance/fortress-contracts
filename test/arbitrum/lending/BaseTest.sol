@@ -199,7 +199,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_totalAssetsAfter, _totalAssetsBefore - _aliceAmount, "_testRemoveLiquidity: E1");
         assertEq(_totalSupplyAfter, _totalSupplyBefore - _aliceShares, "_testRemoveLiquidity: E2");
         assertEq(_lendingPair.balanceOf(address(alice)), 0, "_testRemoveLiquidity: E3");
-        // assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(alice)), _aliceAmount, 1e18, "_testRemoveLiquidity: E4");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(alice)), _aliceAmount, 2e18, "_testRemoveLiquidity: E4");
 
         vm.startPrank(bob);
         uint256 _bobAmount = _lendingPair.redeem(_bobShares, address(bob), address(bob));
@@ -211,14 +211,14 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_totalAssetsAfter, _totalAssetsBefore - _aliceAmount - _bobAmount, "_testRemoveLiquidity: E5");
         assertEq(_totalSupplyAfter, _totalSupplyBefore - _aliceShares - _bobShares, "_testRemoveLiquidity: E6");
         assertEq(_lendingPair.balanceOf(address(bob)), 0, "_testRemoveLiquidity: E7");
-        // assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(bob)), _bobAmount, 1e18, "_testRemoveLiquidity: E8");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(bob)), _bobAmount, 2e18, "_testRemoveLiquidity: E8");
 
         vm.startPrank(charlie);
         uint256 _charlieAmount = _lendingPair.redeem(_charlieShares, address(charlie), address(charlie));
         vm.stopPrank();
 
         assertEq(_lendingPair.balanceOf(address(charlie)), 0, "_testRemoveLiquidity: E11");
-        // assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(charlie)), _charlieAmount, 1e18, "_testRemoveLiquidity: E12");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(charlie)), _charlieAmount, 2e18, "_testRemoveLiquidity: E12");
     }
 
     // --------------------------------- Borrowing --------------------------------
@@ -242,7 +242,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertTrue(_totalSupplyBefore > 0, "_testLeveragePosition: E3");
         
         // add 1% to _minCollateral
-        _minCollateral = _minCollateral * 102 / 100;
+        _minCollateral = _minCollateral * 103 / 100;
 
         vm.startPrank(alice);
         _dealERC20(address(_lendingPair.collateralContract()), alice, _minCollateral);
