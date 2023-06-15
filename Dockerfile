@@ -1,7 +1,7 @@
-# FROM ubuntu:22.04
+FROM ubuntu:22.04
 
 # for M1/M2 Macs
-FROM --platform=linux/amd64 ubuntu:22.04
+# FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/.foundry/bin
 
