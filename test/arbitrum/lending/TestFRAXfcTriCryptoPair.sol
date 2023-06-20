@@ -45,6 +45,7 @@ contract TestFRAXfcTriCryptoPair is BaseTest, InitFraxfcTriCryptoPair {
     }
 
     // --------------------------------- tests ---------------------------------
+    
     function testCorrectFlowWeth(uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
 
@@ -73,19 +74,42 @@ contract TestFRAXfcTriCryptoPair is BaseTest, InitFraxfcTriCryptoPair {
         vm.startPrank(owner);
 
         if (!(fortressSwap.routeExists(FRAX, WETH))) {
-            uint256[] memory _poolType = new uint256[](1);
-            address[] memory _poolAddress = new address[](1);
-            address[] memory _fromList = new address[](1);
-            address[] memory _toList = new address[](1);
+            // uint256[] memory _poolType = new uint256[](1);
+            // address[] memory _poolAddress = new address[](1);
+            // address[] memory _fromList = new address[](1);
+            // address[] memory _toList = new address[](1);
 
-            _poolType[0] = 14;
+            // _poolType[0] = 14;
             
-            _poolAddress[0] = address(0);
+            // _poolAddress[0] = address(0);
             
+            // _fromList[0] = FRAX;
+            
+            // _toList[0] = WETH;
+            
+            // fortressSwap.updateRoute(FRAX, WETH, _poolType, _poolAddress, _fromList, _toList);
+
+            uint256[] memory _poolType = new uint256[](3);
+            address[] memory _poolAddress = new address[](3);
+            address[] memory _fromList = new address[](3);
+            address[] memory _toList = new address[](3);
+
+            _poolType[0] = 2;
+            _poolType[1] = 2;
+            _poolType[2] = 4;
+
+            _poolAddress[0] = CURVE_FRAXBP;
+            _poolAddress[1] = CURVE_BP;
+            _poolAddress[2] = CURVE_TRICRYPTO;
+
             _fromList[0] = FRAX;
-            
-            _toList[0] = WETH;
-            
+            _fromList[1] = USDC;
+            _fromList[2] = USDT;
+
+            _toList[0] = USDC;
+            _toList[1] = USDT;
+            _toList[2] = WETH;
+
             fortressSwap.updateRoute(FRAX, WETH, _poolType, _poolAddress, _fromList, _toList);
         }
 

@@ -671,6 +671,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _borrowAmount The amount of Asset Tokens borrowed
     /// @param _initialCollateralAmount The initial amount of Collateral Tokens supplied by the borrower
     /// @param _minAmount The minimum amount of Collateral Tokens to be received in exchange for the borrowed Asset Tokens
+    /// @param _underlyingAsset The address of the underlying asset to be deposited into the Vault, which will be swapped for Collateral Tokens
     /// @return _totalCollateralAdded The total amount of Collateral Tokens added to a users account (initial + swap)
     function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
         if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();

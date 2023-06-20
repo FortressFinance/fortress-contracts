@@ -189,6 +189,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         uint256 _bobShares = _lendingPair.balanceOf(address(bob));
         uint256 _charlieShares = _lendingPair.balanceOf(address(charlie));
 
+        uint256 _aliceBalanceBefore = IERC20(address(_lendingPair.asset())).balanceOf(address(alice));
+
         vm.startPrank(address(alice));
         uint256 _aliceAmount = _lendingPair.redeem(_aliceShares, address(alice), address(alice));
         vm.stopPrank();
@@ -199,8 +201,10 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_totalAssetsAfter, _totalAssetsBefore - _aliceAmount, "_testRemoveLiquidity: E1");
         assertEq(_totalSupplyAfter, _totalSupplyBefore - _aliceShares, "_testRemoveLiquidity: E2");
         assertEq(_lendingPair.balanceOf(address(alice)), 0, "_testRemoveLiquidity: E3");
-        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(alice)), _aliceAmount, 2e18, "_testRemoveLiquidity: E4");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(alice)) - _aliceBalanceBefore, _aliceAmount, 1e10, "_testRemoveLiquidity: E4");
 
+        uint256 _bobBalanceBefore = IERC20(address(_lendingPair.asset())).balanceOf(address(bob));
+        
         vm.startPrank(bob);
         uint256 _bobAmount = _lendingPair.redeem(_bobShares, address(bob), address(bob));
         vm.stopPrank();
@@ -211,14 +215,16 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertEq(_totalAssetsAfter, _totalAssetsBefore - _aliceAmount - _bobAmount, "_testRemoveLiquidity: E5");
         assertEq(_totalSupplyAfter, _totalSupplyBefore - _aliceShares - _bobShares, "_testRemoveLiquidity: E6");
         assertEq(_lendingPair.balanceOf(address(bob)), 0, "_testRemoveLiquidity: E7");
-        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(bob)), _bobAmount, 2e18, "_testRemoveLiquidity: E8");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(bob)) - _bobBalanceBefore, _bobAmount, 1e10, "_testRemoveLiquidity: E8");
+
+        uint256 _charlieBalanceBefore = IERC20(address(_lendingPair.asset())).balanceOf(address(charlie));
 
         vm.startPrank(charlie);
         uint256 _charlieAmount = _lendingPair.redeem(_charlieShares, address(charlie), address(charlie));
         vm.stopPrank();
 
         assertEq(_lendingPair.balanceOf(address(charlie)), 0, "_testRemoveLiquidity: E11");
-        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(charlie)), _charlieAmount, 2e18, "_testRemoveLiquidity: E12");
+        assertApproxEqAbs(IERC20(address(_lendingPair.asset())).balanceOf(address(charlie)) - _charlieBalanceBefore, _charlieAmount, 1e10, "_testRemoveLiquidity: E12");
     }
 
     // --------------------------------- Borrowing --------------------------------
@@ -348,8 +354,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertApproxEqAbs(_lendingPair.totalAssets(), _totalAssets, 1e17, "_testCloseLeveragePosition: E1");
         assertApproxEqAbs(_lendingPair.totalSupply(), _totalSupply, 1e17, "_testCloseLeveragePosition: E2");
         assertEq(_lendingPair.totalCollateral(), _totalCollateral, "_testCloseLeveragePosition: E3");
-        // assertApproxEqAbs(_lendingPair.userCollateralBalance(alice), _lendingPair.userCollateralBalance(bob),1e8, "_testCloseLeveragePosition: E4");
-        // assertApproxEqAbs(_lendingPair.userCollateralBalance(charlie), _lendingPair.userCollateralBalance(bob),1e8, "_testCloseLeveragePosition: E5");
+        assertApproxEqAbs(_lendingPair.userCollateralBalance(alice), _lendingPair.userCollateralBalance(bob),1e17, "_testCloseLeveragePosition: E4");
+        assertApproxEqAbs(_lendingPair.userCollateralBalance(charlie), _lendingPair.userCollateralBalance(bob),1e17, "_testCloseLeveragePosition: E5");
 
         (uint256 _borrowAmountBefore, uint256 _borrowSharesBefore) = _lendingPair.totalBorrow();
         
