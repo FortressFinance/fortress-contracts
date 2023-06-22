@@ -17,203 +17,52 @@ contract Orchestrator is Auth, Base, IOrchestrator {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
-    struct RouteInfo {
-        address route;
-        bool isRegistered;
-        EnumerableSet.AddressSet puppets;
-        RouteType routeType;
-    }
-
-    struct PuppetInfo {
-        mapping(bytes32 => uint256) throttleLimits; // routeType => throttle limit (in seconds)
-        mapping(bytes32 => uint256) lastPositionOpenedTimestamp; // routeType => timestamp
-        mapping(address => uint256) depositAccount; // collateralToken => balance
-        EnumerableMap.AddressToUintMap allowances; // route => allowance percentage
-    }
-
     // settings
-    address public routeFactory;
-    address private _keeper;
+    address public vaultFactory;
 
     bool private _paused;
 
-    bytes32 private _referralCode;
+    // vaults info
 
-    GMXInfo private _gmxInfo;
-
-    // routes info
-    mapping(address => bool) public isRoute; // Route => isRoute
-    mapping(bytes32 => RouteType) public routeType; // routeTypeKey => RouteType
-
-    mapping(bytes32 => RouteInfo) private _routeInfo; // routeKey => RouteInfo
-
-    address[] private _routes;
-
-    // puppets info
-    mapping(address => PuppetInfo) private _puppetInfo;
+    // investors info
 
     // ============================================================================================
     // Constructor
     // ============================================================================================
 
-    /// @notice The ```constructor``` function is called on deployment
-    /// @param _authority The Authority contract instance
-    /// @param _routeFactory The RouteFactory contract address
-    /// @param _keeperAddr The address of the keeper
-    /// @param _refCode The GMX referral code
-    /// @param _gmx The GMX contract addresses
-    constructor(
-        Authority _authority,
-        address _routeFactory,
-        address _keeperAddr,
-        bytes32 _refCode,
-        bytes memory _gmx
-    ) Auth(address(0), _authority) {
-        routeFactory = _routeFactory;
-        _keeper = _keeperAddr;
-
-        (_gmxInfo.gmxRouter, _gmxInfo.gmxVault, _gmxInfo.gmxPositionRouter) = abi.decode(_gmx, (address, address, address));
-
-        _referralCode = _refCode;
+    constructor(address _owner, address _vaultFactory) {
+        owner = _owner;
+        vaultFactory = _vaultFactory;
     }
 
     // ============================================================================================
     // Modifiers
     // ============================================================================================
 
-    /// @notice Modifier that ensures the caller is a route
-    modifier onlyRoute() {
-        if (!isRoute[msg.sender]) revert NotRoute();
-        _;
-    }
 
     // ============================================================================================
     // View Functions
     // ============================================================================================
 
-    // global
+    // vault
 
-    /// @inheritdoc IOrchestrator
-    function keeper() external view returns (address) {
-        return _keeper;
+    function getVaultKey(address _manager, string calldata _description) public view returns (bytes32 _vaultKey) {
+        return keccak256(abi.encodePacked(_manager, _description));
     }
 
-    /// @inheritdoc IOrchestrator
-    function referralCode() external view returns (bytes32) {
-        return _referralCode;
+    function getvault(bytes32 _vaultKey) external view returns (address) {
+        return _vaultInfo[_vaultKey].vault;
     }
 
-    /// @inheritdoc IOrchestrator
-    function routes() external view returns (address[] memory) {
-        return _routes;
-    }
-
-    /// @inheritdoc IOrchestrator
-    function paused() external view returns (bool) {
-        return _paused;
-    }
-
-    // route
-
-    /// @inheritdoc IOrchestrator
-    function getRouteTypeKey(address _collateralToken, address _indexToken, bool _isLong) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_collateralToken, _indexToken, _isLong));
-    }
-
-    /// @inheritdoc IOrchestrator
-    function getRouteKey(address _trader, bytes32 _routeTypeKey) public view returns (bytes32) {
-        address _collateralToken = routeType[_routeTypeKey].collateralToken;
-        address _indexToken = routeType[_routeTypeKey].indexToken;
-        bool _isLong = routeType[_routeTypeKey].isLong;
-
-        return keccak256(abi.encodePacked(_trader, _collateralToken, _indexToken, _isLong));
-    }
-
-    /// @inheritdoc IOrchestrator
-    function getRoute(bytes32 _routeKey) external view returns (address) {
-        return _routeInfo[_routeKey].route;
-    }
-
-    /// @inheritdoc IOrchestrator
-    function getRoute(address _trader, address _collateralToken, address _indexToken, bool _isLong) external view returns (address) {
-        bytes32 _routeTypeKey = getRouteTypeKey(_collateralToken, _indexToken, _isLong);
-        bytes32 _routeKey = getRouteKey(_trader, _routeTypeKey);
-
-        return _routeInfo[_routeKey].route;
-    }
-
-    /// @inheritdoc IOrchestrator
-    function subscribedPuppets(bytes32 _routeKey) external view returns (address[] memory _puppets) {
-        EnumerableSet.AddressSet storage _puppetsSet = _routeInfo[_routeKey].puppets;
-        _puppets = new address[](EnumerableSet.length(_puppetsSet));
-
-        for (uint256 i = 0; i < EnumerableSet.length(_puppetsSet); i++) {
-            _puppets[i] = EnumerableSet.at(_puppetsSet, i);
-        }
-    }
-
-    // puppet
-
-    /// @inheritdoc IOrchestrator
-    function puppetSubscriptions(address _puppet) external view returns (address[] memory _subscriptions) {
-        EnumerableMap.AddressToUintMap storage _allowances = _puppetInfo[_puppet].allowances;
-
-        uint256 _subscriptionCount = EnumerableMap.length(_allowances);
-        _subscriptions = new address[](_subscriptionCount);
-        for (uint256 i = 0; i < _subscriptionCount; i++) {
-            (_subscriptions[i],) = EnumerableMap.at(_allowances, i);
-        }
-    }
-
-    /// @inheritdoc IOrchestrator
-    function puppetAllowancePercentage(address _puppet, address _route) external view returns (uint256 _allowance) {
-        return EnumerableMap.get(_puppetInfo[_puppet].allowances, _route);
-    }
-
-    /// @inheritdoc IOrchestrator
-    function puppetAccountBalance(address _puppet, address _asset) external view returns (uint256) {
-        return _puppetInfo[_puppet].depositAccount[_asset];
-    }
-
-    /// @inheritdoc IOrchestrator
-    function puppetThrottleLimit(address _puppet, bytes32 _routeType) external view returns (uint256) {
-        return _puppetInfo[_puppet].throttleLimits[_routeType];
-    }
-
-    /// @inheritdoc IOrchestrator
-    function lastPositionOpenedTimestamp(address _puppet, bytes32 _routeType) external view returns (uint256) {
-        return _puppetInfo[_puppet].lastPositionOpenedTimestamp[_routeType];
-    }
-
-    /// @inheritdoc IOrchestrator
-    function isBelowThrottleLimit(address _puppet, bytes32 _routeType) external view returns (bool) {
-        return (block.timestamp - _puppetInfo[_puppet].lastPositionOpenedTimestamp[_routeType]) >= _puppetInfo[_puppet].throttleLimits[_routeType];
-    }
-
-    // gmx
-
-    /// @inheritdoc IOrchestrator
-    function gmxRouter() external view returns (address) {
-        return _gmxInfo.gmxRouter;
-    }
-
-    /// @inheritdoc IOrchestrator
-    function gmxPositionRouter() external view returns (address) {
-        return _gmxInfo.gmxPositionRouter;
-    }
-
-    /// @inheritdoc IOrchestrator
-    function gmxVault() external view returns (address) {
-        return _gmxInfo.gmxVault;
+    function investors(bytes32 _vaultKey) external view returns (address[] memory _investors) {
+        // todo
     }
 
     // ============================================================================================
-    // Trader Function
+    // Manager Function
     // ============================================================================================
 
-    /// @inheritdoc IOrchestrator
-    // slither-disable-next-line reentrancy-no-eth
-    function registerRoute(address _collateralToken, address _indexToken, bool _isLong) public nonReentrant returns (bytes32 _routeKey) {
+    function registerVault(address _collateralToken, address _indexToken, bool _isLong) public nonReentrant returns (bytes32 _routeKey) {
         if (_collateralToken == address(0) || _indexToken == address(0)) revert ZeroAddress();
 
         bytes32 _routeTypeKey = getRouteTypeKey(_collateralToken, _indexToken, _isLong);
