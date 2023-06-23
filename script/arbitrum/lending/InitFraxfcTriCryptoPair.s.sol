@@ -25,9 +25,8 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
     FortressTriCryptoOracle _fcTriCryptoOracle;
     ERC20 __asset;
 
-    function run(address _fortressSwap) public {
+    function run() public {
         
-        _initSwap(_fortressSwap);
 
         uint256 deployerPrivateKey = vm.envUint("GBC_DEPLOYER_PRIVATE_KEY");
         address deployer = vm.envAddress("GBC_DEPLOYER_ADDRESS");
@@ -46,7 +45,7 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
         address _oracleMultiply = address(USD_FRAX_FEED); // denominator oracle (1e8 precision)
         address _oracleDivide = address(_fcTriCryptoOracle); // numerator oracle (1e18 precision)
         // oracle normalization 1^(18 - precision of numerator oracle + precision of denominator oracle + precision of asset token - precision of collateral token)
-        uint256 _oracleNormalization = 1e8; // 1^(18 - 18 + 8 + 18 - 18)
+        uint256 _oracleNormalization = 1e20; // 1^(36 + 8 - 6 - 18)
         address _rateContract = address(_rateCalculator);
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
@@ -69,23 +68,5 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
         console.log("============================================================");
 
         vm.stopBroadcast();
-    }
-
-    function _initSwap(address _fortressSwap) internal {
-
-        FortressArbiSwap _swap = FortressArbiSwap(payable(_fortressSwap));
-
-        // FRAX --> WETH
-        if (!(_swap.routeExists(FRAX, WETH))) {
-            _poolType1[0] = 1; //14
-            
-            _poolAddress1[0] = address(0x31351Bf3fba544863FBff44DDC27bA880916A199); //address(0)
-            
-            _fromList1[0] = FRAX;
-            
-            _toList1[0] = WETH;
-
-            _swap.updateRoute(FRAX, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
-        }
     }
 }
