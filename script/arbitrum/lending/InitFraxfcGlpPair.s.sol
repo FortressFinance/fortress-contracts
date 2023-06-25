@@ -25,14 +25,12 @@ contract InitFraxfcGlpPair is Script, AddressesArbi {
         
         uint256 deployerPrivateKey = vm.envUint("GBC_DEPLOYER_PRIVATE_KEY");
         address deployer = vm.envAddress("GBC_DEPLOYER_ADDRESS");
-        // address owner = vm.envAddress("OWNER");
-        address owner = deployer;
-        // address platform = vm.envAddress("FORTRESS_PLATFORM_ADDRESS");
+        address owner = vm.envAddress("FORTRESS_MULTISIG_OWNER");
 
         vm.startBroadcast(deployerPrivateKey);
 
         _rateCalculator = new VariableInterestRate();
-        _fcGLPOracle = new FortressGLPOracle(address(owner));
+        _fcGLPOracle = new FortressGLPOracle(owner);
 
         // FRAX asset (1e18 precision), fcGLP collateral (1e18 precision)
         _asset = ERC20(address(FRAX)); // asset
@@ -47,14 +45,16 @@ contract InitFraxfcGlpPair is Script, AddressesArbi {
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
         
-        address _owner = address(owner);
-        uint256 _maxLTV = 81000; // 81%
+        address _owner = deployer;
+        uint256 _maxLTV = 80000; // 80%
         uint256 _liquidationFee = 10000; // 10%
         
-        _lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, address(FortressSwap), _maxLTV, _liquidationFee);
+        _lendingPair = new FortressLendingPair(_asset, _name, _symbol, _configData, _owner, FortressSwapV2, _maxLTV, _liquidationFee);
 
         bytes memory _rateInitCallData;
         _lendingPair.initialize(_rateInitCallData);
+
+        _lendingPair.updateOwner(owner);
 
         console.log("============================================================");
         console.log("============================================================");
@@ -70,9 +70,9 @@ contract InitFraxfcGlpPair is Script, AddressesArbi {
 
 // ---- Notes ----
 
-// _rateCalculator:  0x3309a94C2693258B102E7FCe88c0445bbF802D99
-// _fcGLPOracle:  0x657e2e35758D6597f06E028a3DAFa2F47A9E726f
-// _lendingPair:  0xB900A00418bbD1A1b7e1b00A960A22EA540918a2
+//   _rateCalculator:  0xea43a662841294bA9bBf45656B6d67c85093b319
+//   _fcGLPOracle:  0x907F41f19D101e99bE967359740C66160D25281F
+//   _lendingPair:  0x21dA5B5718ebce131071eD43D13483DD3C585F04
 
 // forge script script/arbitrum/InitFraxfcGlpPair.s.sol:InitFraxfcGlpPair --rpc-url $RPC_URL --broadcast
 // https://abi.hashex.org/ - for constructor

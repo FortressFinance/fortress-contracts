@@ -30,12 +30,12 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
 
         uint256 deployerPrivateKey = vm.envUint("GBC_DEPLOYER_PRIVATE_KEY");
         address deployer = vm.envAddress("GBC_DEPLOYER_ADDRESS");
-        address owner = deployer;
+        address owner = vm.envAddress("FORTRESS_MULTISIG_OWNER");
 
         vm.startBroadcast(deployerPrivateKey);
 
         _rateCalculator = new VariableInterestRate();
-        _fcTriCryptoOracle = new FortressTriCryptoOracle(address(owner),address(fcTriCrypto));
+        _fcTriCryptoOracle = new FortressTriCryptoOracle(owner,address(fcTriCrypto));
 
         // FRAX asset (1e18 precision), fcTriCrypto collateral (1e18 precision)
         __asset = ERC20(address(FRAX)); // asset
@@ -50,14 +50,16 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
         
-        address _owner = address(owner);
-        uint256 _maxLTV = 81000; // 81%
+        address _owner = deployer;
+        uint256 _maxLTV = 80000; // 80%
         uint256 _liquidationFee = 10000; // 10%
         
-        _lendingPair = new FortressLendingPair(__asset, _name, _symbol, _configData, _owner, address(FortressSwap), _maxLTV, _liquidationFee);
+        _lendingPair = new FortressLendingPair(__asset, _name, _symbol, _configData, _owner, FortressSwapV2, _maxLTV, _liquidationFee);
 
         bytes memory _rateInitCallData;
         _lendingPair.initialize(_rateInitCallData);
+
+        _lendingPair.updateOwner(owner);
 
         console.log("============================================================");
         console.log("============================================================");
@@ -69,4 +71,10 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
 
         vm.stopBroadcast();
     }
+
+    // ---- Notes ----
+
+    //     _rateCalculator:  0xB2f8801d3942cCA2Cc088Ffdc84368A36F1cebE2
+    //   _fcTriCryptoPOracle:  0x779823E3bE15a07a91473C0ac6634170b36eb63a
+    //   _lendingPair:  0x6a3e946B83fDD9b2B6650D909332C42397FF774f
 }

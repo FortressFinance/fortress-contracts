@@ -93,6 +93,7 @@ contract AddressesArbi {
 
     // The address of FortressSwap contract.
     address constant FortressSwap = 0xBbF847A344ceBC46DD226dc2682A703ebe37eB9e;
+    address constant FortressSwapV2 = 0xf3E720a128072A5832f32F8fF639f7813B6ab255;
     // The address of first FortressRegistry contract.
     address constant FortressRegistryV1 = 0x5D21D171b265E5212B3E673759C971537b6a0d01;
     // The address of fcGLP contract.
