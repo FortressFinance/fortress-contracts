@@ -33,6 +33,12 @@ contract AddressesArbi {
     address constant WSTETH = 0x5979D7b546E38E414F7E9822514be443A4800529;
     // The address of Y2K token.
     address constant Y2K = 0x65c936f008BC34fE819bce9Fa5afD9dc2d49977f;
+
+    // The address of BAL token.
+    address constant BAL = 0x040d1EdC9569d4Bab2D15287Dc5A4F10F56a56B8;
+    // The address of AURA BAL token.
+    address constant AURA = 0x223738a747383d6F9f827d95964e4d8E8AC754cE;
+    
     
     // ------------------------------------- Curve LP Tokens -------------------------------------
 
@@ -65,8 +71,10 @@ contract AddressesArbi {
 
     // ------------------------------------- Balancer Pools -------------------------------------
 
-    // The address of Sushi wstETH/WETH pool
-    address constant BALANCER_WSTETHWETH = 0xFB5e6d0c1DfeD2BA000fBC040Ab8DF3615AC329c;
+    // The address of Balancer wstETH/WETH pool
+    address constant BALANCER_WSTETHWETH = 0x36bf227d6BaC96e2aB1EbB5492ECec69C691943f;
+    // The address of Balancer BAL/WETH pool
+    address constant BALANCER_BALWETH = 0xcC65A812ce382aB909a11E434dbf75B34f1cc59D;
 
     // ------------------------------------- UniV3 Pools -------------------------------------
 
