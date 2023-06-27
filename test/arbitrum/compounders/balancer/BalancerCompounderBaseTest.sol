@@ -37,7 +37,7 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
 
     function _setUp() internal {
 
-        string memory ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
+        string memory ARBITRUM_RPC_URL = "https://arbitrum-mainnet.infura.io/v3/6175c5e376b9460eaa23997ac6eccabc";//vm.envString("ARBITRUM_RPC_URL");
         arbitrumFork = vm.createFork(ARBITRUM_RPC_URL);
         vm.selectFork(arbitrumFork);
 
@@ -57,7 +57,7 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
         vm.deal(harvester, 100 ether);
 
         vm.startPrank(owner);
-        ammOperations = new BalancerArbiOperations();
+        ammOperations = new BalancerArbiOperations(address(owner));
         fortressSwap = new FortressArbiSwap(address(owner));
         vm.stopPrank();
 
@@ -96,7 +96,7 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
 
         _testHarvest(_asset, (_sharesAlice + _sharesBob + _sharesCharlie));
 
-        // // // ------------ Withdraw ------------
+        // // // // ------------ Withdraw ------------
 
         _testRedeemSingleUnwrapped(_asset, _sharesAlice, _sharesBob, _sharesCharlie);
     }

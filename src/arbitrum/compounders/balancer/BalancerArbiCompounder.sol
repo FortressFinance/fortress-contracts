@@ -26,19 +26,15 @@ import "src/shared/compounders/AMMCompounderBase.sol";
 import "src/arbitrum/utils/BalancerArbiOperations.sol";
 import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
 import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IAuraBoosterArbi.sol";
+import {IBalancerOperations} from "src/shared/fortress-interfaces/IBalancerOperations.sol";
 
-contract BalancerArbiCompounder is BalancerArbiOperations, AMMCompounderBase {
+contract BalancerArbiCompounder is AMMCompounderBase {
     
     using SafeERC20 for IERC20;
 
-    // /// @notice The address of the vault's Balancer pool
-    // address private immutable poolAddress;
 
     /********************************** Constructor **********************************/
 
-    //         address(0x98Ef32edd24e2c92525E59afc4475C1242a30184), // Aura Arbi Booster
-    //         IConvexBooster(0x98Ef32edd24e2c92525E59afc4475C1242a30184).poolInfo(_boosterPoolId).crvRewards,
-    
     constructor(
         ERC20 _asset,
         string memory _name,
@@ -54,18 +50,23 @@ contract BalancerArbiCompounder is BalancerArbiOperations, AMMCompounderBase {
             _settingsConfig,
             _boosterConfig,
             _underlyingAssets
-        ) {
-            // poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
-    }
+        ) {}
+
     /********************************** Internal Functions **********************************/
 
     function _swapFromUnderlying(address _underlyingAsset, uint256 _underlyingAmount, uint256 _minAmount) internal override returns (uint256 _assets) {
-        _assets = _addLiquidity(address(asset), _underlyingAsset, _underlyingAmount);
+        address payable _ammOperations = settings.ammOperations;
+        _approve(_underlyingAsset, _ammOperations, _underlyingAmount);
+        _assets = IBalancerOperations(_ammOperations).addLiquidity(address(asset), _underlyingAsset, _underlyingAmount);
+        
         if (!(_assets >= _minAmount)) revert InsufficientAmountOut();
     }
 
     function _swapToUnderlying(address _underlyingAsset, uint256 _assets, uint256 _minAmount) internal override returns (uint256 _underlyingAmount) {
-        _underlyingAmount = _removeLiquidity(address(asset), _underlyingAsset, _assets);
+         address payable _ammOperations = settings.ammOperations;
+         _approve(address(asset), _ammOperations, _assets);
+        _underlyingAmount = IBalancerOperations(_ammOperations).removeLiquidity(address(asset), _underlyingAsset, _assets);
+
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
     }
 
@@ -101,7 +102,9 @@ contract BalancerArbiCompounder is BalancerArbiOperations, AMMCompounderBase {
 
         if (_rewards > 0) {
             address _lpToken = address(asset);
-            _rewards = _addLiquidity(_lpToken, _underlyingAsset, _rewards);
+            address payable _ammOperations = settings.ammOperations;
+            _approve(_underlyingAsset, _ammOperations, _rewards);
+            _rewards = IBalancerOperations(_ammOperations).addLiquidity(_lpToken, _underlyingAsset, _rewards);
 
             Fees memory _fees = fees;
             uint256 _platformFee = _fees.platformFeePercentage;

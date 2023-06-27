@@ -39,7 +39,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
 
         // // ------------------------- whitelist in ammOperations -------------------------
 
-        // // BalancerArbiOperations(payable(_ammOperations)).updateWhitelist(address(balancerCompounder), true); //to check the purpose
+        BalancerArbiOperations(payable(_ammOperations)).updateWhitelist(address(balancerCompounder), true); 
         
         return address(balancerCompounder);
     }

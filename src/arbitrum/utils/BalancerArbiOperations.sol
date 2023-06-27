@@ -34,6 +34,7 @@ import "src/shared/interfaces/IBalancerPool.sol";
 contract BalancerArbiOperations {
 
     using SafeERC20 for IERC20;
+    using Address for address payable;
     
     /// @notice The address of the owner
     address public owner;
@@ -50,9 +51,9 @@ contract BalancerArbiOperations {
         
     /********************************** Constructor **********************************/
 
-    // constructor(address _owner) {
-    //     owner = _owner;
-    // }
+    constructor(address _owner) {
+        owner = _owner;
+    }
 
     /********************************** Restricted Functions **********************************/
 
@@ -68,9 +69,11 @@ contract BalancerArbiOperations {
         owner = _owner;
     }
 
-    /********************************** Internal Functions **********************************/
+    /********************************** Restricted Functions **********************************/
 
-    function _addLiquidity(address _poolAddress, address _asset, uint256 _amount) internal returns (uint256) {
+    function addLiquidity(address _poolAddress, address _asset, uint256 _amount) external returns (uint256 _assets) {
+        if (!whitelist[msg.sender]) revert Unauthorized_();
+        
         bytes32 _poolId = IBalancerPool(_poolAddress).getPoolId();
         IBalancerVault _vault = IBalancerVault(BALANCER_VAULT);
 
@@ -82,7 +85,8 @@ contract BalancerArbiOperations {
             _wrapETH(_amount);
             _asset = WETH;
         }
-        
+        IERC20(_asset).safeTransferFrom(msg.sender, address(this), _amount);
+
         uint256[] memory _amounts = new uint256[](_tokens.length);
         for (uint256 _i = 0; _i < _tokens.length; _i++) {
             if (_tokens[_i] == _asset) {
@@ -91,6 +95,7 @@ contract BalancerArbiOperations {
                 uint256[] memory _noBptAmounts = _isComposablePool(_tokens, _poolAddress) ? _dropBptItem(_tokens, _amounts, _poolAddress) : _amounts;
                 
                 _approveOperations(_tokens[_i], address(_vault), _amount);
+                // _approveOperations(_tokens[_i], BALANCER_VAULT, _amount);
                 _vault.joinPool(
                     _poolId,
                     address(this), // sender
@@ -109,16 +114,23 @@ contract BalancerArbiOperations {
                 break;
             }
         }
-        return (IERC20(_poolAddress).balanceOf(address(this)) - _before);
+        _assets = IERC20(_poolAddress).balanceOf(address(this)) - _before;
+        IERC20(_poolAddress).safeTransfer(msg.sender, _assets);
+        
+        return _assets;
     }
 
-    function _removeLiquidity(address _poolAddress, address _asset, uint256 _bptAmountIn) internal returns (uint256) {
+    function removeLiquidity(address _poolAddress, address _asset, uint256 _bptAmountIn) external returns (uint256 _underlyingAmount) {
+        if (!whitelist[msg.sender]) revert Unauthorized_();
+        
         bytes32 _poolId = IBalancerPool(_poolAddress).getPoolId();
         IBalancerVault _vault = IBalancerVault(BALANCER_VAULT);
 
         (address[] memory _tokens,,) = _vault.getPoolTokens(_poolId);
         uint256 _before = IERC20(_asset).balanceOf(address(this));
         
+        IERC20(_poolAddress).safeTransferFrom(msg.sender, address(this), _bptAmountIn);
+
         uint256[] memory _amounts = new uint256[](_tokens.length);
         for (uint256 _i = 0; _i < _tokens.length; _i++) {
             if (_tokens[_i] == _asset) {
@@ -140,8 +152,13 @@ contract BalancerArbiOperations {
                 break;
             }
         }
-        return (IERC20(_asset).balanceOf(address(this)) - _before);
+        _underlyingAmount = IERC20(_asset).balanceOf(address(this)) - _before;
+        IERC20(_asset).safeTransfer(msg.sender, _underlyingAmount);
+
+        return _underlyingAmount;
     }
+
+    /********************************** Internal Functions **********************************/
 
     function _isComposablePool(address[] memory _tokens, address _poolAddress) internal pure returns (bool) {
         for(uint256 i = 0; i < _tokens.length; i++) {
@@ -172,8 +189,12 @@ contract BalancerArbiOperations {
     function _wrapETH(uint256 _amount) internal {
         IWETH(WETH).deposit{ value: _amount }();
     }
+
+    // receive() external payable {}
+
 /********************************** Errors **********************************/
 
     error OnlyOwner();
+    error Unauthorized_();
 
 }

@@ -20,7 +20,7 @@ contract testArbiWstETHwETH is BalancerArbiCompounderBaseTest, InitWstETHwETHArb
         balancerCompounder = BalancerArbiCompounder(payable(_balancerCompounder));
 
         vm.startPrank(owner);
-        // ammOperations.updateWhitelist(address(balancerCompounder), true); 
+        ammOperations.updateWhitelist(address(balancerCompounder), true); 
         vm.stopPrank();
     }
 
