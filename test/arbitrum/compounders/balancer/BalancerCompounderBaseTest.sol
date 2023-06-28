@@ -60,7 +60,6 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
         ammOperations = new BalancerArbiOperations(address(owner));
         fortressSwap = new FortressArbiSwap(address(owner));
         vm.stopPrank();
-
     }
 
     function _testSingleUnwrapped(address _asset, uint256 _amount) internal {

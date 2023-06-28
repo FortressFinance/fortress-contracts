@@ -6,7 +6,6 @@ import "script/arbitrum/utils/compounders/balancer/InitWstETHwETH.sol";
 
 contract testArbiWstETHwETH is BalancerArbiCompounderBaseTest, InitWstETHwETHArbi {
 
-
     using SafeERC20 for IERC20;
 
     function setUp() public {
@@ -18,10 +17,6 @@ contract testArbiWstETHwETH is BalancerArbiCompounderBaseTest, InitWstETHwETHArb
         vm.stopPrank();
         
         balancerCompounder = BalancerArbiCompounder(payable(_balancerCompounder));
-
-        vm.startPrank(owner);
-        ammOperations.updateWhitelist(address(balancerCompounder), true); 
-        vm.stopPrank();
     }
 
     // ------------------------------------------------------------------------------------------
