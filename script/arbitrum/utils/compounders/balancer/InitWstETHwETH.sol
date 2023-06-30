@@ -17,9 +17,10 @@ contract InitWstETHwETHArbi is InitBaseArbi {
         uint256 _convexPid = 0;
         address _asset = BALANCER_WSTETHWETH; 
         
-        address[] memory _rewardAssets = new address[](1);
+        address[] memory _rewardAssets = new address[](3);
         _rewardAssets[0] = BAL;
-        // _rewardAssets[1] = AURA;
+        _rewardAssets[1] = ARB;
+        _rewardAssets[2] = AURA;
 
         address[] memory _underlyingAssets = new address[](3);
         _underlyingAssets[0] = WSTETH;
@@ -103,6 +104,103 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             
             _swap.updateRoute(ETH, WSTETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
+
+        // ARB ->  WETH 
+        if (!(_swap.routeExists(ARB, WETH))) {
+            _poolType1[0] = 0;
+
+            _poolAddress1[0] = UNIV3_ARBWETH;
+            
+            _fromList1[0] = ETH;
+            
+            _toList1[0] = WETH;
+            
+            _swap.updateRoute(ETH, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
+
+        // ARB ->  ETH 
+        if (!(_swap.routeExists(ARB, ETH))) {
+            _poolType1[0] = 0;
+
+            _poolAddress1[0] = UNIV3_ARBWETH;
+            
+            _fromList1[0] = ETH;
+            
+            _toList1[0] = ETH;
+            
+            _swap.updateRoute(ETH, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+        }
         
+        // ARB ->  WSTETH 
+        if (!(_swap.routeExists(ARB, WSTETH))) {
+            _poolType2[0] = 0;
+            _poolType2[1] = 12;
+
+            _poolAddress2[0] = UNIV3_ARBWETH;
+            _poolAddress2[1] = BALANCER_WSTETHWETH;
+
+            _fromList2[0] = ARB;
+            _fromList2[1] = WETH;
+            
+            _toList2[0] = WETH;
+            _toList2[1] = WSTETH;
+            
+            _swap.updateRoute(ARB, WSTETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+        }
+
+        // AURA ->  WETH 
+        if (!(_swap.routeExists(AURA, WETH))) {
+            _poolType2[0] = 12;
+            _poolType2[1] = 0;
+
+            _poolAddress2[0] = BALANCER_33AURA33BAL33WETH;
+            _poolAddress2[1] = UNIV3_ARBWETH;
+            
+            _fromList2[0] = AURA;
+            _fromList2[1] = ARB;
+            
+            _toList2[0] = ARB;
+            _toList2[1] = WETH;
+            
+            _swap.updateRoute(AURA, WETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+        }
+
+        // AURA ->  ETH 
+        if (!(_swap.routeExists(AURA, ETH))) {
+            _poolType2[0] = 12;
+            _poolType2[1] = 0;
+
+            _poolAddress2[0] = BALANCER_33AURA33BAL33WETH;
+            _poolAddress2[1] = UNIV3_ARBWETH;
+            
+            _fromList2[0] = AURA;
+            _fromList2[1] = ARB;
+            
+            _toList2[0] = ARB;
+            _toList2[1] = ETH;
+            
+            _swap.updateRoute(AURA, ETH, _poolType2, _poolAddress2, _fromList2, _toList2);
+        }
+
+        // AURA ->  WSTETH 
+        if (!(_swap.routeExists(AURA, WSTETH))) {
+            _poolType3[0] = 12;
+            _poolType3[1] = 0;
+            _poolType3[2] = 12;
+
+            _poolAddress3[0] = BALANCER_33AURA33BAL33WETH;
+            _poolAddress3[1] = UNIV3_ARBWETH;
+            _poolAddress3[2] = BALANCER_WSTETHWETH;
+
+            _fromList3[0] = AURA;
+            _fromList3[1] = ARB;
+            _fromList3[2] = WETH;
+            
+            _toList3[0] = ARB;
+            _toList3[1] = WETH;
+            _toList3[2] = WSTETH;
+            
+            _swap.updateRoute(AURA, WSTETH, _poolType3, _poolAddress3, _fromList3, _toList3);
+        }
      }
 }

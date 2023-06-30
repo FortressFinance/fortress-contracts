@@ -36,9 +36,10 @@ contract AddressesArbi {
 
     // The address of BAL token.
     address constant BAL = 0x040d1EdC9569d4Bab2D15287Dc5A4F10F56a56B8;
-    // The address of AURA BAL token.
-    address constant AURA = 0x223738a747383d6F9f827d95964e4d8E8AC754cE;
-    
+    // The address of AURA token.
+    address constant AURA = 0x1509706a6c66CA549ff0cB464de88231DDBe213B;
+    // The address of ARB token.
+    address constant ARB = 0x912CE59144191C1204E64559FE8253a0e49E6548;
     
     // ------------------------------------- Curve LP Tokens -------------------------------------
 
@@ -50,6 +51,8 @@ contract AddressesArbi {
     address constant FRAXBP_LP = 0xC9B8a3FDECB9D5b218d02555a8Baf332E5B740d5;
     // The address of USDC/USDT LP token
     address constant CRVBP_LP = 0x7f90122BF0700F9E7e1F688fe926940E8839F353;
+
+
 
     // ------------------------------------- Curve Pools -------------------------------------
 
@@ -75,6 +78,8 @@ contract AddressesArbi {
     address constant BALANCER_WSTETHWETH = 0x36bf227d6BaC96e2aB1EbB5492ECec69C691943f;
     // The address of Balancer BAL/WETH pool
     address constant BALANCER_BALWETH = 0xcC65A812ce382aB909a11E434dbf75B34f1cc59D;
+    // The address of Balancer 33AURA-33ARB-33BAL pool
+    address constant BALANCER_33AURA33BAL33WETH = 0xbcaA6c053cab3Dd73a2E898d89A4f84a180ae1CA;
 
     // ------------------------------------- UniV3 Pools -------------------------------------
 
@@ -84,6 +89,8 @@ contract AddressesArbi {
     address constant UNIV3_USDCWETH = 0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443;
     // The address of LINK/WETH pool
     address constant UNIV3_LINKWETH = 0x468b88941e7Cc0B88c1869d68ab6b570bCEF62Ff;
+    // The address of ARB/WETH pool
+    address constant UNIV3_ARBWETH = 0xC6F780497A95e246EB9449f5e4770916DCd6396A;
 
     // ------------------------------------- GMX -------------------------------------
     
