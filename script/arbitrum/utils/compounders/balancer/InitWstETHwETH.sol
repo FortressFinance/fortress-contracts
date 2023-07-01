@@ -32,9 +32,9 @@ contract InitWstETHwETHArbi is InitBaseArbi {
         bytes memory _settingsConfig = abi.encode(balancerCryptoDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
         bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
 
-        BalancerArbiCompounder balancerCompounder = new BalancerArbiCompounder(ERC20(_asset), "Fortress Compounding wstETH-WETH", "fcWstETHwETh", _settingsConfig, _boosterConfig, _underlyingAssets);
+        BalancerArbiCompounder balancerCompounder = new BalancerArbiCompounder(ERC20(_asset), "Fortress Compounding wstETH-WETH", "fcWstETHwETH", _settingsConfig, _boosterConfig, _underlyingAssets);
 
-        // // ------------------------- init registry -------------------------
+        // // ------------------------- update registry -------------------------
 
         YieldOptimizersRegistry(_yieldOptimizersRegistry).registerAmmCompounder(false, address(balancerCompounder), address(_asset));
 
