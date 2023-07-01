@@ -37,7 +37,7 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
 
     function _setUp() internal {
 
-        string memory ARBITRUM_RPC_URL = "https://arbitrum-mainnet.infura.io/v3/6175c5e376b9460eaa23997ac6eccabc";//vm.envString("ARBITRUM_RPC_URL");
+        string memory ARBITRUM_RPC_URL = vm.envString("ARBITRUM_RPC_URL");
         arbitrumFork = vm.createFork(ARBITRUM_RPC_URL);
         vm.selectFork(arbitrumFork);
 
