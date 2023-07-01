@@ -25,4 +25,6 @@ interface IConvexBasicRewardsArbi {
   function stake(uint256) external returns (bool);
 
   function claimable_reward (address, address) external view returns (uint256);
+
+  function rewards(address) external view returns (uint256);
 }
