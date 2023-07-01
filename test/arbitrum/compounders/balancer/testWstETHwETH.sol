@@ -3,6 +3,7 @@ pragma solidity 0.8.17;
 
 import "test/arbitrum/compounders/balancer/BalancerCompounderBaseTest.sol";
 import "script/arbitrum/utils/compounders/balancer/InitWstETHwETH.sol";
+import {InitBalancerCompounders} from "script/arbitrum/utils/compounders/balancer/InitBalancerCompounder.s.sol";
 
 contract testArbiWstETHwETH is BalancerArbiCompounderBaseTest, InitWstETHwETHArbi {
 
@@ -12,7 +13,7 @@ contract testArbiWstETHwETH is BalancerArbiCompounderBaseTest, InitWstETHwETHArb
         
         _setUp();
 
-        vm.startPrank(owner);
+        vm.startPrank(deployer);
         address _balancerCompounder = _initializeWstETHwETH(owner, address(yieldOptimizersRegistry), address(fortressSwap), platform, address(ammOperations));
         vm.stopPrank();
         

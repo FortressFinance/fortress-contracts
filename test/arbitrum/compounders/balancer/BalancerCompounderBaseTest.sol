@@ -20,13 +20,15 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
 
     using SafeERC20 for IERC20;
 
-    address owner;
     address alice;
     address bob;
     address charlie;
     address yossi;
     address harvester;
-    address platform;
+
+    address owner = vm.envAddress("FORTRESS_MULTISIG_OWNER");
+    address platform = vm.envAddress("FORTRESS_MULTISIG_PLATFORM");
+    address deployer = vm.envAddress("FORTRESS_DEPLOYER_ADDRESS");
 
     uint256 arbitrumFork;
     
@@ -46,8 +48,6 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
         charlie = address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc);
         yossi = address(0x77Ee01E3d0E05b4afF42105Fe004520421248261);
         harvester = address(0xBF93B898E8Eee7dd6915735eB1ea9BFc4b98BEc0);
-        owner = address(0xe81557e0a10f59b5FA9CE6d3e128b5667D847FBc);
-        platform = address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
 
         vm.deal(owner, 100 ether);
         vm.deal(alice, 100 ether);
@@ -57,8 +57,8 @@ contract BalancerArbiCompounderBaseTest is Test, AddressesArbi {
         vm.deal(harvester, 100 ether);
 
         vm.startPrank(owner);
-        ammOperations = new BalancerArbiOperations(address(owner));
-        fortressSwap = new FortressArbiSwap(address(owner));
+        ammOperations = new BalancerArbiOperations(address(deployer));
+        fortressSwap = FortressArbiSwap(payable(FortressSwapV2));
         vm.stopPrank();
     }
 

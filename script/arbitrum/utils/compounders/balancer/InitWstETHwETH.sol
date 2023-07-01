@@ -36,7 +36,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
 
         // // ------------------------- update registry -------------------------
 
-        YieldOptimizersRegistry(_yieldOptimizersRegistry).registerAmmCompounder(false, address(balancerCompounder), address(_asset));
+        // YieldOptimizersRegistry(_yieldOptimizersRegistry).registerAmmCompounder(false, address(balancerCompounder), address(_asset));
 
         // // ------------------------- whitelist in ammOperations -------------------------
 
