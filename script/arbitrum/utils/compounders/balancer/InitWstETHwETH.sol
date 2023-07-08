@@ -32,7 +32,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
         bytes memory _settingsConfig = abi.encode(balancerCryptoDescription, address(_owner), address(_platform), address(_fortressSwap), address(_ammOperations));
         bytes memory _boosterConfig = abi.encode(_convexPid, _booster, _crvRewards, _rewardAssets);
 
-        BalancerArbiCompounder balancerCompounder = new BalancerArbiCompounder(ERC20(_asset), "Fortress Compounding wstETH-WETH", "fcWstETHwETH", _settingsConfig, _boosterConfig, _underlyingAssets);
+        BalancerArbiCompounder balancerCompounder = new BalancerArbiCompounder(ERC20(_asset), "Fortress Compounding wstETH-WETH", "fcwstETHwETH", _settingsConfig, _boosterConfig, _underlyingAssets);
 
         // // ------------------------- update registry -------------------------
 
@@ -92,7 +92,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             _swap.updateRoute(BAL, WSTETH, _poolType2, _poolAddress2, _fromList2, _toList2);
         }
 
-        // ETH ->  WSTETH 
+        // ETH ->  WSTETH
         if (!(_swap.routeExists(ETH, WSTETH))) {
             _poolType1[0] = 12;
 
@@ -105,30 +105,30 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             _swap.updateRoute(ETH, WSTETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
 
-        // ARB ->  WETH 
+        // ARB ->  WETH
         if (!(_swap.routeExists(ARB, WETH))) {
             _poolType1[0] = 0;
 
             _poolAddress1[0] = UNIV3_ARBWETH;
             
-            _fromList1[0] = ETH;
+            _fromList1[0] = ARB;
             
             _toList1[0] = WETH;
             
-            _swap.updateRoute(ETH, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+            _swap.updateRoute(ARB, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
 
-        // ARB ->  ETH 
+        // ARB -> ETH 
         if (!(_swap.routeExists(ARB, ETH))) {
             _poolType1[0] = 0;
 
             _poolAddress1[0] = UNIV3_ARBWETH;
             
-            _fromList1[0] = ETH;
+            _fromList1[0] = ARB;
             
             _toList1[0] = ETH;
             
-            _swap.updateRoute(ETH, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+            _swap.updateRoute(ARB, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
         
         // ARB ->  WSTETH 
@@ -153,7 +153,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             _poolType2[0] = 12;
             _poolType2[1] = 0;
 
-            _poolAddress2[0] = BALANCER_33AURA33BAL33WETH;
+            _poolAddress2[0] = BALANCER_33AURA33BAL33ARB;
             _poolAddress2[1] = UNIV3_ARBWETH;
             
             _fromList2[0] = AURA;
@@ -170,7 +170,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             _poolType2[0] = 12;
             _poolType2[1] = 0;
 
-            _poolAddress2[0] = BALANCER_33AURA33BAL33WETH;
+            _poolAddress2[0] = BALANCER_33AURA33BAL33ARB;
             _poolAddress2[1] = UNIV3_ARBWETH;
             
             _fromList2[0] = AURA;
@@ -188,7 +188,7 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             _poolType3[1] = 0;
             _poolType3[2] = 12;
 
-            _poolAddress3[0] = BALANCER_33AURA33BAL33WETH;
+            _poolAddress3[0] = BALANCER_33AURA33BAL33ARB;
             _poolAddress3[1] = UNIV3_ARBWETH;
             _poolAddress3[2] = BALANCER_WSTETHWETH;
 

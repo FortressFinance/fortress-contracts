@@ -79,7 +79,7 @@ contract AddressesArbi {
     // The address of Balancer BAL/WETH pool
     address constant BALANCER_BALWETH = 0xcC65A812ce382aB909a11E434dbf75B34f1cc59D;
     // The address of Balancer 33AURA-33ARB-33BAL pool
-    address constant BALANCER_33AURA33BAL33WETH = 0xbcaA6c053cab3Dd73a2E898d89A4f84a180ae1CA;
+    address constant BALANCER_33AURA33BAL33ARB = 0xbcaA6c053cab3Dd73a2E898d89A4f84a180ae1CA;
 
     // ------------------------------------- UniV3 Pools -------------------------------------
 
@@ -119,10 +119,10 @@ contract AddressesArbi {
     address constant fc2Pool = 0xe16F15266cD00c418fB63e505361de32ce90Ac9f;
     // The address of fcFraxBP contract.
     address constant fcFraxBP = 0xe0Ef16f92DdC7f2AA3DADC0fDd3cdEd262Df03D6;
+    // The address of balancer fcWstETHwETH contract.
+    address constant fcwstETHwETH = 0x79636559F70Ffe7429A965a59B884B0eE9b1391C;
     //
-    // address constant ammOperations = 0x860b5691C95a2698bAd732E88F95C2e947AA4aDB;
-    //
-    address constant balancerAmmOperations = 0x860b5691C95a2698bAd732E88F95C2e947AA4aDB; // todo
+    address constant balancerAmmOperations = 0x1D27f9A10Ca8142663FD711a4717B08726d86f72;
     address constant yieldOptimizersRegistry = 0x03605C3A3dAf860774448df807742c0d0e49460C;
     address constant multiClaimer = 0x259c2B9F14Ef98620d529feEf6d0D22269fDfbeD;
     address constant fctrTriCryptofcGLP = 0x4cdEE506E9130f8A8947D80DCe1AbfDf0fa36fb5;
