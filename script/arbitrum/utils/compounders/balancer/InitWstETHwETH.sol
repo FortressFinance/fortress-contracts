@@ -111,11 +111,11 @@ contract InitWstETHwETHArbi is InitBaseArbi {
 
             _poolAddress1[0] = UNIV3_ARBWETH;
             
-            _fromList1[0] = ETH;
+            _fromList1[0] = ARB;
             
             _toList1[0] = WETH;
             
-            _swap.updateRoute(ETH, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+            _swap.updateRoute(ARB, WETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
 
         // ARB ->  ETH 
@@ -124,14 +124,14 @@ contract InitWstETHwETHArbi is InitBaseArbi {
 
             _poolAddress1[0] = UNIV3_ARBWETH;
             
-            _fromList1[0] = ETH;
+            _fromList1[0] = ARB;
             
             _toList1[0] = ETH;
             
-            _swap.updateRoute(ETH, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
+            _swap.updateRoute(ARB, ETH, _poolType1, _poolAddress1, _fromList1, _toList1);
         }
         
-        // ARB ->  WSTETH 
+        // ARB ->  WSTETH
         if (!(_swap.routeExists(ARB, WSTETH))) {
             _poolType2[0] = 0;
             _poolType2[1] = 12;
@@ -195,11 +195,11 @@ contract InitWstETHwETHArbi is InitBaseArbi {
             _fromList3[0] = AURA;
             _fromList3[1] = ARB;
             _fromList3[2] = WETH;
-            
+
             _toList3[0] = ARB;
             _toList3[1] = WETH;
             _toList3[2] = WSTETH;
-            
+
             _swap.updateRoute(AURA, WSTETH, _poolType3, _poolAddress3, _fromList3, _toList3);
         }
      }

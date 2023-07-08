@@ -28,10 +28,6 @@ contract InitBalancerCompounders is Script, InitWstETHwETHArbi {
         
         address _wstETHwETHVault = _initializeWstETHwETH(owner, yieldOptimizersRegistry, fortressArbiSwap, platform, address(_balancerAmmOperations));
 
-        console.log("Balancer compounders initialized");
-        console.log("_balancerAmmOperations: ", address(_balancerAmmOperations));
-        console.log("_wstETHwETHVault: ", _wstETHwETHVault);
-
         vm.stopBroadcast();
     }
 }

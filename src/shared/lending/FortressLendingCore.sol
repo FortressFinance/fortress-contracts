@@ -115,7 +115,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     
     // User Level Accounting
     /// @notice Stores the balance of collateral for each user
-    mapping(address => uint256) public userCollateralBalance; // amount of collateral each user is backed
+    mapping(address => uint256) public userCollateralBalance; // amount of collateral a user owns
     /// @notice Stores the balance of borrow shares for each user
     mapping(address => uint256) public userBorrowShares; // represents the shares held by individuals
     // NOTE: user shares of assets are represented as ERC-20 tokens and accessible via balanceOf()
@@ -541,7 +541,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @dev msg.sender must call ERC20.approve() on the Collateral Token contract prior to invocation
     /// @param _collateralAmount The amount of Collateral Token to be added to borrower's position
     /// @param _borrower The account to be credited
-    function addCollateral(uint256 _collateralAmount, address _borrower) external nonReentrant speedBump(_borrower) {
+    function addCollateral(uint256 _collateralAmount, address _borrower) external virtual nonReentrant speedBump(_borrower) {
         if (pauseSettings.addCollateral) revert Paused();
 
         lastInteractionBlock[_borrower] = block.number;
@@ -555,7 +555,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @dev msg.sender must be solvent after invocation or transaction will revert
     /// @param _collateralAmount The amount of Collateral Token to transfer
     /// @param _receiver The address to receive the transferred funds
-    function removeCollateral(uint256 _collateralAmount, address _receiver) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) {
+    function removeCollateral(uint256 _collateralAmount, address _receiver) external virtual nonReentrant speedBump(msg.sender) isSolvent(msg.sender) {
         if (pauseSettings.removeCollateral) revert Paused();
         
         lastInteractionBlock[msg.sender] = block.number;
@@ -573,7 +573,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _shares The number of Borrow Shares which will be repaid by the call
     /// @param _borrower The account for which the debt will be reduced
     /// @return _amountToRepay The amount of Asset Tokens which were transferred in order to repay the Borrow Shares
-    function repayAsset(uint256 _shares, address _borrower) external nonReentrant speedBump(_borrower) returns (uint256 _amountToRepay) {
+    function repayAsset(uint256 _shares, address _borrower) external virtual nonReentrant speedBump(_borrower) returns (uint256 _amountToRepay) {
         if (pauseSettings.repayAsset) revert Paused();
 
         lastInteractionBlock[_borrower] = block.number;
@@ -673,7 +673,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _minAmount The minimum amount of Collateral Tokens to be received in exchange for the borrowed Asset Tokens
     /// @param _underlyingAsset The address of the underlying asset to be deposited into the Vault, which will be swapped for Collateral Tokens
     /// @return _totalCollateralAdded The total amount of Collateral Tokens added to a users account (initial + swap)
-    function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
+    function leveragePosition(uint256 _borrowAmount, uint256 _initialCollateralAmount, uint256 _minAmount, address _underlyingAsset) external virtual nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _totalCollateralAdded) {
         if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
         if (pauseSettings.addLeverage) revert Paused();
 
@@ -715,7 +715,7 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
     /// @param _collateralToSwap The amount of Collateral Tokens to swap for Asset Tokens
     /// @param _minAmount The minimum amount of Asset Tokens to receive during the swap
     /// @return _amountAssetOut The amount of Asset Tokens received for the Collateral Tokens, the amount the borrowers account was credited
-    function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
+    function repayAssetWithCollateral(uint256 _collateralToSwap, uint256 _minAmount, address _underlyingAsset) external virtual nonReentrant speedBump(msg.sender) isSolvent(msg.sender) returns (uint256 _amountAssetOut) {
         if (ERC20(address(_underlyingAsset)).decimals() != ERC20(address(assetContract)).decimals()) revert InvalidUnderlyingAsset();
         if (pauseSettings.removeLeverage) revert Paused();
 
