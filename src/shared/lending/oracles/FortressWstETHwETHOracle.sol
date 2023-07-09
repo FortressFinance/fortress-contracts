@@ -29,6 +29,7 @@ import "./BaseOracle.sol";
 
 contract FortressWstETHwETHOracle is BaseOracle {
 
+    using SafeCast for int256;
     using SafeCast for uint256;
 
     uint256 constant internal _DECIMAL_DIFFERENCE = 1e18;
@@ -64,7 +65,7 @@ contract FortressWstETHwETHOracle is BaseOracle {
 
     function _getPrice() internal view override reentrancyCheck returns (int256) {
 
-        uint256 _assetPrice = BPT.getRate() * uint256(_getwETHPrice()) / wethOracle.decimals();
+        uint256 _assetPrice = BPT.getRate() * _getwETHPrice().toUint256() / wethOracle.decimals();
         uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         // check that vault share price deviation did not exceed the configured bounds
@@ -88,7 +89,7 @@ contract FortressWstETHwETHOracle is BaseOracle {
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external override onlyOwner reentrancyCheck {
 
-        uint256 _assetPrice = BPT.getRate() * uint256(_getwETHPrice()) / wethOracle.decimals();
+        uint256 _assetPrice = BPT.getRate() * _getwETHPrice().toUint256() / wethOracle.decimals();
 
         lastSharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
