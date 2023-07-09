@@ -54,7 +54,7 @@ contract FortressWstETHwETHOracle is BaseOracle {
     /********************************** External Functions **********************************/
 
     function description() external pure override returns (string memory) {
-        return "fcWstETHwETH USD Oracle";
+        return "fcwstETHwETH USD Oracle";
     }
 
     /********************************** Internal Functions **********************************/
