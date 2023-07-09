@@ -31,9 +31,12 @@ contract FortressWstETHwETHOracle is BaseOracle {
 
     using SafeCast for uint256;
 
-    IChainlinkAggregator public WETH = IChainlinkAggregator(address(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612)); //ETH feed
-    address constant wstETHwETH = address(0x36bf227d6BaC96e2aB1EbB5492ECec69C691943f);
-    
+    uint256 constant internal _DECIMAL_DIFFERENCE = 1e18;
+
+    IChainlinkAggregator public wethOracle = IChainlinkAggregator(address(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612));
+
+    IBalancerV2StablePool public constant BPT = IBalancerV2StablePool(address(0x36bf227d6BaC96e2aB1EbB5492ECec69C691943f));
+
     /********************************** Constructor **********************************/
 
     constructor(address _owner, address _vault) BaseOracle(_owner, _vault) {}
@@ -43,7 +46,7 @@ contract FortressWstETHwETHOracle is BaseOracle {
     /// @notice Triggers the Vault's reentrancy guard
     /// @dev This staticcall always reverts, but we need to make sure it doesn't fail due to a re-entrancy attack (abi.encoded BAL#400).
     modifier reentrancyCheck() {
-        address balancerVault = IBalancerV2StablePool(wstETHwETH).getVault();
+        address balancerVault = BPT.getVault();
         (, bytes memory revertData) = balancerVault.staticcall{ gas: 10_000 }(
             abi.encodeWithSelector(IBalancerVault(balancerVault).manageUserBalance.selector, 0)
         );
@@ -60,10 +63,9 @@ contract FortressWstETHwETHOracle is BaseOracle {
     /********************************** Internal Functions **********************************/
 
     function _getPrice() internal view override reentrancyCheck returns (int256) {
-        
-        int256 _wETHPrice = _getwETHPrice();
-        uint256 _assetPrice = IBalancerV2StablePool(wstETHwETH).getRate() * uint256(_wETHPrice);
-        uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+
+        uint256 _assetPrice = BPT.getRate() * uint256(_getwETHPrice()) / wethOracle.decimals();
+        uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         // check that vault share price deviation did not exceed the configured bounds
         if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
@@ -73,9 +75,11 @@ contract FortressWstETHwETHOracle is BaseOracle {
     }
 
     function _getwETHPrice() internal view returns (int256) {
-            (, int256 wethPrice, ,uint256 wethUpdatedAt, ) = WETH.latestRoundData();
+            (, int256 wethPrice, ,uint256 wethUpdatedAt, ) = wethOracle.latestRoundData();
+
             if (wethPrice == 0) revert zeroPrice();
             if (wethUpdatedAt < block.timestamp - (24 * 3600)) revert stalePrice();
+
             return wethPrice;
     }
 
@@ -83,17 +87,16 @@ contract FortressWstETHwETHOracle is BaseOracle {
 
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external override onlyOwner reentrancyCheck {
-                
-        int256 _wETHPrice = _getwETHPrice();
-        uint256 _assetPrice = IBalancerV2StablePool(wstETHwETH).getRate() * uint256(_wETHPrice);
 
-        lastSharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        uint256 _assetPrice = BPT.getRate() * uint256(_getwETHPrice()) / wethOracle.decimals();
+
+        lastSharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         emit LastSharePriceUpdated(lastSharePrice);
     }
 
-    function updatePriceFeed(address _wethPriceFeed) external onlyOwner {
-        WETH = IChainlinkAggregator(_wethPriceFeed);
+    function updatePriceFeed(address _oracle) external onlyOwner {
+        wethOracle = IChainlinkAggregator(_oracle);
 
     }
     

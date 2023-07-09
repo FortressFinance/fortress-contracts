@@ -45,8 +45,9 @@ contract FortressGLPOracle is AggregatorV3Interface {
 
     bool public isCheckPriceDeviation;
 
-    uint256 constant private DECIMAL_DIFFERENCE = 1e6;
-    uint256 constant private BASE = 1e18;
+    uint256 constant internal _DECIMAL_DIFFERENCE = 1e18;
+
+    uint256 constant internal _BASE = 1e6;
 
     /********************************** Constructor **********************************/
 
@@ -102,7 +103,7 @@ contract FortressGLPOracle is AggregatorV3Interface {
     function _getPrice() internal view returns (int256) {
         uint256 _assetPrice = glpManager.getPrice(false);
 
-        uint256 _sharePrice = ((fcGLP.convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        uint256 _sharePrice = ((fcGLP.convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         // check that fcGLP price deviation did not exceed the configured bounds
         if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
@@ -129,7 +130,7 @@ contract FortressGLPOracle is AggregatorV3Interface {
 
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external onlyOwner {
-        lastSharePrice = ((fcGLP.convertToAssets(glpManager.getPrice(false)) * DECIMAL_DIFFERENCE) / BASE);
+        lastSharePrice = ((fcGLP.convertToAssets(glpManager.getPrice(false)) * _DECIMAL_DIFFERENCE) / _BASE);
 
         emit LastSharePriceUpdated(lastSharePrice);
     }

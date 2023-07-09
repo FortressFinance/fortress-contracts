@@ -30,6 +30,8 @@ contract FortressTriCryptoOracle is BaseOracle {
 
     using SafeCast for uint256;
 
+    uint256 constant internal _DECIMAL_DIFFERENCE = 1e18;
+
     /********************************** Constructor **********************************/
 
     constructor(address _owner, address _vault) BaseOracle(_owner, _vault) {}
@@ -46,7 +48,7 @@ contract FortressTriCryptoOracle is BaseOracle {
         address _triCryptoLpPriceOracle= address(0x2C2FC48c3404a70F2d33290d5820Edf49CBf74a5);
         uint256 _assetPrice = ITriCryptoLpPriceOracle(_triCryptoLpPriceOracle).lp_price();
 
-        uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         // check that vault share price deviation did not exceed the configured bounds
         if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
@@ -60,7 +62,7 @@ contract FortressTriCryptoOracle is BaseOracle {
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external override onlyOwner {
         address _triCryptoLpPriceOracle= address(0x2C2FC48c3404a70F2d33290d5820Edf49CBf74a5);
-        lastSharePrice = ((ERC4626(vault).convertToAssets(ITriCryptoLpPriceOracle(_triCryptoLpPriceOracle).lp_price()) * DECIMAL_DIFFERENCE) / BASE);
+        lastSharePrice = ((ERC4626(vault).convertToAssets(ITriCryptoLpPriceOracle(_triCryptoLpPriceOracle).lp_price()) * _DECIMAL_DIFFERENCE) / _BASE);
 
         emit LastSharePriceUpdated(lastSharePrice);
     }
