@@ -43,7 +43,7 @@ contract FortressTriCryptoOracle is BaseOracle {
     /********************************** Internal Functions **********************************/
 
     function _getPrice() internal view override returns (int256) {
-        address _triCryptoLpPriceOracle= address(0x2C2FC48c3404a70F2d33290d5820Edf49CBf74a5);
+        address _triCryptoLpPriceOracle = address(0x2C2FC48c3404a70F2d33290d5820Edf49CBf74a5);
         uint256 _assetPrice = ITriCryptoLpPriceOracle(_triCryptoLpPriceOracle).lp_price();
 
         uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);

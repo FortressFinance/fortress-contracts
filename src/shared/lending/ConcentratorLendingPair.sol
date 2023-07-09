@@ -14,12 +14,6 @@ pragma solidity 0.8.17;
 // ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
 // ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
 
-//  _____         _                   __              _ _         _____     _     
-// |   __|___ ___| |_ ___ ___ ___ ___|  |   ___ ___ _| |_|___ ___|  _  |___|_|___ 
-// |   __| . |  _|  _|  _| -_|_ -|_ -|  |__| -_|   | . | |   | . |   __| .'| |  _|
-// |__|  |___|_| |_| |_| |___|___|___|_____|___|_|_|___|_|_|_|_  |__|  |__,|_|_|  todo
-//                                                           |___|                
-
 // Github - https://github.com/FortressFinance
 
 import {IFortressConcentrator} from "./interfaces/IFortressConcentrator.sol";
@@ -47,9 +41,9 @@ contract ConcentratorLendingPair is FortressLendingCore {
     uint256 public harvestBountyPercentage;
 
     /// @notice The precision
-    uint256 private constant PRECISION = 1e18;
+    uint256 private constant _PRECISION = 1e18;
     /// @notice The fee denominator
-    uint256 private constant FEE_DENOMINATOR = 1e9;
+    uint256 private constant _FEE_DENOMINATOR = 1e9;
 
     struct UserRewardsInfo {
         /// @notice The amount of current accrued rewards
@@ -93,7 +87,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
     function pendingReward(address _account) public view returns (uint256) {
         UserRewardsInfo memory _userInfo = userRewardsInfo[_account];
 
-        return _userInfo.rewards + (((accRewardPerCollatUnit - _userInfo.rewardPerCollatUnitPaid) * userCollateralBalance[_account]) / PRECISION);
+        return _userInfo.rewards + (((accRewardPerCollatUnit - _userInfo.rewardPerCollatUnitPaid) * userCollateralBalance[_account]) / _PRECISION);
     }
 
     // ============================================================================================
@@ -272,7 +266,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
         lastHarvestBlock = block.number;
 
         _rewards = _harvest(_receiver, _minBounty);
-        accRewardPerCollatUnit += ((_rewards * PRECISION) / totalCollateral);
+        accRewardPerCollatUnit += ((_rewards * _PRECISION) / totalCollateral);
 
         return _rewards;
     }
@@ -320,7 +314,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
         _rewards = IERC20(_asset).balanceOf(address(this)) - _before;
 
         if (_rewards > 0) {
-            uint256 _harvestBounty = (harvestBountyPercentage * _rewards) / FEE_DENOMINATOR;
+            uint256 _harvestBounty = (harvestBountyPercentage * _rewards) / _FEE_DENOMINATOR;
             if (!(_harvestBounty >= _minBounty)) revert InsufficientAmountOut();
 
             _rewards -= _harvestBounty;
