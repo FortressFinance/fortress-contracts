@@ -45,9 +45,9 @@ contract FortressGLPOracle is AggregatorV3Interface {
 
     bool public isCheckPriceDeviation;
 
-    uint256 constant internal _DECIMAL_DIFFERENCE = 1e18;
+    uint256 constant internal _DECIMAL_DIFFERENCE = 1e6;
 
-    uint256 constant internal _BASE = 1e6;
+    uint256 constant internal _BASE = 1e18;
 
     /********************************** Constructor **********************************/
 
