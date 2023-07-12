@@ -150,4 +150,5 @@ contract BaseOracle is AggregatorV3Interface {
     error notOwner();
     error zeroPrice();
     error stalePrice();
+    error reentrancy();
 }
