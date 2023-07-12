@@ -151,4 +151,5 @@ contract BaseOracle is AggregatorV3Interface {
     error zeroPrice();
     error stalePrice();
     error reentrancy();
+    error didNotConverge();
 }
