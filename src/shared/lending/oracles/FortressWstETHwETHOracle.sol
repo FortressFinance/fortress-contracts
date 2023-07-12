@@ -31,11 +31,11 @@ contract FortressWstETHwETHOracle is BaseOracle {
 
     using FixedPointMathLib for uint256;
 
-    uint256 public wethOracle_decimals = 1e8;
-    uint256 public wstethOracle_decimals = 1e18;
+    uint256 public ethUSDFeed_decimals = 1e8;
+    uint256 public wstEthUSDFeed_decimals = 1e18;
 
-    IChainlinkAggregator public wEthOracle = IChainlinkAggregator(address(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612));
-    IChainlinkAggregator public wstEthOracle = IChainlinkAggregator(address(0xb523AE262D20A936BC152e6023996e46FDC2A95D));
+    IChainlinkAggregator public ethUSDFeed = IChainlinkAggregator(address(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612));
+    IChainlinkAggregator public wstEthUSDFeed = IChainlinkAggregator(address(0xb523AE262D20A936BC152e6023996e46FDC2A95D));
     IBalancerV2StablePool public BPT = IBalancerV2StablePool(address(0x36bf227d6BaC96e2aB1EbB5492ECec69C691943f));
 
     /********************************** Constructor **********************************/
@@ -58,7 +58,7 @@ contract FortressWstETHwETHOracle is BaseOracle {
     /********************************** Internal Functions **********************************/
 
     function _getPrice() internal view override  returns (int256) {
-        uint256 _bptPrice = _minAssetPrice().mulWadDown(BPT.getRate()) * _BASE / wethOracle_decimals;
+        uint256 _bptPrice = _minAssetPrice().mulWadDown(BPT.getRate()) * _BASE / ethUSDFeed_decimals;
         uint256 _sharePrice = ERC4626(vault).convertToAssets(_bptPrice);
 
         // check that vault share price deviation did not exceed the configured bounds
@@ -69,29 +69,29 @@ contract FortressWstETHwETHOracle is BaseOracle {
     }
 
     function _minAssetPrice() internal view returns (uint256) {
-        (, int256 wethPrice, ,uint256 wethUpdatedAt, ) = wEthOracle.latestRoundData();
-        (, int256 wstEthPrice, ,uint256 wstEthUpdatedAt, ) = wstEthOracle.latestRoundData();
+        (, int256 ethPrice, ,uint256 ethUpdatedAt, ) = ethUSDFeed.latestRoundData();
+        (, int256 wstEthPrice, ,uint256 wstEthUpdatedAt, ) = wstEthUSDFeed.latestRoundData();
 
-        if (wethPrice == 0 || wstEthPrice == 0)  revert zeroPrice();
-        if (wethUpdatedAt < block.timestamp - (24 * 3600) || wstEthUpdatedAt < block.timestamp - (24 * 3600)) revert stalePrice();
+        if (ethPrice <= 0 || wstEthPrice <= 0)  revert zeroPrice();
+        if (ethUpdatedAt < block.timestamp - (24 * 3600) || wstEthUpdatedAt < block.timestamp - (24 * 3600)) revert stalePrice();
         
-        return (uint256(wstEthPrice) >= wstethOracle_decimals) ? uint256(wethPrice) : uint256(wstEthPrice).mulWadDown(uint256(wethPrice)) / wstethOracle_decimals;
+        return (uint256(wstEthPrice) >= wstEthUSDFeed_decimals) ? uint256(ethPrice) : uint256(wstEthPrice).mulWadDown(uint256(ethPrice)) / wstEthUSDFeed_decimals;
     }
 
     /********************************** Owner Functions **********************************/
 
     /// @notice this function needs to be called periodically to update the last share price
     function updateLastSharePrice() external override onlyOwner  {
-        uint256 _bptPrice = _minAssetPrice().mulWadDown(BPT.getRate()) * _BASE / wethOracle_decimals;
+        uint256 _bptPrice = _minAssetPrice().mulWadDown(BPT.getRate()) * _BASE / ethUSDFeed_decimals;
         lastSharePrice = ERC4626(vault).convertToAssets(_bptPrice);
 
         emit LastSharePriceUpdated(lastSharePrice);
     }
 
-    function updatePriceFeed(address _wETHoracle, address _wstETHoracle) external onlyOwner {
-        wEthOracle = IChainlinkAggregator(_wETHoracle);
-        wstEthOracle = IChainlinkAggregator(_wstETHoracle);
-        wethOracle_decimals = 10 ** wEthOracle.decimals();
-        wstethOracle_decimals = 10 ** wstEthOracle.decimals();
+    function updatePriceFeed(address _ethUSDFeed, address _wstEthUSDFeed) external onlyOwner {
+        ethUSDFeed = IChainlinkAggregator(_ethUSDFeed);
+        wstEthUSDFeed = IChainlinkAggregator(_wstEthUSDFeed);
+        ethUSDFeed_decimals = 10 ** ethUSDFeed.decimals();
+        wstEthUSDFeed_decimals = 10 ** wstEthUSDFeed.decimals();
     }
 }
