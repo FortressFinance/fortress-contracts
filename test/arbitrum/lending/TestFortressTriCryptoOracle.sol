@@ -41,6 +41,7 @@ contract TestFortressTriCryptoOracle is BaseTest {
         (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
 
         assertEq(_lastSharePrice1, uint256(_answer), "testUpdateLastSharePrice: E1");
+        console.log('lastPrice:',uint256(_answer));
 
         vm.startPrank(owner);
         oracle.updateLastSharePrice();
