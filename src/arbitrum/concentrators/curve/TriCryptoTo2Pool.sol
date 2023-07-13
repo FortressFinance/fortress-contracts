@@ -16,34 +16,49 @@ pragma solidity 0.8.17;
 
 // Github - https://github.com/FortressFinance
 
-import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, Address, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
-
 import {ICurveOperations} from "src/shared/fortress-interfaces/ICurveOperations.sol";
 import {IConvexBoosterArbi} from "src/arbitrum/interfaces/IConvexBoosterArbi.sol";
 import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewardsArbi.sol";
-import {IGlpMinter} from "src/arbitrum/interfaces/IGlpMinter.sol";
+
+import {ICompounder} from "src/shared/fortress-interfaces/ICompounder.sol";
+
+import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, Address, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
 
 contract TriCryptoTo2Pool is AMMConcentratorBase {
 
     using SafeERC20 for IERC20;
     using Address for address payable;
 
+    /// @notice The whitelisted address that can harvest rewards
+    address public harvester;
+
     /// @notice The address of the underlying Curve pool
     address private immutable poolAddress;
     /// @notice The type of the pool, used in ammOperations
     uint256 private immutable poolType;
 
-    /// @notice The address of WETH token (Arbitrum)
-    address internal constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-    
+    /// @notice The address of USDT token (Arbitrum)
+    address internal constant USDT = 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9;
+
     /********************************** Constructor **********************************/
 
-    constructor (ERC20 _asset, string memory _name, string memory _symbol, bytes memory _settingsConfig, bytes memory _boosterConfig, address _compounder, address[] memory _underlyingAssets, uint256 _poolType)
+    constructor(
+        ERC20 _asset,
+        string memory _name,
+        string memory _symbol,
+        bytes memory _settingsConfig,
+        bytes memory _boosterConfig,
+        address _compounder,
+        address _harvester,
+        address[] memory _underlyingAssets,
+        uint256 _poolType
+    )
         AMMConcentratorBase (_asset, _name, _symbol, _settingsConfig, _boosterConfig, _compounder, _underlyingAssets) {
+            harvester = _harvester;
             poolType = _poolType;
             poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
         }
-    
+
     /********************************** View Functions **********************************/
 
     /// @notice See {AMMConcentratorBase - isPendingRewards}
@@ -52,7 +67,7 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
         address _crv = address(0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978);
         return IConvexBasicRewardsArbi(boosterData.crvRewards).claimable_reward(_crv, address(this)) > 0;
     }
-    
+
     /********************************** Mutated Functions **********************************/
 
     /// @dev Adds the ability to choose the underlying asset to deposit to the GLP minter
@@ -64,9 +79,17 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
         lastHarvestBlock = block.number;
 
         _rewards = _harvest(_receiver, _underlyingAsset, _minBounty);
-        accRewardPerShare = accRewardPerShare + ((_rewards * PRECISION) / totalSupply);
+        accRewardPerShare += ((_rewards * PRECISION) / totalSupply);
 
         return _rewards;
+    }
+
+    /********************************** Onwer Functions **********************************/
+
+    function updateHarvester(address _harvester) external {
+        if (msg.sender != settings.owner) revert Unauthorized();
+
+        harvester = _harvester;
     }
 
     /********************************** Internal Functions **********************************/
@@ -111,6 +134,8 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
     }
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal returns (uint256 _rewards) {
+        if (msg.sender != harvester) revert Unauthorized();
+
         Booster memory _boosterData = boosterData;
         
         IConvexBasicRewardsArbi(_boosterData.crvRewards).getReward(address(this));
@@ -148,8 +173,8 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
                 IERC20(_underlyingAsset).safeTransfer(_receiver, _harvestBounty);
             }
 
-            // _rewards = ERC4626(_settings.compounder).deposit(_rewards, address(this)); // todo - deposit single underlying (USDT/USDC)
-            
+            _rewards = ICompounder(_settings.compounder).depositUnderlying(_underlyingAsset, _rewards, address(this), 0);
+
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
             return _rewards;

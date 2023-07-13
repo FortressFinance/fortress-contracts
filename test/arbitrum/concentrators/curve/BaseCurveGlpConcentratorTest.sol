@@ -6,7 +6,6 @@ import {AMMConcentratorBase, IConvexBasicRewards} from "src/shared/concentrators
 import {CurveGlpConcentrator} from "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
 
 import {ERC4626} from "src/shared/interfaces/ERC4626.sol";
-import "src/arbitrum/fortress-interfaces/IGlpCompounder.sol";
 
 contract BaseCurveGlpConcentratorTest is BaseTest {
 
