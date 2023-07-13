@@ -23,6 +23,15 @@ contract TestFortressWstETHwETHOracle is BaseTest {
 
     /********************************** Tests **********************************/
 
+    function testReenterancy() public {
+        // todo
+
+        // 1. create an internal function that:
+            // a. swaps using the wstETH/ETH Balancer pool
+            // b. calls our oracle to get the price
+        // 2. make sure that 1.b fails because of reentrancy  
+    }
+
     function testVaultMaxSpread() public {
         
         uint256 _maxSpread = oracle.vaultMaxSpread();
