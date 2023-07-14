@@ -29,9 +29,6 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
-    /// @notice The whitelisted address that can harvest rewards
-    address public harvester;
-
     /// @notice The address of the underlying Curve pool
     address private immutable poolAddress;
     /// @notice The type of the pool, used in ammOperations
@@ -49,12 +46,10 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
         bytes memory _settingsConfig,
         bytes memory _boosterConfig,
         address _compounder,
-        address _harvester,
         address[] memory _underlyingAssets,
         uint256 _poolType
     )
         AMMConcentratorBase (_asset, _name, _symbol, _settingsConfig, _boosterConfig, _compounder, _underlyingAssets) {
-            harvester = _harvester;
             poolType = _poolType;
             poolAddress = ICurveOperations(settings.ammOperations).getPoolFromLpToken(address(_asset));
         }
@@ -82,14 +77,6 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
         accRewardPerShare += ((_rewards * PRECISION) / totalSupply);
 
         return _rewards;
-    }
-
-    /********************************** Onwer Functions **********************************/
-
-    function updateHarvester(address _harvester) external {
-        if (msg.sender != settings.owner) revert Unauthorized();
-
-        harvester = _harvester;
     }
 
     /********************************** Internal Functions **********************************/
@@ -134,8 +121,6 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
     }
 
     function _harvest(address _receiver, address _underlyingAsset, uint256 _minBounty) internal returns (uint256 _rewards) {
-        if (msg.sender != harvester) revert Unauthorized();
-
         Booster memory _boosterData = boosterData;
         
         IConvexBasicRewardsArbi(_boosterData.crvRewards).getReward(address(this));

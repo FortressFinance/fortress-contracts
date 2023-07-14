@@ -15,11 +15,11 @@ contract InitConcentrator is Script, AddressesArbi, InitTriCryptoGlp {
     function run() public {
 
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address deployer = vm.envAddress("DEPLOYER");
+        // address deployer = vm.envAddress("DEPLOYER");
         address owner = vm.envAddress("OWNER");
-        address platform = owner;
+        // address platform = owner;
 
-        address ammOperations = 0x860b5691C95a2698bAd732E88F95C2e947AA4aDB;
+        // address ammOperations = 0x860b5691C95a2698bAd732E88F95C2e947AA4aDB;
 
         vm.startBroadcast(deployerPrivateKey);
 

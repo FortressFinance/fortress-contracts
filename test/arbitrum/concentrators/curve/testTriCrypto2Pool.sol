@@ -3,18 +3,17 @@ pragma solidity 0.8.17;
 
 import "test/arbitrum/concentrators/curve/BaseCurveGlpConcentratorTest.sol";
 
-import "script/arbitrum/utils/compounders/gmx/InitGlpCompounder.sol";
-import "script/arbitrum/utils/concentrators/curve/InitTriCryptoGlp.sol";
+import {InitTriCrypto2Pool} from "script/arbitrum/utils/concentrators/curve/InitTriCrypto2Pool.sol";
 
-import "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
-import "src/arbitrum/compounders/gmx/GlpCompounder.sol";
-// todo
-contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCompounder, InitTriCryptoGlp {
+import {TriCryptoTo2Pool} from "src/arbitrum/concentrators/curve/TriCryptoTo2Pool.sol";
+import {CurveArbiCompounder} from "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
+
+contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool {
 
     using SafeERC20 for IERC20;
 
-    GlpCompounder glpCompounder;
-    CurveGlpConcentrator glpConcentrator;
+    CurveArbiCompounder bpCompounder;
+    TriCryptoTo2Pool tricryptoConcentrator;
     
     function setUp() public {
         
@@ -22,91 +21,92 @@ contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCo
 
         vm.startPrank(owner);
         
-        address tempAddr = _initializeGlpCompounder(address(owner), platform, address(fortressRegistry), address(fortressSwap));
-        glpCompounder = GlpCompounder(payable(tempAddr)); 
+        bpCompounder = CurveArbiCompounder(payable(fc2Pool)); 
         
-        // YieldOptimizersRegistry(fortressRegistry).updateConcentratorsTargetAssets(address(0), address(0), address(glpCompounder), address(0));
-
-        tempAddr = _initializeTriCryptoGlp(address(owner), address(fortressRegistry), address(fortressSwap), platform, address(glpCompounder), address(ammOperations));
-        glpConcentrator = CurveGlpConcentrator(payable(tempAddr));
+        address tempAddr = _initializeTriCrypto2Pool(address(owner), address(fortressRegistry), address(fortressSwap), platform, address(bpCompounder), address(ammOperations));
+        tricryptoConcentrator = TriCryptoTo2Pool(payable(tempAddr));
 
         vm.stopPrank();
 
-        (,,,,,, compounder,,,) = AMMConcentratorBase(address(glpConcentrator)).settings();
+        (,,,,,, compounder,,,) = AMMConcentratorBase(address(tricryptoConcentrator)).settings();
+    }
+
+    function testSanity() public {
+        assertTrue(true, "sanity");
     }
 
     function testCorrectFlowETH(uint256 _amount) public {
-        _testCorrectFlow(ETH, _amount, address(glpConcentrator));
+        _testCorrectFlow(ETH, _amount, address(tricryptoConcentrator));
     }
 
     function testCorrectFlowUSDT(uint256 _amount) public {
-        _testCorrectFlow(USDT, _amount, address(glpConcentrator));
+        _testCorrectFlow(USDT, _amount, address(tricryptoConcentrator));
     }
 
     function testCorrectFlowWBTC(uint256 _amount) public {
-        _testCorrectFlow(WBTC, _amount, address(glpConcentrator));
+        _testCorrectFlow(WBTC, _amount, address(tricryptoConcentrator));
     }
 
     function testCorrectFlowWETH(uint256 _amount) public {
-        _testCorrectFlow(WETH, _amount, address(glpConcentrator));
+        _testCorrectFlow(WETH, _amount, address(tricryptoConcentrator));
     }
 
     function testCorrectFlowHarvestSingleUSDT(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(USDT, _amount, address(payable(glpConcentrator)), WETH);
+        _testCorrectFlowHarvestWithUnderlying(USDT, _amount, address(payable(tricryptoConcentrator)), WETH);
     }
     
     function testCorrectFlowHarvestSingleWBTC(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WBTC, _amount, address(payable(glpConcentrator)), WBTC);
+        _testCorrectFlowHarvestWithUnderlying(WBTC, _amount, address(payable(tricryptoConcentrator)), WBTC);
     }
 
     function testCorrectFlowHarvestSingleWETH(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDT);
+        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(tricryptoConcentrator)), USDT);
     }
 
     function testCorrectFlowHarvestSingleWETHUSDC(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), USDC);
+        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(tricryptoConcentrator)), USDC);
     }
 
     function testCorrectFlowHarvestSingleWETHFRAX() public {
         // vm.assume(_amount > 0.01 ether && _amount < 1 ether);
         uint256 _amount = 1 ether;
 
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(glpConcentrator)), FRAX);
+        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(tricryptoConcentrator)), FRAX);
     }
 
     function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
-        _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(glpConcentrator)), USDT);
+        _testRedeemUnderlyingAndClaim(USDT, _amount, address(payable(tricryptoConcentrator)), USDT);
     }
 
     function testDepositCap(uint256 _amount) public {
-        _testDepositCap(USDT, _amount, address(payable(glpConcentrator)));
+        _testDepositCap(USDT, _amount, address(payable(tricryptoConcentrator)));
     }
 
     function testMint(uint256 _amount) public {
-        _testMint(USDT, _amount, address(glpConcentrator), WETH);
+        _testMint(USDT, _amount, address(tricryptoConcentrator), WETH);
     }
 
     function testWithdraw(uint256 _amount) public {
-        _testWithdraw(USDT, _amount, address(payable(glpConcentrator)));
+        _testWithdraw(USDT, _amount, address(payable(tricryptoConcentrator)));
     }
 
     function testRedeemAndClaim(uint256 _amount) public {
-        _testRedeemAndClaim(USDT, _amount, address(payable(glpConcentrator)));
+        _testRedeemAndClaim(USDT, _amount, address(payable(tricryptoConcentrator)));
     }
 
     function testTransfer(uint256 _amount) public {
-        _testCorrectFlowTransfer(USDT, _amount, address(payable(glpConcentrator)));
+        _testCorrectFlowTransfer(USDT, _amount, address(payable(tricryptoConcentrator)));
     }
 
     function testDepositNoAsset(uint256 _amount) public {
-        _testDepositNoAsset(_amount, USDT, address(payable(glpConcentrator)));
+        _testDepositNoAsset(_amount, USDT, address(payable(tricryptoConcentrator)));
     }
 
     function testDepositWrongAsset(uint256 _amount) public {
-        _testDepositWrongAsset(_amount, CRV, address(payable(glpConcentrator)));
+        _testDepositWrongAsset(_amount, CRV, address(payable(tricryptoConcentrator)));
     }
 
     function testWithdrawNoShare(uint256 _amount) public {
-        _testWithdrawNoShare(_amount, USDT, address(payable(glpConcentrator)));
+        _testWithdrawNoShare(_amount, USDT, address(payable(tricryptoConcentrator)));
     }
 }
