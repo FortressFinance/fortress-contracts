@@ -5,9 +5,7 @@ interface ICompounder {
 
     // Deposit
 
-    function depositUnderlying(address _underlyingAsset, uint256 _underlyingAssets, address _receiver, uint256 _minAmount) external returns (uint256 _shares);
-
-    function depositUnderlying(uint256 _underlyingAssets, address _receiver, uint256 _minAmount) external returns (uint256 _shares);
+    function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) external returns (uint256 _shares);
 
     function deposit(uint256 _assets, address _receiver) external returns (uint256 _shares);
 

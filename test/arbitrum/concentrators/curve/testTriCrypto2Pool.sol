@@ -16,12 +16,12 @@ contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool 
     TriCryptoTo2Pool tricryptoConcentrator;
     
     function setUp() public {
-        
+
         _setUp();
 
         vm.startPrank(owner);
         
-        bpCompounder = CurveArbiCompounder(payable(fc2Pool)); 
+        bpCompounder = CurveArbiCompounder(payable(fc2Pool));
         
         address tempAddr = _initializeTriCrypto2Pool(address(owner), address(fortressRegistry), address(fortressSwap), platform, address(bpCompounder), address(ammOperations));
         tricryptoConcentrator = TriCryptoTo2Pool(payable(tempAddr));
@@ -36,6 +36,8 @@ contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool 
     }
 
     function testCorrectFlowETH(uint256 _amount) public {
+        console.log("bpCompounder.totalAssets();", bpCompounder.totalAssets());
+        require(bpCompounder.totalAssets() != 0, "bpCompounder.totalAssets() != 0");
         _testCorrectFlow(ETH, _amount, address(tricryptoConcentrator));
     }
 

@@ -158,7 +158,7 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
                 IERC20(_underlyingAsset).safeTransfer(_receiver, _harvestBounty);
             }
 
-            _rewards = ICompounder(_settings.compounder).depositUnderlying(_underlyingAsset, _rewards, address(this), 0);
+            _rewards = ICompounder(_settings.compounder).depositUnderlying(_underlyingAsset, address(this), _rewards, 0);
 
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 

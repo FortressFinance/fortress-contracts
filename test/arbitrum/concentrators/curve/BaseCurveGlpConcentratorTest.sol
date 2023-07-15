@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseTest, SafeERC20, IERC20} from "test/arbitrum/concentrators/BaseTest.sol";
 import {AMMConcentratorBase, IConvexBasicRewards} from "src/shared/concentrators/AMMConcentratorBase.sol";
 import {CurveGlpConcentrator} from "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
 
 import {ERC4626} from "src/shared/interfaces/ERC4626.sol";
+
+import "test/arbitrum/concentrators/BaseTest.sol";
 
 contract BaseCurveGlpConcentratorTest is BaseTest {
 
