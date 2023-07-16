@@ -23,7 +23,8 @@ import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewar
 import {ICompounder} from "src/shared/fortress-interfaces/ICompounder.sol";
 
 import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, Address, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
-
+import "forge-std/Test.sol";
+import "forge-std/console.sol";
 contract TriCryptoTo2Pool is AMMConcentratorBase {
 
     using SafeERC20 for IERC20;
@@ -141,6 +142,10 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
 
         _rewards = IERC20(_underlyingAsset).balanceOf(address(this));
 
+        address _compounder = _settings.compounder;
+        _approve(_underlyingAsset, _compounder, _rewards);
+        _rewards = ICompounder(_compounder).depositUnderlying(_underlyingAsset, address(this), _rewards, 0);
+
         if (_rewards > 0) {
             Fees memory _fees = fees;
             uint256 _platformFee = _fees.platformFeePercentage;
@@ -148,17 +153,18 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
             if (_platformFee > 0) {
                 _platformFee = (_platformFee * _rewards) / FEE_DENOMINATOR;
                 _rewards = _rewards - _platformFee;
-                IERC20(_underlyingAsset).safeTransfer(_settings.platform, _platformFee);
+                IERC20(_compounder).safeTransfer(_settings.platform, _platformFee);
             }
             if (_harvestBounty > 0) {
                 _harvestBounty = (_harvestBounty * _rewards) / FEE_DENOMINATOR;
                 if (!(_harvestBounty >= _minBounty)) revert InsufficientAmountOut();
 
                 _rewards = _rewards - _harvestBounty;
-                IERC20(_underlyingAsset).safeTransfer(_receiver, _harvestBounty);
+                IERC20(_compounder).safeTransfer(_receiver, _harvestBounty);
             }
-
-            _rewards = ICompounder(_settings.compounder).depositUnderlying(_underlyingAsset, address(this), _rewards, 0);
+            console.log("compounder address: %s", address(_compounder));
+            console.log("platform address: %s", address(_settings.platform));
+            console.log("harvester address: %s", address(_receiver));
 
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 

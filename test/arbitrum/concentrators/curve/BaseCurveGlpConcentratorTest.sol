@@ -721,20 +721,26 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         assertTrue(_localConcentrator.pendingReward(address(alice)) > 0, "_testHarvest: E001");
         assertTrue(_localConcentrator.pendingReward(address(bob)) > 0, "_testHarvest: E02");
         assertTrue(_localConcentrator.pendingReward(address(charlie)) > 0, "_testHarvest: E03");
-        assertTrue(_localConcentrator.accRewardPerShare() > 0, "_testHarvest: E04");
-        
-        address _rewardAsset = address(ERC4626(address(compounder)).asset());
-        assertEq(_localConcentrator.isPendingRewards(), false, "_testHarvest: E3");
-        assertTrue(IERC20(_rewardAsset).balanceOf(platform) > 0, "_testHarvest: E4");
-        assertTrue(IERC20(_rewardAsset).balanceOf(harvester) > 0, "_testHarvest: E5");
-        assertEq(_localConcentrator.totalAssets(), _underlyingBefore, "_testHarvest: E6");
-        assertEq(_localConcentrator.totalSupply(), _totalShare, "_testHarvest: E7");
-        assertEq((IERC20(compounder).balanceOf(address(_localConcentrator)) - _rewardsBefore), _newUnderlying, "_testHarvest: E8");
-        assertTrue(_newUnderlying > 0, "_testHarvest: E9");
-        assertTrue(_localConcentrator.accRewardPerShare() > 0, "_testHarvest: E10");
-        assertTrue(_localConcentrator.pendingReward(address(alice)) > 0, "_testHarvest: E11");
-        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(bob)), 1e17, "_testHarvest: E12");
-        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvest: E13");
+        assertTrue(_localConcentrator.accRewardPerShare() > 0, "_testHarvest: E004");
+
+        address _rewardAsset;
+        if (address(compounder) == fc2Pool) {
+            _rewardAsset = address(compounder);
+        } else {
+            _rewardAsset = address(ERC4626(address(compounder)).asset());
+        }
+
+        assertEq(_localConcentrator.isPendingRewards(), false, "_testHarvest: E0003");
+        assertTrue(IERC20(_rewardAsset).balanceOf(platform) > 0, "_testHarvest: E0004");
+        assertTrue(IERC20(_rewardAsset).balanceOf(harvester) > 0, "_testHarvest: E0005");
+        assertEq(_localConcentrator.totalAssets(), _underlyingBefore, "_testHarvest: E0006");
+        assertEq(_localConcentrator.totalSupply(), _totalShare, "_testHarvest: E0007");
+        assertEq((IERC20(compounder).balanceOf(address(_localConcentrator)) - _rewardsBefore), _newUnderlying, "_testHarvest: E0008");
+        assertTrue(_newUnderlying > 0, "_testHarvest: E0009");
+        assertTrue(_localConcentrator.accRewardPerShare() > 0, "_testHarvest: E00010");
+        assertTrue(_localConcentrator.pendingReward(address(alice)) > 0, "_testHarvest: E00011");
+        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(bob)), 1e17, "_testHarvest: E00012");
+        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvest: E00013");
     }
 
     function _testHarvestWithUnderlying(uint256 _totalShare, address _concentrator, address _targetAsset) internal {
