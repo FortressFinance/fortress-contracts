@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "test/arbitrum/concentrators/curve/BaseCurveGlpConcentratorTest.sol";
+import "test/arbitrum/concentrators/curve/BaseCurveConcentratorTest.sol";
 
 import {InitTriCrypto2Pool} from "script/arbitrum/utils/concentrators/curve/InitTriCrypto2Pool.sol";
 
 import {TriCryptoTo2Pool} from "src/arbitrum/concentrators/curve/TriCryptoTo2Pool.sol";
 import {CurveArbiCompounder} from "src/arbitrum/compounders/curve/CurveArbiCompounder.sol";
 
-contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool {
+contract testTriCrypto2Pool is BaseCurveConcentratorTest, InitTriCrypto2Pool {
 
     using SafeERC20 for IERC20;
 
@@ -48,11 +48,11 @@ contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool 
     }
 
     function testCorrectFlowHarvestSingleUSDT(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(USDT, _amount, address(payable(tricryptoConcentrator)), WETH);
+        _testCorrectFlowHarvestWithUnderlying(USDT, _amount, address(payable(tricryptoConcentrator)), USDT);
     }
     
     function testCorrectFlowHarvestSingleWBTC(uint256 _amount) public {
-        _testCorrectFlowHarvestWithUnderlying(WBTC, _amount, address(payable(tricryptoConcentrator)), WBTC);
+        _testCorrectFlowHarvestWithUnderlying(WBTC, _amount, address(payable(tricryptoConcentrator)), USDC);
     }
 
     function testCorrectFlowHarvestSingleWETH(uint256 _amount) public {
@@ -61,13 +61,6 @@ contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool 
 
     function testCorrectFlowHarvestSingleWETHUSDC(uint256 _amount) public {
         _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(tricryptoConcentrator)), USDC);
-    }
-
-    function testCorrectFlowHarvestSingleWETHFRAX() public {
-        // vm.assume(_amount > 0.01 ether && _amount < 1 ether);
-        uint256 _amount = 1 ether;
-
-        _testCorrectFlowHarvestWithUnderlying(WETH, _amount, address(payable(tricryptoConcentrator)), FRAX);
     }
 
     function testRedeemUnderlyingAndClaimUSDT(uint256 _amount) public {
@@ -79,7 +72,7 @@ contract testTriCrypto2Pool is BaseCurveGlpConcentratorTest, InitTriCrypto2Pool 
     }
 
     function testMint(uint256 _amount) public {
-        _testMint(USDT, _amount, address(tricryptoConcentrator), WETH);
+        _testMint(USDT, _amount, address(tricryptoConcentrator), USDT);
     }
 
     function testWithdraw(uint256 _amount) public {

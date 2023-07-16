@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "test/arbitrum/concentrators/curve/BaseCurveGlpConcentratorTest.sol";
+import "test/arbitrum/concentrators/curve/BaseCurveConcentratorTest.sol";
 
 import "script/arbitrum/utils/compounders/gmx/InitGlpCompounder.sol";
 import "script/arbitrum/utils/concentrators/curve/InitTriCryptoGlp.sol";
@@ -9,7 +9,7 @@ import "script/arbitrum/utils/concentrators/curve/InitTriCryptoGlp.sol";
 import "src/arbitrum/concentrators/curve/CurveGlpConcentrator.sol";
 import "src/arbitrum/compounders/gmx/GlpCompounder.sol";
 
-contract testTriCryptoGlpConcentrator is BaseCurveGlpConcentratorTest, InitGlpCompounder, InitTriCryptoGlp {
+contract testTriCryptoGlpConcentrator is BaseCurveConcentratorTest, InitGlpCompounder, InitTriCryptoGlp {
 
     using SafeERC20 for IERC20;
 

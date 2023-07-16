@@ -23,8 +23,7 @@ import {IConvexBasicRewardsArbi} from "src/arbitrum/interfaces/IConvexBasicRewar
 import {ICompounder} from "src/shared/fortress-interfaces/ICompounder.sol";
 
 import {AMMConcentratorBase, ERC4626, ERC20, SafeERC20, Address, IERC20, IFortressSwap} from "src/shared/concentrators/AMMConcentratorBase.sol";
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
+
 contract TriCryptoTo2Pool is AMMConcentratorBase {
 
     using SafeERC20 for IERC20;
@@ -162,9 +161,6 @@ contract TriCryptoTo2Pool is AMMConcentratorBase {
                 _rewards = _rewards - _harvestBounty;
                 IERC20(_compounder).safeTransfer(_receiver, _harvestBounty);
             }
-            console.log("compounder address: %s", address(_compounder));
-            console.log("platform address: %s", address(_settings.platform));
-            console.log("harvester address: %s", address(_receiver));
 
             emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 

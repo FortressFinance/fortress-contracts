@@ -8,7 +8,7 @@ import {ERC4626} from "src/shared/interfaces/ERC4626.sol";
 
 import "test/arbitrum/concentrators/BaseTest.sol";
 
-contract BaseCurveGlpConcentratorTest is BaseTest {
+contract BaseCurveConcentratorTest is BaseTest {
 
     using SafeERC20 for IERC20;
 
@@ -746,7 +746,7 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
     function _testHarvestWithUnderlying(uint256 _totalShare, address _concentrator, address _targetAsset) internal {
         AMMConcentratorBase _localConcentrator = AMMConcentratorBase(_concentrator);
         
-        assertEq(_localConcentrator.isPendingRewards(), false, "_testHarvestWithUnderlying: E1");
+        assertEq(_localConcentrator.isPendingRewards(), false, "_testHarvestWithUnderlying: E01");
         assertEq(_localConcentrator.pendingReward(address(alice)), 0, "_testHarvestWithUnderlying: E1");
         assertEq(_localConcentrator.pendingReward(address(bob)), 0, "_testHarvestWithUnderlying: E2");
         assertEq(_localConcentrator.pendingReward(address(charlie)), 0, "_testHarvestWithUnderlying: E3");
@@ -763,18 +763,24 @@ contract BaseCurveGlpConcentratorTest is BaseTest {
         vm.prank(harvester);
         uint256 _newUnderlying = CurveGlpConcentrator(payable(_concentrator)).harvest(address(harvester), _targetAsset, 0);
 
-        address _rewardAsset = address(ERC4626(address(compounder)).asset());
-        assertEq(_localConcentrator.isPendingRewards(), false, "_testHarvestWithUnderlying: E3");
-        assertTrue(IERC20(_rewardAsset).balanceOf(platform) > 0, "_testHarvestWithUnderlying: E4");
-        assertTrue(IERC20(_rewardAsset).balanceOf(harvester) > 0, "_testHarvestWithUnderlying: E5");
-        assertEq(_localConcentrator.totalAssets(), _underlyingBefore, "_testHarvestWithUnderlying: E6");
-        assertEq(_localConcentrator.totalSupply(), _totalShare, "_testHarvestWithUnderlying: E7");
-        assertEq((IERC20(compounder).balanceOf(address(_localConcentrator)) - _rewardsBefore), _newUnderlying, "_testHarvestWithUnderlying: E8");
-        assertTrue(_newUnderlying > 0, "_testHarvestWithUnderlying: E9");
-        assertTrue(_localConcentrator.accRewardPerShare() > 0, "_testHarvestWithUnderlying: E10");
-        assertTrue(_localConcentrator.pendingReward(address(alice)) > 0, "_testHarvestWithUnderlying: E11");
-        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(bob)), 1e17, "_testHarvestWithUnderlying: E12");
-        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvestWithUnderlying: E13");
+        address _rewardAsset;
+        if (address(compounder) == fc2Pool) {
+            _rewardAsset = address(compounder);
+        } else {
+            _rewardAsset = address(ERC4626(address(compounder)).asset());
+        }
+
+        assertEq(_localConcentrator.isPendingRewards(), false, "_testHarvestWithUnderlying: E03");
+        assertTrue(IERC20(_rewardAsset).balanceOf(platform) > 0, "_testHarvestWithUnderlying: E04");
+        assertTrue(IERC20(_rewardAsset).balanceOf(harvester) > 0, "_testHarvestWithUnderlying: E05");
+        assertEq(_localConcentrator.totalAssets(), _underlyingBefore, "_testHarvestWithUnderlying: E06");
+        assertEq(_localConcentrator.totalSupply(), _totalShare, "_testHarvestWithUnderlying: E07");
+        assertEq((IERC20(compounder).balanceOf(address(_localConcentrator)) - _rewardsBefore), _newUnderlying, "_testHarvestWithUnderlying: E08");
+        assertTrue(_newUnderlying > 0, "_testHarvestWithUnderlying: E09");
+        assertTrue(_localConcentrator.accRewardPerShare() > 0, "_testHarvestWithUnderlying: E010");
+        assertTrue(_localConcentrator.pendingReward(address(alice)) > 0, "_testHarvestWithUnderlying: E011");
+        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(bob)), 1e17, "_testHarvestWithUnderlying: E012");
+        assertApproxEqAbs(_localConcentrator.pendingReward(address(alice)) , _localConcentrator.pendingReward(address(charlie)), 1e17, "_testHarvestWithUnderlying: E013");
     }
 
     // ------------------------------------------------------------------------------------------
