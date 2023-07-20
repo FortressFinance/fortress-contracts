@@ -126,6 +126,9 @@ contract FortressTriCryptoOracle {
     }
 
     function _getLPprice(uint p1, uint p2, uint p3) internal view returns(uint256) {
+        uint256 virtualPrice = ICurveV2Pool(triCrypto).get_virtual_price();
+        if (virtualPrice < 1*1e18 || virtualPrice >= 1.1*1e18)  revert virtualPriceOutOfBounds();
+
         return 3 * ICurveV2Pool(triCrypto).get_virtual_price() * cubicRoot(p1 * p2 / 1e18 * p3) / 1e18;
     }
 
@@ -215,4 +218,5 @@ contract FortressTriCryptoOracle {
     error stalePrice();
     error reentrancy();
     error didNotConverge();
+    error virtualPriceOutOfBounds();
 }

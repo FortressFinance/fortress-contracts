@@ -57,7 +57,9 @@ contract FortressWstETHwETHOracle is BaseOracle {
     /********************************** Internal Functions **********************************/
 
     function _getPrice() internal view override  returns (int256) {
-        uint256 _bptPrice = _minAssetPrice().mulWadDown(BPT.getRate()) * _BASE / ethUSDFeed_decimals;
+        uint256 rate = BPT.getRate();
+        if (rate < 1*1e18 || rate >= 1.1*1e18)  revert virtualPriceOutOfBounds();
+        uint256 _bptPrice = _minAssetPrice().mulWadDown(rate) * _BASE / ethUSDFeed_decimals;
         uint256 _sharePrice = ERC4626(vault).convertToAssets(_bptPrice);
 
         // check that vault share price deviation did not exceed the configured bounds
