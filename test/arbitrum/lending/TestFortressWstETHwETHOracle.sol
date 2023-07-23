@@ -2,10 +2,11 @@
 pragma solidity 0.8.17;
 
 import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
 import {FortressWstETHwETHOracle} from "src/shared/lending/oracles/FortressWstETHwETHOracle.sol";
-
 import "test/arbitrum/lending/BaseTest.sol";
+import "test/arbitrum/lending/ReentrancyTestAttacker.sol";
 
 contract TestFortressWstETHwETHOracle is BaseTest {
 
@@ -24,12 +25,19 @@ contract TestFortressWstETHwETHOracle is BaseTest {
     /********************************** Tests **********************************/
 
     function testReenterancy() public {
-        // todo
 
-        // 1. create an internal function that:
-            // a. swaps using the wstETH/ETH Balancer pool
-            // b. calls our oracle to get the price
-        // 2. make sure that 1.b fails because of reentrancy  
+        ReentrancyTestAttacker attacker;
+        attacker = new ReentrancyTestAttacker(address(oracle));
+        uint256 _amount = 50 * 1e18;
+
+        vm.startPrank(alice);
+        // deal(address(WETH), address(alice), _amount);
+        deal(address(WETH), address(attacker), _amount);
+        attacker.execReentrancy{value : 1e18}(_amount);
+        console.log('duringReentrancyPrice:',attacker.getLastPrice()/1e18);
+        (,int256 lastPrice,,,) = oracle.latestRoundData();
+        console.log('afterAttack:',uint256(lastPrice)/1e18);
+        vm.stopPrank();
     }
 
     function testVaultMaxSpread() public {
@@ -94,6 +102,4 @@ contract TestFortressWstETHwETHOracle is BaseTest {
 
         // lastSharePrice = _sharePrice; 
     }
-
-    
 }
