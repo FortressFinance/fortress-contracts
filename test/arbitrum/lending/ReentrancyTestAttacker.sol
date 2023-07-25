@@ -4,7 +4,10 @@ pragma solidity 0.8.17;
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IBalancerV2StablePool} from "src/shared/lending/interfaces/IBalancerV2StablePool.sol";
 import {IBalancerVault} from "src/shared/lending/interfaces/IBalancerVault.sol";
-import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+interface Oracle {
+    function latestRoundData() external returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+}
 
 contract ReentrancyTestAttacker  {
 
@@ -14,12 +17,12 @@ contract ReentrancyTestAttacker  {
     bytes32 _poolId;
     address[] _tokens;
     int256 lastPrice;
-    AggregatorV3Interface oracle;
+    Oracle oracle;
 
     constructor(address _oracle) {
         _poolId = IBalancerV2StablePool(address(0x36bf227d6BaC96e2aB1EbB5492ECec69C691943f)).getPoolId();
         (_tokens,,) = _vault.getPoolTokens(_poolId);
-        oracle = AggregatorV3Interface(_oracle);
+        oracle = Oracle(_oracle);
     }
 
     function execReentrancy(uint _amount) external payable {
@@ -42,13 +45,28 @@ contract ReentrancyTestAttacker  {
                         fromInternalBalance: false
                     })
                 );
+        // _vault.exitPool(
+        //             _poolId,
+        //             address(this), // sender
+        //             payable(address(this)), // recipient
+        //             IBalancerVault.ExitPoolRequest({
+        //                 assets: _tokens,
+        //                 minAmountsOut: _amounts,
+        //                 userData: abi.encode(
+        //                     IBalancerVault.ExitKind.BPT_IN_FOR_EXACT_TOKENS_OUT,
+        //                     _amounts, 
+        //                     1 //token index
+        //                 ),
+        //                 toInternalBalance: false
+        //             })
+        //         );
     }
     
     fallback() external payable {
         (,lastPrice,,,) = oracle.latestRoundData();
     }
 
-    function getLastPrice() external returns(uint256) {
+    function getLastPrice() external view returns(uint256) {
         return uint256(lastPrice);
     }
 }

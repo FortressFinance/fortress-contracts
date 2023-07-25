@@ -23,15 +23,26 @@ import {IBalancerV2StablePool} from "../interfaces/IBalancerV2StablePool.sol";
 import {IBalancerVault} from "../interfaces/IBalancerVault.sol";
 import {IChainlinkAggregator} from "../interfaces/IChainlinkAggregator.sol";
 import {FixedPointMathLib} from "@solmate/utils/FixedPointMathLib.sol";
+import {ERC4626} from "@solmate/mixins/ERC4626.sol";
 
-import "./BaseOracle.sol";
-
-contract FortressWstETHwETHOracle is BaseOracle {
+contract FortressWstETHwETHOracle {
 
     using FixedPointMathLib for uint256;
 
+    uint256 public lastSharePrice;
+    uint256 public lowerBoundPercentage;
+    uint256 public upperBoundPercentage;
+    uint256 public vaultMaxSpread;
+
+    address public owner;
+    address public vault;
+
     uint256 public ethUSDFeed_decimals = 1e8;
     uint256 public wstEthETHFeed_decimals = 1e18;
+
+    bool public isCheckPriceDeviation;
+
+    uint256 constant internal _BASE = 1e18;
 
     IChainlinkAggregator public ethUSDFeed = IChainlinkAggregator(address(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612));
     IChainlinkAggregator public wstEthETHFeed = IChainlinkAggregator(address(0xb523AE262D20A936BC152e6023996e46FDC2A95D));
@@ -39,7 +50,20 @@ contract FortressWstETHwETHOracle is BaseOracle {
 
     /********************************** Constructor **********************************/
 
-    constructor(address _owner, address _vault) BaseOracle(_owner, _vault) {}
+    constructor(address _owner, address _vault) {
+        lowerBoundPercentage = 20;
+        upperBoundPercentage = 20;
+        
+        owner = _owner;
+        vault = _vault;
+
+        uint256 _vaultSpread = ERC4626(_vault).convertToAssets(1e18);
+        vaultMaxSpread = _vaultSpread * 110 / 100; // limit to 10% of the vault spread
+
+        lastSharePrice = uint256(_getPrice());
+
+        isCheckPriceDeviation = true;
+    }
 
     /********************************** Modifiers **********************************/
 
@@ -47,16 +71,37 @@ contract FortressWstETHwETHOracle is BaseOracle {
         IBalancerVault(BPT.getVault()).manageUserBalance(new IBalancerVault.UserBalanceOp[](0));
         _;
     }
+    
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert notOwner();
+        _;
+    }
 
     /********************************** External Functions **********************************/
 
-    function description() external pure override returns (string memory) {
+    function decimals() external pure virtual returns (uint8) {
+        return 18;
+    }
+
+    function version() external pure virtual returns (uint256) {
+        return 1;
+    }
+
+    function description() external pure returns (string memory) {
         return "fcwstETHwETH USD Oracle";
+    }
+
+    function getRoundData(uint80) external pure returns (uint80, int256, uint256, uint256, uint80) {
+        revert("Not implemented");
+    }
+
+    function latestRoundData() external returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) {
+        return (0, _getPrice(), 0, 0, 0);
     }
 
     /********************************** Internal Functions **********************************/
 
-    function _getPrice() internal view override  returns (int256) {
+    function _getPrice() internal reentrancyCheck returns (int256) {
         uint256 rate = BPT.getRate();
         if (rate < 1*1e18 || rate >= 1.1*1e18)  revert virtualPriceOutOfBounds();
         uint256 _bptPrice = _minAssetPrice().mulWadDown(rate) * _BASE / ethUSDFeed_decimals;
@@ -79,10 +124,21 @@ contract FortressWstETHwETHOracle is BaseOracle {
         return (uint256(wstEthPrice) >= wstEthETHFeed_decimals) ? uint256(ethPrice) : uint256(wstEthPrice).mulWadDown(uint256(ethPrice)) / wstEthETHFeed_decimals;
     }
 
+    function _checkVaultSpread() internal view {
+        if (ERC4626(vault).convertToAssets(1e18) > vaultMaxSpread) revert vaultMaxSpreadExceeded();
+    }
+
+    function _checkPriceDeviation(uint256 _sharePrice) internal view {
+        uint256 _lastSharePrice = lastSharePrice;
+        uint256 _lowerBound = (_lastSharePrice * (100 - lowerBoundPercentage)) / 100;
+        uint256 _upperBound = (_lastSharePrice * (100 + upperBoundPercentage)) / 100;
+
+        if (_sharePrice < _lowerBound || _sharePrice > _upperBound) revert priceDeviationTooHigh();
+    }
     /********************************** Owner Functions **********************************/
 
     /// @notice this function needs to be called periodically to update the last share price
-    function updateLastSharePrice() external override onlyOwner  {
+    function updateLastSharePrice() external onlyOwner  {
         uint256 _bptPrice = _minAssetPrice().mulWadDown(BPT.getRate()) * _BASE / ethUSDFeed_decimals;
         lastSharePrice = ERC4626(vault).convertToAssets(_bptPrice);
 
@@ -95,4 +151,49 @@ contract FortressWstETHwETHOracle is BaseOracle {
         ethUSDFeed_decimals = 10 ** ethUSDFeed.decimals();
         wstEthETHFeed_decimals = 10 ** wstEthETHFeed.decimals();
     }
+    
+    function shouldCheckPriceDeviation(bool _check) external onlyOwner {
+        isCheckPriceDeviation = _check;
+
+        emit PriceDeviationCheckUpdated(_check);
+    }
+
+    function updatePriceDeviationBounds(uint256 _lowerBoundPercentage, uint256 _upperBoundPercentage) external onlyOwner {
+        lowerBoundPercentage = _lowerBoundPercentage;
+        upperBoundPercentage = _upperBoundPercentage;
+
+        emit PriceDeviationBoundsUpdated(_lowerBoundPercentage, _upperBoundPercentage);
+    }
+
+    function updateVaultMaxSpread(uint256 _vaultMaxSpread) external onlyOwner {
+        vaultMaxSpread = _vaultMaxSpread;
+
+        emit VaultMaxSpreadUpdated(_vaultMaxSpread);
+    }
+
+    function updateOwner(address _owner) external onlyOwner {
+        owner = _owner;
+
+        emit OwnershipTransferred(owner, _owner);
+    }
+    
+    /********************************** Events **********************************/
+
+    event LastSharePriceUpdated(uint256 lastSharePrice);
+    event PriceDeviationCheckUpdated(bool isCheckPriceDeviation);
+    event PriceDeviationBoundsUpdated(uint256 lowerBoundPercentage, uint256 upperBoundPercentage);
+    event VaultMaxSpreadUpdated(uint256 vaultMaxSpread);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event PriceFeedUpdated(address indexed usdtPriceFeed, address indexed usdcPriceFeed);
+
+    /********************************** Errors **********************************/
+
+    error priceDeviationTooHigh();
+    error vaultMaxSpreadExceeded();
+    error notOwner();
+    error zeroPrice();
+    error stalePrice();
+    error reentrancy();
+    error didNotConverge();
+    error virtualPriceOutOfBounds();
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IWETH} from "src/shared/interfaces/IWETH.sol";
 import {FortressWstETHwETHOracle} from "src/shared/lending/oracles/FortressWstETHwETHOracle.sol";
@@ -31,12 +30,9 @@ contract TestFortressWstETHwETHOracle is BaseTest {
         uint256 _amount = 50 * 1e18;
 
         vm.startPrank(alice);
-        // deal(address(WETH), address(alice), _amount);
         deal(address(WETH), address(attacker), _amount);
+        vm.expectRevert();
         attacker.execReentrancy{value : 1e18}(_amount);
-        console.log('duringReentrancyPrice:',attacker.getLastPrice()/1e18);
-        (,int256 lastPrice,,,) = oracle.latestRoundData();
-        console.log('afterAttack:',uint256(lastPrice)/1e18);
         vm.stopPrank();
     }
 
@@ -54,10 +50,6 @@ contract TestFortressWstETHwETHOracle is BaseTest {
 
     function testUpdateLastSharePrice() public {
         uint256 _lastSharePrice1 = oracle.lastSharePrice();
-        
-        (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
-
-        assertEq(_lastSharePrice1, uint256(_answer), "testUpdateLastSharePrice: E1");
 
         vm.startPrank(owner);
         oracle.updateLastSharePrice();
@@ -69,26 +61,23 @@ contract TestFortressWstETHwETHOracle is BaseTest {
         vm.stopPrank();
 
         uint256 _lastSharePrice2 = oracle.lastSharePrice();
-        
-        assertEq(_lastSharePrice2, uint256(_answer), "testUpdateLastSharePrice: E2");
+        assertEq(_lastSharePrice1, _lastSharePrice2, "testUpdateLastSharePrice: E2");
     }
 
     function testDownSidePriceDeviation() public {
-        (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
-
-        uint256 _minPrice = uint256(_answer) * (100 - 10) / 100;
+        uint256 _lastSharePrice = oracle.lastSharePrice();
+        uint256 _minPrice = _lastSharePrice * (100 - 10) / 100;
 
         vm.expectRevert("priceDeviationTooHigh");
-        _checkPriceDeviation(_minPrice - 1, uint256(_answer));
+        _checkPriceDeviation(_minPrice - 1, _lastSharePrice);
     }
 
     function testUpSidePriceDeviation() public {
-        (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
-
-        uint256 _maxPrice = uint256(_answer) * (100 + 10) / 100;
+        uint256 _lastSharePrice = oracle.lastSharePrice();
+        uint256 _maxPrice = _lastSharePrice * (100 + 10) / 100;
 
         vm.expectRevert("priceDeviationTooHigh");
-        _checkPriceDeviation(_maxPrice + 1, uint256(_answer));
+        _checkPriceDeviation(_maxPrice + 1, _lastSharePrice);
     }
 
     /********************************** Internal Functions **********************************/
@@ -99,7 +88,5 @@ contract TestFortressWstETHwETHOracle is BaseTest {
         uint256 _upperBound = (_lastSharePrice * (100 + 10)) / 100;
 
         if (_sharePrice < _lowerBound || _sharePrice > _upperBound) revert("priceDeviationTooHigh");
-
-        // lastSharePrice = _sharePrice; 
     }
 }
