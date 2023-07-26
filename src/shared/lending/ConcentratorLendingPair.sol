@@ -21,6 +21,7 @@ import {IFortressConcentrator} from "./interfaces/IFortressConcentrator.sol";
 import "./FortressLendingCore.sol";
 
 /// @notice The child contract of FortressLendingCore that is deployed for each Concentrator pair.
+/// @notice Provides a Lending Pair for a Concentrator vault.
 contract ConcentratorLendingPair is FortressLendingCore {
 
     using SafeERC20 for IERC20;
@@ -110,10 +111,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
     }
 
     /// @notice Same as parent function, but adds a call to _updateReward()
-    function removeCollateral(
-        uint256 _collateralAmount,
-        address _receiver
-    ) external override nonReentrant speedBump(msg.sender) isSolvent(msg.sender) {
+    function removeCollateral(uint256 _collateralAmount, address _receiver) external override nonReentrant speedBump(msg.sender) isSolvent(msg.sender) {
         if (pauseSettings.removeCollateral) revert Paused();
 
         _updateRewards(msg.sender);
@@ -121,7 +119,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
         lastInteractionBlock[msg.sender] = block.number;
 
         _addInterest();
-        
+
         // Note: exchange rate is irrelevant when borrower has no debt shares
         if (userBorrowShares[msg.sender] > 0) _updateExchangeRate();
         
@@ -129,10 +127,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
     }
 
     /// @notice Same as parent function, but adds a call to _updateReward()
-    function repayAsset(
-        uint256 _shares,
-        address _borrower
-    ) external override nonReentrant speedBump(_borrower) returns (uint256 _amountToRepay) {
+    function repayAsset(uint256 _shares, address _borrower) external override nonReentrant speedBump(_borrower) returns (uint256 _amountToRepay) {
         if (pauseSettings.repayAsset) revert Paused();
 
         _updateRewards(_borrower);
@@ -140,7 +135,7 @@ contract ConcentratorLendingPair is FortressLendingCore {
         lastInteractionBlock[_borrower] = block.number;
 
         _addInterest();
-        
+
         BorrowAccount memory _totalBorrow = totalBorrow;
         _amountToRepay = convertToAssets(_totalBorrow.amount, _totalBorrow.shares, _shares, true);
         

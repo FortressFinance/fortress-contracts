@@ -13,6 +13,7 @@ import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/
 
 import {FortressArbiSwap} from "src/arbitrum/utils/FortressArbiSwap.sol";
 import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
+import {CurveArbiOperations} from "src/arbitrum/utils/CurveArbiOperations.sol";
 
 import {IWETH} from "src/shared/interfaces/IWETH.sol";
 
@@ -35,6 +36,7 @@ abstract contract BaseTest is Test, AddressesArbi {
 
     FortressArbiSwap fortressSwap;
     IRateCalculator rateCalculator;
+    CurveArbiOperations ammOperations;
     
     function _setUp() internal {
         
@@ -61,12 +63,16 @@ abstract contract BaseTest is Test, AddressesArbi {
         vm.deal(charlie, 100 ether);
         vm.deal(yossi, 100 ether);
 
+        vm.startPrank(owner);
         fortressSwap = new FortressArbiSwap(address(owner));
-        // vm.stopPrank();
+        // fortressSwap = FortressArbiSwap(payable(address(FortressSwapV2)));
+
+        ammOperations = new CurveArbiOperations(address(owner));
 
         // --------------------------------- deploy interest rate contract ---------------------------------
 
         rateCalculator = new VariableInterestRate();
+        vm.stopPrank();
     }
 
     // --------------------------------- Tests ---------------------------------
@@ -247,7 +253,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         assertTrue(_totalAssetsBefore > 0, "_testLeveragePosition: E2");
         assertTrue(_totalSupplyBefore > 0, "_testLeveragePosition: E3");
         
-        // add 1% to _minCollateral
+        // add 3% to _minCollateral
         _minCollateral = _minCollateral * 103 / 100;
 
         vm.startPrank(alice);
@@ -256,8 +262,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
 
         vm.expectRevert();
-        // remove 10% of collateral
-        _lendingPair.leveragePosition(_borrowAmount, (_minCollateral * 9 / 10), 0, _underlyingAsset);
+        // remove 20% of collateral
+        _lendingPair.leveragePosition(_borrowAmount, (_minCollateral * 8 / 10), 0, _underlyingAsset);
         uint256 _userAddedCollateral = _lendingPair.leveragePosition(_borrowAmount, _minCollateral, 0, _underlyingAsset);
         _totalCollateral += _userAddedCollateral;
 

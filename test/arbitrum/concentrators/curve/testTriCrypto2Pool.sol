@@ -14,13 +14,13 @@ contract testTriCrypto2Pool is BaseCurveConcentratorTest, InitTriCrypto2Pool {
 
     CurveArbiCompounder bpCompounder;
     TriCryptoTo2Pool tricryptoConcentrator;
-    
+
     function setUp() public {
 
         _setUp();
 
         vm.startPrank(owner);
-        
+
         bpCompounder = CurveArbiCompounder(payable(fc2Pool));
         
         address tempAddr = _initializeTriCrypto2Pool(address(owner), address(fortressRegistry), address(fortressSwap), platform, fc2Pool, address(ammOperations));
