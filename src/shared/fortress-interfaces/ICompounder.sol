@@ -3,6 +3,8 @@ pragma solidity ^0.8.17;
 
 interface ICompounder {
 
+    function isPendingRewards() external view returns (bool);
+
     // Deposit
 
     function depositUnderlying(address _underlyingAsset, address _receiver, uint256 _underlyingAmount, uint256 _minAmount) external returns (uint256 _shares);

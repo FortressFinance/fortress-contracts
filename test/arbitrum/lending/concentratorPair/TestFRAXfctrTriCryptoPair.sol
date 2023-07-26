@@ -63,11 +63,11 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
 
         // --------------------------------- deposit funds into TriCryptoTo2Pool ---------------------------------
 
-        _dealERC20(WETH, owner, 100 ether);
-        vm.startPrank(owner);
-        IERC20(WETH).approve(address(fctrTriCrypto), type(uint256).max);
-        fctrTriCrypto.depositUnderlying(WETH, owner, 50 ether, 0);
-        vm.stopPrank();
+        // _dealERC20(WETH, owner, 100 ether);
+        // vm.startPrank(owner);
+        // IERC20(WETH).approve(address(fctrTriCrypto), type(uint256).max);
+        // fctrTriCrypto.depositUnderlying(WETH, owner, 50 ether, 0);
+        // vm.stopPrank();
 
         // --------------------------------- deposit funds into fc2Pool ---------------------------------
 
@@ -81,20 +81,29 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
     // --------------------------------- tests ---------------------------------
 
     function testSanity() public {
-        assertTrue(true);
-        _dealERC20(USDC, owner, 2 ether);
+        // assertTrue(true);
+        // _dealERC20(USDT, owner, 0.000002 ether);
+        // vm.startPrank(owner);
+        // IERC20(USDT).approve(fc2Pool, type(uint256).max);
+        // uint256 _balance = IERC20(USDT).balanceOf(owner);
+        // ICompounder(fc2Pool).depositUnderlying(USDT, owner, _balance, 0);
+
+        // skip(216000);
+        // skip(216000);
+        // skip(216000);
+
+        // ICompounder(fc2Pool).harvest(owner, USDT, 0);
+
+        // vm.stopPrank();
+        _dealERC20(WETH, owner, 100 ether);
         vm.startPrank(owner);
-        IERC20(USDC).approve(fc2Pool, type(uint256).max);
-        uint256 _balance = IERC20(USDC).balanceOf(owner);
-        ICompounder(fc2Pool).depositUnderlying(USDC, owner, _balance, 0);
-
-        skip(216000);
-        skip(216000);
-        skip(216000);
-
-        ICompounder(fc2Pool).harvest(owner, 0);
-
+        IERC20(WETH).approve(address(fctrTriCrypto), type(uint256).max);
+        fctrTriCrypto.depositUnderlying(WETH, owner, 50 ether, 0);
         vm.stopPrank();
+
+        skip(216000);
+        skip(216000);
+        skip(216000);
     }
     
     function testCorrectFlowWeth(uint256 _amount) public {
@@ -129,20 +138,31 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
         assertTrue(lendingPair.userBorrowShares(address(alice)) > 0, "_testClaim: E2");
         assertTrue(lendingPair.userBorrowShares(address(bob)) > 0, "_testClaim: E3");
 
-        assertEq(lendingPair.pendingReward(address(lendingPair)), 0, "_testClaim: E4");
+        assertEq(fctrTriCrypto.pendingReward(address(lendingPair)), 0, "_testClaim: E4");
+        console.log("pending reward: ", fctrTriCrypto.pendingReward(address(lendingPair)));
+        console.log("total assets: ", fctrTriCrypto.totalAssets());
+        console.log("total supply: ", fctrTriCrypto.totalSupply());
+        console.log("isPendingRewards: ", fctrTriCrypto.isPendingRewards());
 
         skip(216000);
         skip(216000);
         skip(216000);
         skip(216000);
 
-        assertEq(lendingPair.pendingReward(address(lendingPair)), 0, "_testClaim: E5");
+        console.log("isPendingRewards1: ", fctrTriCrypto.isPendingRewards());
 
         vm.startPrank(owner);
+        fctrTriCrypto.harvest(owner, 0);
         lendingPair.harvest(owner, 0);
         vm.stopPrank();
 
-        assertTrue(lendingPair.pendingReward(address(lendingPair)) > 0, "_testClaim: E6");
+        console.log("total assets1: ", fctrTriCrypto.totalAssets());
+        console.log("total supply1: ", fctrTriCrypto.totalSupply());
+        console.log("pending reward1: ", fctrTriCrypto.pendingReward(address(lendingPair)));
+
+        assertTrue(fctrTriCrypto.pendingReward(address(lendingPair)) > 0, "_testClaim: E5");
+
+        assertTrue(fctrTriCrypto.pendingReward(address(lendingPair)) > 0, "_testClaim: E6");
     }
 
     function _addFraxWethRouteToSwap() internal {
