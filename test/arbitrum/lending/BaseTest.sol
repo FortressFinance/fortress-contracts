@@ -15,6 +15,7 @@ import {FortressArbiSwap} from "src/arbitrum/utils/FortressArbiSwap.sol";
 import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 import {CurveArbiOperations} from "src/arbitrum/utils/CurveArbiOperations.sol";
 
+import {ICompounder} from "src/shared/fortress-interfaces/ICompounder.sol";
 import {IWETH} from "src/shared/interfaces/IWETH.sol";
 
 import {FortressLendingPair} from "src/shared/lending/FortressLendingPair.sol";
@@ -257,7 +258,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         _minCollateral = _minCollateral * 103 / 100;
 
         vm.startPrank(alice);
-        _dealERC20(address(_lendingPair.collateralContract()), alice, _minCollateral);
+        // _dealERC20(address(_lendingPair.collateralContract()), alice, _minCollateral); // todo make sure this doesn't break anything
+        _mintVaultShares(address(_lendingPair.collateralContract()), alice, _minCollateral);
         assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(alice)), _minCollateral, "_testLeveragePosition: E03");
         IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
 
@@ -284,7 +286,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         _totalCollateral = _lendingPair.totalCollateral();
 
         vm.startPrank(bob);
-        _dealERC20(address(_lendingPair.collateralContract()), bob, _minCollateral);
+        // _dealERC20(address(_lendingPair.collateralContract()), bob, _minCollateral);
+        _mintVaultShares(address(_lendingPair.collateralContract()), bob, _minCollateral);
         assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(bob)), _minCollateral, "_testLeveragePosition: E10");
         IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
 
@@ -308,7 +311,8 @@ abstract contract BaseTest is Test, AddressesArbi {
         _totalCollateral = _lendingPair.totalCollateral();
 
         vm.startPrank(charlie);
-        _dealERC20(address(_lendingPair.collateralContract()), charlie, _minCollateral);
+        // _dealERC20(address(_lendingPair.collateralContract()), charlie, _minCollateral);
+        _mintVaultShares(address(_lendingPair.collateralContract()), charlie, _minCollateral);
         assertEq(IERC20(address(_lendingPair.collateralContract())).balanceOf(address(charlie)), _minCollateral, "_testLeveragePosition: E17");
         IERC20(address(_lendingPair.collateralContract())).approve(address(_lendingPair), _minCollateral);
 
@@ -587,8 +591,23 @@ abstract contract BaseTest is Test, AddressesArbi {
 
     // --------------------------------- Internal functions ---------------------------------
 
-    function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
+    function _dealERC20(address _token, address _recipient, uint256 _amount) internal {
         deal({ token: address(_token), to: _recipient, give: _amount});
+    }
+
+    function _depositToVault(address _token, address _user, address _concentrator, uint256 _amount) internal {
+        _dealERC20(_token, _user, _amount);
+        vm.startPrank(_user);
+        IERC20(_token).approve(address(_concentrator), _amount);
+        ICompounder(_concentrator).depositUnderlying(_token, _user, _amount, 0);
+        vm.stopPrank();
+    }
+
+    function _mintVaultShares(address _vault, address _user, uint256 _amount) internal {
+        address _asset = address(ERC4626(_vault).asset());
+        _dealERC20(_asset, _user, _amount * 2);
+        IERC20(_asset).approve(_vault, _amount * 2);
+        ICompounder(_vault).mint(_amount, _user);
     }
 
     // --------------------------------- Notes ---------------------------------

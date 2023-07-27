@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import {FortressTriCryptoOracle} from "src/shared/lending/oracles/FortressTriCryptoOracle.sol";
 
-import {ICompounder} from "src/shared/fortress-interfaces/ICompounder.sol";
+import {AMMConcentratorBase, IConvexBasicRewards} from "src/shared/concentrators/AMMConcentratorBase.sol";
 
 import {ConcentratorLendingPair} from "src/shared/lending/ConcentratorLendingPair.sol";
 import {TriCryptoTo2Pool} from "src/arbitrum/concentrators/curve/TriCryptoTo2Pool.sol";
@@ -143,12 +143,17 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
         console.log("total assets: ", fctrTriCrypto.totalAssets());
         console.log("total supply: ", fctrTriCrypto.totalSupply());
         console.log("isPendingRewards: ", fctrTriCrypto.isPendingRewards());
+        console.log("balanceOf(address(lendingPair)): ", fctrTriCrypto.balanceOf(address(lendingPair)));
+
+        (,, address _crvRewards) = fctrTriCrypto.boosterData();
+        console.log("IConvexBasicRewards(_crvRewards).balanceOf(address(_concentrator)):", IConvexBasicRewards(_crvRewards).balanceOf(address(fctrTriCrypto)));
 
         skip(216000);
         skip(216000);
         skip(216000);
         skip(216000);
 
+        console.log("IConvexBasicRewards(_crvRewards).balanceOf(address(_concentrator)):1", IConvexBasicRewards(_crvRewards).balanceOf(address(fctrTriCrypto)));
         console.log("isPendingRewards1: ", fctrTriCrypto.isPendingRewards());
 
         vm.startPrank(owner);
