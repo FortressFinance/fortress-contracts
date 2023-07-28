@@ -33,6 +33,7 @@ contract FortressWstETHwETHOracle {
     uint256 public lowerBoundPercentage;
     uint256 public upperBoundPercentage;
     uint256 public vaultMaxSpread;
+    uint256 public virtualPriceUpperBound;
 
     address public owner;
     address public vault;
@@ -53,7 +54,8 @@ contract FortressWstETHwETHOracle {
     constructor(address _owner, address _vault) {
         lowerBoundPercentage = 20;
         upperBoundPercentage = 20;
-        
+        virtualPriceUpperBound = 1.1 * 1e18;
+
         owner = _owner;
         vault = _vault;
 
@@ -103,7 +105,7 @@ contract FortressWstETHwETHOracle {
 
     function _getPrice() internal reentrancyCheck returns (int256) {
         uint256 rate = BPT.getRate();
-        if (rate < 1*1e18 || rate >= 1.1*1e18)  revert virtualPriceOutOfBounds();
+        if (rate < 1*1e18 || rate >= virtualPriceUpperBound)  revert virtualPriceOutOfBounds();
         uint256 _bptPrice = _minAssetPrice().mulWadDown(rate) * _BASE / ethUSDFeed_decimals;
         uint256 _sharePrice = ERC4626(vault).convertToAssets(_bptPrice);
 
@@ -171,6 +173,12 @@ contract FortressWstETHwETHOracle {
         emit VaultMaxSpreadUpdated(_vaultMaxSpread);
     }
 
+    function updateVirtualPriceUpperBound(uint256 _virtualPriceUpperBound) external onlyOwner {
+        virtualPriceUpperBound = _virtualPriceUpperBound;
+
+        emit VirtualPriceUpperBound(_virtualPriceUpperBound);
+    }
+
     function updateOwner(address _owner) external onlyOwner {
         owner = _owner;
 
@@ -185,6 +193,7 @@ contract FortressWstETHwETHOracle {
     event VaultMaxSpreadUpdated(uint256 vaultMaxSpread);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event PriceFeedUpdated(address indexed usdtPriceFeed, address indexed usdcPriceFeed);
+    event VirtualPriceUpperBound(uint256 virtualPriceUpperBound);
 
     /********************************** Errors **********************************/
 

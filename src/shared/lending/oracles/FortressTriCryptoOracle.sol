@@ -35,6 +35,7 @@ contract FortressTriCryptoOracle {
     uint256 public lowerBoundPercentage;
     uint256 public upperBoundPercentage;
     uint256 public vaultMaxSpread;
+    uint256 public virtualPriceUpperBound;
 
     address public owner;
     address public vault;
@@ -54,6 +55,7 @@ contract FortressTriCryptoOracle {
     constructor(address _owner, address _vault) {
         lowerBoundPercentage = 20;
         upperBoundPercentage = 20;
+        virtualPriceUpperBound = 1.1 * 1e18;
         
         owner = _owner;
         vault = _vault;
@@ -127,7 +129,7 @@ contract FortressTriCryptoOracle {
 
     function _getLPprice(uint p1, uint p2, uint p3) internal view returns(uint256) {
         uint256 virtualPrice = ICurveV2Pool(triCrypto).get_virtual_price();
-        if (virtualPrice < 1*1e18 || virtualPrice >= 1.1*1e18)  revert virtualPriceOutOfBounds();
+        if (virtualPrice < 1*1e18 || virtualPrice >= virtualPriceUpperBound)  revert virtualPriceOutOfBounds();
 
         return 3 * ICurveV2Pool(triCrypto).get_virtual_price() * cubicRoot(p1 * p2 / 1e18 * p3) / 1e18;
     }
@@ -194,6 +196,12 @@ contract FortressTriCryptoOracle {
         emit VaultMaxSpreadUpdated(_vaultMaxSpread);
     }
 
+    function updateVirtualPriceUpperBound(uint256 _virtualPriceUpperBound) external onlyOwner {
+        virtualPriceUpperBound = _virtualPriceUpperBound;
+
+        emit VirtualPriceUpperBound(_virtualPriceUpperBound);
+    }
+
     function updateOwner(address _owner) external onlyOwner {
         owner = _owner;
 
@@ -208,6 +216,7 @@ contract FortressTriCryptoOracle {
     event VaultMaxSpreadUpdated(uint256 vaultMaxSpread);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event PriceFeedUpdated(address indexed usdtPriceFeed, address indexed usdcPriceFeed);
+    event VirtualPriceUpperBound(uint256 virtualPriceUpperBound);
 
     /********************************** Errors **********************************/
 
