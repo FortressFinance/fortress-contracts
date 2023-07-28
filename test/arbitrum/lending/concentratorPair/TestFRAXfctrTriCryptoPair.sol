@@ -60,51 +60,9 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
         // --------------------------------- init pair ---------------------------------
 
         _testInitialize(address(lendingPair));
-
-        // --------------------------------- deposit funds into TriCryptoTo2Pool ---------------------------------
-
-        // _dealERC20(WETH, owner, 100 ether);
-        // vm.startPrank(owner);
-        // IERC20(WETH).approve(address(fctrTriCrypto), type(uint256).max);
-        // fctrTriCrypto.depositUnderlying(WETH, owner, 50 ether, 0);
-        // vm.stopPrank();
-
-        // --------------------------------- deposit funds into fc2Pool ---------------------------------
-
-        // _dealERC20(USDC, owner, 100 ether);
-        // vm.startPrank(owner);
-        // IERC20(USDC).approve(fc2Pool, type(uint256).max);
-        // ICompounder(fc2Pool).depositUnderlying(USDC, owner, 50 ether, 0);
-        // vm.stopPrank();
     }
 
     // --------------------------------- tests ---------------------------------
-
-    function testSanity() public {
-        // assertTrue(true);
-        // _dealERC20(USDT, owner, 0.000002 ether);
-        // vm.startPrank(owner);
-        // IERC20(USDT).approve(fc2Pool, type(uint256).max);
-        // uint256 _balance = IERC20(USDT).balanceOf(owner);
-        // ICompounder(fc2Pool).depositUnderlying(USDT, owner, _balance, 0);
-
-        // skip(216000);
-        // skip(216000);
-        // skip(216000);
-
-        // ICompounder(fc2Pool).harvest(owner, USDT, 0);
-
-        // vm.stopPrank();
-        _dealERC20(WETH, owner, 100 ether);
-        vm.startPrank(owner);
-        IERC20(WETH).approve(address(fctrTriCrypto), type(uint256).max);
-        fctrTriCrypto.depositUnderlying(WETH, owner, 50 ether, 0);
-        vm.stopPrank();
-
-        skip(216000);
-        skip(216000);
-        skip(216000);
-    }
     
     function testCorrectFlowWeth(uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
@@ -113,7 +71,7 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
 
         uint256 _totalCollateral = _testLeveragePosition(address(lendingPair), WETH);
 
-        _testClaim();
+        _testClaimAliceAndBob();
 
         _testClosePosition(address(lendingPair), WETH, _totalAssetsAfter, _totalSupplyAfter, _totalCollateral);
 
@@ -128,46 +86,72 @@ contract TestFRAXfctrTriCryptoPair is BaseTest, InitTriCrypto2Pool {
         _testUpdateFee(address(lendingPair));
 
         _testUpdateOwner(address(lendingPair));
+
+        _testClaimCharlie();
     }
 
     // --------------------------------- internal functions ---------------------------------
 
-    function _testClaim() internal {
+    function _testClaimAliceAndBob() internal {
         assertTrue(lendingPair.userCollateralBalance(address(alice)) > 0, "_testClaim: E0");
         assertTrue(lendingPair.userCollateralBalance(address(bob)) > 0, "_testClaim: E1");
         assertTrue(lendingPair.userBorrowShares(address(alice)) > 0, "_testClaim: E2");
         assertTrue(lendingPair.userBorrowShares(address(bob)) > 0, "_testClaim: E3");
-
         assertEq(fctrTriCrypto.pendingReward(address(lendingPair)), 0, "_testClaim: E4");
-        console.log("pending reward: ", fctrTriCrypto.pendingReward(address(lendingPair)));
-        console.log("total assets: ", fctrTriCrypto.totalAssets());
-        console.log("total supply: ", fctrTriCrypto.totalSupply());
-        console.log("isPendingRewards: ", fctrTriCrypto.isPendingRewards());
-        console.log("balanceOf(address(lendingPair)): ", fctrTriCrypto.balanceOf(address(lendingPair)));
-
-        (,, address _crvRewards) = fctrTriCrypto.boosterData();
-        console.log("IConvexBasicRewards(_crvRewards).balanceOf(address(_concentrator)):", IConvexBasicRewards(_crvRewards).balanceOf(address(fctrTriCrypto)));
 
         skip(216000);
-        skip(216000);
-        skip(216000);
-        skip(216000);
-
-        console.log("IConvexBasicRewards(_crvRewards).balanceOf(address(_concentrator)):1", IConvexBasicRewards(_crvRewards).balanceOf(address(fctrTriCrypto)));
-        console.log("isPendingRewards1: ", fctrTriCrypto.isPendingRewards());
 
         vm.startPrank(owner);
         fctrTriCrypto.harvest(owner, 0);
-        lendingPair.harvest(owner, 0);
-        vm.stopPrank();
-
-        console.log("total assets1: ", fctrTriCrypto.totalAssets());
-        console.log("total supply1: ", fctrTriCrypto.totalSupply());
-        console.log("pending reward1: ", fctrTriCrypto.pendingReward(address(lendingPair)));
 
         assertTrue(fctrTriCrypto.pendingReward(address(lendingPair)) > 0, "_testClaim: E5");
 
-        assertTrue(fctrTriCrypto.pendingReward(address(lendingPair)) > 0, "_testClaim: E6");
+        lendingPair.harvest(owner, 0);
+        vm.stopPrank();
+
+        uint256 _aliceReward = lendingPair.pendingReward(alice);
+        uint256 _bobReward = lendingPair.pendingReward(bob);
+        uint256 _charlieReward = lendingPair.pendingReward(charlie);
+
+        assertEq(fctrTriCrypto.pendingReward(address(lendingPair)), 0, "_testClaim: E6");
+        assertApproxEqAbs(_aliceReward, _bobReward, 1e10, "_testClaim: E7");
+        assertApproxEqAbs(_bobReward, _charlieReward, 1e10, "_testClaim: E8");
+        assertTrue(_aliceReward > 0, "_testClaim: E9");
+
+        vm.startPrank(alice);
+        uint256 _rewardsBalanceBefore = IERC20(lendingPair.rewardAsset()).balanceOf(address(alice));
+        lendingPair.claim(alice, alice);
+        uint256 _rewardsPaid = IERC20(lendingPair.rewardAsset()).balanceOf(address(alice)) - _rewardsBalanceBefore;
+        assertEq(_rewardsPaid, _aliceReward, "_testClaim: E10");
+        assertEq(lendingPair.pendingReward(alice), 0, "_testClaim: E11");
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        _rewardsBalanceBefore = IERC20(lendingPair.rewardAsset()).balanceOf(address(bob));
+        lendingPair.claim(bob, bob);
+        _rewardsPaid = IERC20(lendingPair.rewardAsset()).balanceOf(address(bob)) - _rewardsBalanceBefore;
+        assertEq(_rewardsPaid, _bobReward, "_testClaim: E12");
+        assertEq(lendingPair.pendingReward(bob), 0, "_testClaim: E13");
+        vm.stopPrank();
+
+        assertApproxEqAbs(IERC20(lendingPair.rewardAsset()).balanceOf(address(lendingPair)), _charlieReward, 1e2, "_testClaim: E16");
+    }
+
+    function _testClaimCharlie() internal {
+        assertEq(lendingPair.userCollateralBalance(address(charlie)), 0, "_testClaimCharlie: E1");
+        assertEq(lendingPair.userBorrowShares(address(charlie)), 0, "_testClaimCharlie: E2");
+
+        uint256 _charlieReward = lendingPair.pendingReward(charlie);
+
+        vm.startPrank(charlie);
+        uint256 _rewardsBalanceBefore = IERC20(lendingPair.rewardAsset()).balanceOf(address(charlie));
+        lendingPair.claim(charlie, charlie);
+        uint256 _rewardsPaid = IERC20(lendingPair.rewardAsset()).balanceOf(address(charlie)) - _rewardsBalanceBefore;
+        assertEq(_rewardsPaid, _charlieReward, "_testClaimCharlie: E14");
+        assertEq(lendingPair.pendingReward(charlie), 0, "_testClaimCharlie: E15");
+        vm.stopPrank();
+
+        assertApproxEqAbs(IERC20(lendingPair.rewardAsset()).balanceOf(address(lendingPair)), 0, 1e2, "_testClaimCharlie: E16");
     }
 
     function _addFraxWethRouteToSwap() internal {
