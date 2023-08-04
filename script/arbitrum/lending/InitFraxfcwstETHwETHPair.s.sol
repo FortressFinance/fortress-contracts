@@ -43,9 +43,9 @@ contract InitFraxfcwstETHwETHPair is Script, AddressesArbi, InitBaseArbi {
         string memory _name = "Fortress Lending FRAX/fcWstETHwETH Pair";
         string memory _symbol = "fFRAX/fcWstETHwETH";
         address _oracleMultiply = address(USD_FRAX_FEED); // denominator oracle (1e8 precision)
-        address _oracleDivide = address(_fcWstETHwETHOracle); // numerator oracle (1e6 precision) (fcTriCrypto contract's ```decimals``` is faulty)
+        address _oracleDivide = address(_fcWstETHwETHOracle); // numerator oracle (1e18 precision)
         // oracle normalization 1^(18 - precision of numerator oracle + precision of denominator oracle + precision of asset token - precision of collateral token)
-        uint256 _oracleNormalization = 1e20; // 1^(18 - 6 + 8 + 18 - 18)
+        uint256 _oracleNormalization = 1e8; // 1^(18 - 18 + 8 + 18 - 18)
         address _rateContract = address(_rateCalculator);
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");

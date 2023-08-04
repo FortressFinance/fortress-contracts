@@ -347,7 +347,7 @@ abstract contract BaseTest is Test, AddressesArbi {
         _lendingPair.addInterest();
         
         vm.roll(block.number + 1);
-        vm.warp(block.timestamp + 1 days);
+        vm.warp(block.timestamp + 1 hours);
 
         _lendingPair.addInterest();
 

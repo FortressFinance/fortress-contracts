@@ -33,6 +33,7 @@ import {FortressLendingConstants} from "./FortressLendingConstants.sol";
 import {IRateCalculator} from "./interfaces/IRateCalculator.sol";
 import {IFortressSwap} from "../fortress-interfaces/IFortressSwap.sol";
 import {IFortressVault} from "../fortress-interfaces/IFortressVault.sol";
+import {IOracle} from "./interfaces/IOracle.sol";
 
 /// @notice An abstract contract which contains the core logic and storage for the FortressLendingPair
 abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGuard, ERC4626 {
@@ -849,16 +850,16 @@ abstract contract FortressLendingCore is FortressLendingConstants, ReentrancyGua
             if (_answer <= 0) {
                 revert OracleLTEZero(_oracleMultiply);
             }
-            _price = _price * uint256(_answer);
+            _price = _price * uint256(_answer); //36 + 8 = 44
         }
 
         address _oracleDivide = oracleDivide;
         if (_oracleDivide != address(0)) {
-            (, int256 _answer, , , ) = AggregatorV3Interface(_oracleDivide).latestRoundData();
+            (, int256 _answer, , , ) = IOracle(_oracleDivide).latestRoundData();
             if (_answer <= 0) {
                 revert OracleLTEZero(_oracleDivide);
             }
-            _price = _price / uint256(_answer);
+            _price = _price / uint256(_answer); //44-18 = 26
         }
 
         _exchangeRate = _price / oracleNormalization;
