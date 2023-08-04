@@ -13,16 +13,16 @@ import {AddressesArbi} from "script/arbitrum/utils/AddressesArbi.sol";
 
 import {FortressLendingPair} from "src/shared/lending/FortressLendingPair.sol";
 import {VariableInterestRate, IRateCalculator} from "src/shared/lending/VariableInterestRate.sol";
-import {FortressTriCryptoOracle} from "src/shared/lending/oracles/FortressTriCryptoOracle.sol";
+import {FortressWstETHwETHOracle} from "src/shared/lending/oracles/FortressWstETHwETHOracle.sol";
 
 import "script/arbitrum/utils/InitBase.sol";
 import "src/arbitrum/utils/FortressArbiSwap.sol";
 
-contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
+contract InitFraxfcwstETHwETHPair is Script, AddressesArbi, InitBaseArbi {
 
     IRateCalculator _rateCalculator;
     FortressLendingPair _lendingPair;
-    FortressTriCryptoOracle _fcTriCryptoOracle;
+    FortressWstETHwETHOracle _fcWstETHwETHOracle;
     ERC20 __asset;
 
     function run() public {
@@ -35,17 +35,17 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
         vm.startBroadcast(deployerPrivateKey);
 
         _rateCalculator = new VariableInterestRate();
-        _fcTriCryptoOracle = new FortressTriCryptoOracle(owner,address(fcTriCrypto));
+        _fcWstETHwETHOracle = new FortressWstETHwETHOracle(owner,address(fcwstETHwETH));
 
-        // FRAX asset (1e18 precision), fcTriCrypto collateral (1e18 precision)
+        // FRAX asset (1e18 precision), fcwstETHwETH collateral (1e18 precision)
         __asset = ERC20(address(FRAX)); // asset
-        address _collateral = address(fcTriCrypto); // collateral
-        string memory _name = "Fortress Lending FRAX/fcTriCrypto Pair";
-        string memory _symbol = "fFRAX/fcTriCrypto";
+        address _collateral = address(fcwstETHwETH); // collateral
+        string memory _name = "Fortress Lending FRAX/fcWstETHwETH Pair";
+        string memory _symbol = "fFRAX/fcWstETHwETH";
         address _oracleMultiply = address(USD_FRAX_FEED); // denominator oracle (1e8 precision)
-        address _oracleDivide = address(_fcTriCryptoOracle); // numerator oracle (1e6 precision) (fcTriCrypto contract's ```decimals``` is faulty)
+        address _oracleDivide = address(_fcWstETHwETHOracle); // numerator oracle (1e18 precision)
         // oracle normalization 1^(18 - precision of numerator oracle + precision of denominator oracle + precision of asset token - precision of collateral token)
-        uint256 _oracleNormalization = 1e20; // 1^(18 - 6 + 8 + 18 - 18)
+        uint256 _oracleNormalization = 1e8; // 1^(18 - 18 + 8 + 18 - 18)
         address _rateContract = address(_rateCalculator);
         
         bytes memory _configData = abi.encode(_collateral, _oracleMultiply, _oracleDivide, _oracleNormalization, _rateContract, "");
@@ -64,7 +64,7 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
         console.log("============================================================");
         console.log("============================================================");
         console.log("_rateCalculator: ", address(_rateCalculator));
-        console.log("_fcTriCryptoPOracle: ", address(_fcTriCryptoOracle));
+        console.log("_fcWstETHwETHOracle: ", address(_fcWstETHwETHOracle));
         console.log("_lendingPair: ", address(_lendingPair));
         console.log("============================================================");
         console.log("============================================================");
@@ -72,9 +72,4 @@ contract InitFraxfcTriCryptoPair is Script, AddressesArbi, InitBaseArbi {
         vm.stopBroadcast();
     }
 
-    // ---- Notes ----
-
-    //     _rateCalculator:  0xB2f8801d3942cCA2Cc088Ffdc84368A36F1cebE2
-    //   _fcTriCryptoPOracle:  0x779823E3bE15a07a91473C0ac6634170b36eb63a
-    //   _lendingPair:  0x6a3e946B83fDD9b2B6650D909332C42397FF774f
 }

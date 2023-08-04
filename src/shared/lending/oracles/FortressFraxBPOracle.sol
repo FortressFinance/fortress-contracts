@@ -31,6 +31,8 @@ contract FortressFraxBPOracle is BaseOracle {
 
     using SafeCast for uint256;
 
+    uint256 constant internal _DECIMAL_DIFFERENCE = 1e18; // todo - fix
+
     IChainlinkAggregator public FRAX = IChainlinkAggregator(address(0x0809E3d38d1B4214958faf06D8b1B1a2b73f2ab8));
     IChainlinkAggregator public USDC = IChainlinkAggregator(address(0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3));
 
@@ -51,7 +53,7 @@ contract FortressFraxBPOracle is BaseOracle {
         address _fraxBP = address(0xC9B8a3FDECB9D5b218d02555a8Baf332E5B740d5);
         uint256 _assetPrice = ICurveV2Pool(_fraxBP).get_virtual_price() * minAssetPrice;
 
-        uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        uint256 _sharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         // check that vault share price deviation did not exceed the configured bounds
         if (isCheckPriceDeviation) _checkPriceDeviation(_sharePrice);
@@ -80,7 +82,7 @@ contract FortressFraxBPOracle is BaseOracle {
         address _fraxBP = address(0xC9B8a3FDECB9D5b218d02555a8Baf332E5B740d5);
         uint256 _assetPrice = ICurveV2Pool(_fraxBP).get_virtual_price() * minAssetPrice;
 
-        lastSharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * DECIMAL_DIFFERENCE) / BASE);
+        lastSharePrice = ((ERC4626(vault).convertToAssets(_assetPrice) * _DECIMAL_DIFFERENCE) / _BASE);
 
         emit LastSharePriceUpdated(lastSharePrice);
     }

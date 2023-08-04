@@ -1,32 +1,46 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {AggregatorV3Interface} from "@chainlink/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
-import {FortressTriCryptoOracle} from "src/shared/lending/oracles/FortressTriCryptoOracle.sol";
-
+import {IERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IWETH} from "src/shared/interfaces/IWETH.sol";
+import {FortressWstETHwETHOracle} from "src/shared/lending/oracles/FortressWstETHwETHOracle.sol";
 import "test/arbitrum/lending/BaseTest.sol";
+import "test/arbitrum/lending/ReentrancyTestAttacker.sol";
 
-contract TestFortressTriCryptoOracle is BaseTest {
+contract TestFortressWstETHwETHOracle is BaseTest {
 
-    FortressTriCryptoOracle oracle;
+    FortressWstETHwETHOracle oracle;
+    address fcWstETHwETH = address(0x79636559F70Ffe7429A965a59B884B0eE9b1391C);
 
     function setUp() public {
         _setUp();
-        address _fcTriCrypto = address(0x32ED4f40ce345Eca65F24735Ad9D35c7fF3460E5);
-        oracle = new FortressTriCryptoOracle(address(owner), _fcTriCrypto);
+        
+        oracle = new FortressWstETHwETHOracle(address(owner), fcWstETHwETH);
+        
         (,int256 lastPrice,,,) = oracle.latestRoundData();
-        console.log('lastPrice:',uint256(lastPrice)/1e18);
+        console.log('oraclePrice:',uint256(lastPrice)/1e18);
     }
 
     /********************************** Tests **********************************/
+
+    function testReenterancy() public {
+
+        ReentrancyTestAttacker attacker;
+        attacker = new ReentrancyTestAttacker(address(oracle));
+        uint256 _amount = 50 * 1e18;
+
+        vm.startPrank(alice);
+        deal(address(WETH), address(attacker), _amount);
+        vm.expectRevert();
+        attacker.execReentrancy{value : 1e18}(_amount);
+        vm.stopPrank();
+    }
 
     function testVaultMaxSpread() public {
         
         uint256 _maxSpread = oracle.vaultMaxSpread();
 
-
-        uint256 _spread = ERC4626(fcTriCrypto).convertToAssets(1e18);
+        uint256 _spread = ERC4626(fcWstETHwETH).convertToAssets(1e18);
 
         // add 10% to _spread
         uint256 _localMaxSpread = _spread * 110 / 100;
@@ -36,11 +50,6 @@ contract TestFortressTriCryptoOracle is BaseTest {
 
     function testUpdateLastSharePrice() public {
         uint256 _lastSharePrice1 = oracle.lastSharePrice();
-        
-        // (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
-
-        // assertEq(_lastSharePrice1, uint256(_answer), "testUpdateLastSharePrice: E1");
-        console.log('lastPrice:',_lastSharePrice1);
 
         vm.startPrank(owner);
         oracle.updateLastSharePrice();
@@ -52,12 +61,10 @@ contract TestFortressTriCryptoOracle is BaseTest {
         vm.stopPrank();
 
         uint256 _lastSharePrice2 = oracle.lastSharePrice();
-        console.log('lastPrice:',_lastSharePrice2);
-        // assertEq(_lastSharePrice2, uint256(_answer), "testUpdateLastSharePrice: E2");
+        assertEq(_lastSharePrice1, _lastSharePrice2, "testUpdateLastSharePrice: E2");
     }
 
     function testDownSidePriceDeviation() public {
-        // (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
         uint256 _lastSharePrice = oracle.lastSharePrice();
         uint256 _minPrice = _lastSharePrice * (100 - 10) / 100;
 
@@ -66,7 +73,6 @@ contract TestFortressTriCryptoOracle is BaseTest {
     }
 
     function testUpSidePriceDeviation() public {
-        // (, int256 _answer,,,) = AggregatorV3Interface(address(oracle)).latestRoundData();
         uint256 _lastSharePrice = oracle.lastSharePrice();
         uint256 _maxPrice = _lastSharePrice * (100 + 10) / 100;
 
@@ -82,9 +88,5 @@ contract TestFortressTriCryptoOracle is BaseTest {
         uint256 _upperBound = (_lastSharePrice * (100 + 10)) / 100;
 
         if (_sharePrice < _lowerBound || _sharePrice > _upperBound) revert("priceDeviationTooHigh");
-
-        // lastSharePrice = _sharePrice; 
     }
-
-    
 }

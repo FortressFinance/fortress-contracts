@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 interface IChainlinkAggregator {
+
   function decimals() external view returns (uint8);
 
   function latestAnswer() external view returns (int256);

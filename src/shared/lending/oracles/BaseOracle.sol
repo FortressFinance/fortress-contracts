@@ -27,8 +27,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract BaseOracle is AggregatorV3Interface {
 
-    using SafeCast for uint256;
-
     uint256 public lastSharePrice;
     uint256 public lowerBoundPercentage;
     uint256 public upperBoundPercentage;
@@ -39,8 +37,7 @@ contract BaseOracle is AggregatorV3Interface {
 
     bool public isCheckPriceDeviation;
 
-    uint256 constant internal DECIMAL_DIFFERENCE = 1e6;
-    uint256 constant internal BASE = 1e18;
+    uint256 constant internal _BASE = 1e18;
 
     /********************************** Constructor **********************************/
 
@@ -153,4 +150,7 @@ contract BaseOracle is AggregatorV3Interface {
     error notOwner();
     error zeroPrice();
     error stalePrice();
+    error reentrancy();
+    error didNotConverge();
+    error virtualPriceOutOfBounds();
 }
