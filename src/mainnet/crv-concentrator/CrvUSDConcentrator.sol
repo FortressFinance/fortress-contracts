@@ -271,8 +271,15 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
 
         IERC20(_underlyingAsset).safeTransferFrom(msg.sender, address(this), _amount);
         
-        uint256 _yCRVamount = (_underlyingAsset == YCRV) ? _amount : IYCRV(YCRV).mint(_amount);
+        uint256 _yCRVamount;
+        if (_underlyingAsset == YCRV) {
+             _yCRVamount = _amount;
+        } else {
+            _approve(CRV, YCRV, _amount);
+             _yCRVamount = IYCRV(YCRV).mint(_amount);
+        }
 
+        _approve(YCRV, STYCRV, _yCRVamount);
         uint256 _assets = ISTYCRV(STYCRV).deposit(_yCRVamount, address(this)); 
 
         if (_assets >= maxDeposit(msg.sender)) revert InsufficientDepositCap();
@@ -439,10 +446,10 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
     function _harvest(address _receiver, uint256 _minBounty) internal returns (uint256 _rewards) {
 
         uint256 _rate = ISTYCRV(STYCRV).pricePerShare();
-        uint256 _crvBalanceSnapshot = (IERC20(STYCRV).balanceOf(address(this)) * PRECISION) /  _rate;
+        uint256 _crvBalanceSnapshot = (IERC20(STYCRV).balanceOf(address(this)) * _rate)/PRECISION;
         uint256 _accruedCRV = _crvBalanceSnapshot - totalCRV;
         if (_accruedCRV <=0) revert NoPendingRewards();
-        _rewards = (_accruedCRV * _rate) / PRECISION;
+        _rewards = ISTYCRV(STYCRV).withdraw((_accruedCRV * PRECISION)/_rate); 
 
         Fees memory _fees = fees;
         uint256 _platformFee = _fees.platformFeePercentage;
@@ -450,20 +457,19 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         if (_platformFee > 0) {
             _platformFee = (_platformFee * _rewards) / FEE_DENOMINATOR;
             _rewards = _rewards - _platformFee;
-            IERC20(STYCRV).safeTransfer(settings.platform, _platformFee);
+            IERC20(YCRV).safeTransfer(settings.platform, _platformFee);
         }
         if (_harvestBounty > 0) {
             _harvestBounty = (_harvestBounty * _rewards) / FEE_DENOMINATOR;
             if (!(_harvestBounty >= _minBounty)) revert InsufficientAmountOut();
 
             _rewards = _rewards - _harvestBounty;
-            IERC20(STYCRV).safeTransfer(_receiver, _harvestBounty);
+            IERC20(YCRV).safeTransfer(_receiver, _harvestBounty);
         }
+        _approve(YCRV, address(settings.swap), _rewards);
+        _rewards = IFortressSwap(settings.swap).swap(YCRV, CRVUSD, _rewards);
 
-        _rewards = IFortressSwap(settings.swap).swap(STYCRV, CRVUSD, _rewards);
-
-        if (((IERC20(STYCRV).balanceOf(address(this)) * PRECISION) /  _rate) - totalCRV <0) revert IncorrectHarvest();
-        
+        if ((IERC20(STYCRV).balanceOf(address(this)) * _rate) / PRECISION - totalCRV <0) revert IncorrectHarvest();
         emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
         return _rewards;
@@ -528,10 +534,10 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         _userInfo.rewardPerSharePaid = accRewardPerShare;
     }
 
-    // function _approve(address _token, address _spender, uint256 _amount) internal {
-    //     IERC20(_token).safeApprove(_spender, 0);
-    //     IERC20(_token).safeApprove(_spender, _amount);
-    // }
+    function _approve(address _token, address _spender, uint256 _amount) internal {
+        IERC20(_token).safeApprove(_spender, 0);
+        IERC20(_token).safeApprove(_spender, _amount);
+    }
 
     receive() external payable {}
 
