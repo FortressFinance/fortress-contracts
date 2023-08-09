@@ -273,10 +273,10 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         
         uint256 _yCRVamount;
         if (_underlyingAsset == YCRV) {
-             _yCRVamount = _amount;
+            _yCRVamount = _amount;
         } else {
             _approve(CRV, YCRV, _amount);
-             _yCRVamount = IYCRV(YCRV).mint(_amount);
+            _yCRVamount = IYCRV(YCRV).mint(_amount);
         }
 
         _approve(YCRV, STYCRV, _yCRVamount);
@@ -334,13 +334,19 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
 
         uint256 _yCrvAssets = ISTYCRV(STYCRV).withdraw(_assets); 
-        _underlyingAmount = (_underlyingAsset == YCRV) ? _yCrvAssets : IFortressSwap(settings.swap).swap(YCRV, _underlyingAsset, _yCrvAssets);
+
+        if (_underlyingAsset == YCRV) {
+            _underlyingAmount = _yCrvAssets;
+        } else {
+            _approve(YCRV, address(settings.swap), _yCrvAssets);
+            _underlyingAmount = IFortressSwap(settings.swap).swap(YCRV, _underlyingAsset, _yCrvAssets);
+        }
 
         if (!(_underlyingAmount >= _minAmount)) revert InsufficientAmountOut();
 
         IERC20(_underlyingAsset).safeTransfer(_receiver, _underlyingAmount);
 
-        totalCRV -= _yCrvAssets; // TO CHECK IF 'totalCRV -= _yCrvAssets' OR 'totalCRV -= _underlyingAsset' IS CORRECT
+        totalCRV = (totalCRV < _yCrvAssets) ? 0 : totalCRV - _yCrvAssets;
 
         return _underlyingAmount;
     }
@@ -469,7 +475,10 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         _approve(YCRV, address(settings.swap), _rewards);
         _rewards = IFortressSwap(settings.swap).swap(YCRV, CRVUSD, _rewards);
 
-        if ((IERC20(STYCRV).balanceOf(address(this)) * _rate) / PRECISION - totalCRV <0) revert IncorrectHarvest();
+        totalAUM = IERC20(STYCRV).balanceOf(address(this));
+        
+        if ((IERC20(STYCRV).balanceOf(address(this)) * _rate) / PRECISION - totalCRV < 0) revert IncorrectHarvest();
+
         emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
         return _rewards;
