@@ -229,6 +229,11 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         return _depositCap == 0 ? type(uint256).max : _depositCap - totalSupply;
     }
     
+    /// @dev Get the list of addresses of the vault's underlying assets (the assets that comprise the LP token, which is the vault primary asset)
+    /// @return - The underlying assets
+    function getUnderlyingAssets() external view returns (address[] memory) {
+        return underlyingAssets;
+    }
     /********************************** Mutated Functions **********************************/
 
     /// @dev Harvest the pending rewards and convert to crvUSD

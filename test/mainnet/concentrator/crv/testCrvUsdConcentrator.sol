@@ -70,6 +70,10 @@ contract TestCrvUsdConcentrator is BaseTest {
         _testCorrectFlow(_YCRV, _amount);
     }
 
+    function testDepositCap(uint256 _amount) public {
+        _testDepositCap(_CRV, _amount);
+    }
+
     function _testCorrectFlow(address _asset, uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
         
@@ -270,6 +274,63 @@ contract TestCrvUsdConcentrator is BaseTest {
         assertApproxEqAbs(IERC20(_CRVUSD).balanceOf(address(concentrator)), 0, 1e10, "_testClaim: E008");
     }
 
+    function _testDepositCap(address _asset, uint256 _amount) internal {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        // ------------ Get _asset ------------
+        
+        _dealERC20(address(_asset), alice, _amount);
+        _dealERC20(address(_asset), bob, _amount);
+        _dealERC20(address(_asset), charlie, _amount);
+
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        uint256 _underlyingBob = ERC20(_asset).balanceOf(bob);
+        uint256 _underlyingCharlie = ERC20(_asset).balanceOf(charlie);
+
+        // ------------ Deposit ------------
+
+        _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+        
+        // Fast forward 1 month
+        skip(216000);
+
+        vm.prank(harvester);
+        concentrator.harvest(address(harvester), 0);
+
+        // ------------ Deposit Cap ------------
+
+        _testDepositCapInt(_asset);
+    }
+
+    function _testDepositCapInt(address _asset) internal {
+        (, uint256 _depositCap, address _platform, address _swap, address _owner,,,) = concentrator.settings();
+
+        assertEq(_depositCap, 0, "_testDepositCap: E1");
+        assertEq(_platform, address(platform), "_testDepositCap: E2");
+        assertEq(_swap, address(_fortressSwap), "_testDepositCap: E3");
+        assertEq(_owner, address(owner), "_testDepositCap: E4");
+        assertEq(concentrator.maxDeposit(address(alice)), type(uint256).max, "_testDepositCap: E5");
+        assertEq(concentrator.maxMint(address(alice)), type(uint256).max, "_testDepositCap: E6");
+
+        vm.startPrank(owner);
+        concentrator.updateSettings(address(platform), address(fortressSwap), address(owner), concentrator.totalSupply(), concentrator.getUnderlyingAssets());
+        vm.stopPrank();
+        
+        (, _depositCap,,,,,,) = concentrator.settings();
+        assertEq(_depositCap, concentrator.totalSupply(), "_testDepositCap: E7");
+        assertEq(concentrator.maxDeposit(address(alice)), 0, "_testDepositCap: E8");
+        assertEq(concentrator.maxMint(address(alice)), 0, "_testDepositCap: E9");
+
+        uint256 _amount = 1 ether;
+        _dealERC20(address(_asset), alice, _amount);
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(concentrator), _amount);
+        vm.expectRevert();
+        concentrator.depositUnderlying(_asset, address(alice), _amount);
+        vm.stopPrank();
+    }    
     function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
         deal({ token: address(_token), to: _recipient, give: _amount});
     }
