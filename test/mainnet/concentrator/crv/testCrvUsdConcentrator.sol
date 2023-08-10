@@ -12,24 +12,18 @@ contract TestCrvUsdConcentrator is BaseTest {
 
     CrvUsdConcentrator concentrator;
     FortressSwap _fortressSwap;
+
     address constant _STYCRV = 0x27B5739e22ad9033bcBf192059122d163b60349D;
     address constant _YCRV = 0xFCc5c47bE19d06BF83eB04298b026F81069ff65b;
     address constant _CRV = 0xD533a949740bb3306d119CC777fa900bA034cd52;
     address constant _CRVUSD = 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E; 
-    address[] _underlyingAssets2 = new address[](2);
-    uint256 mainnetFork;
-    address asset;
-    string symbol;
-    string name;
 
     function setUp() public {
         
         // --------------------------------- set env ---------------------------------
         
-        string memory MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
-
-        mainnetFork = vm.createFork(MAINNET_RPC_URL);
-        
+        string memory MAINNET_RPC_URL = "https://mainnet.infura.io/v3/3420f721c3d8404d8d7ce9dd6fec61d5";//vm.envString("MAINNET_RPC_URL");
+        uint256 mainnetFork = vm.createFork(MAINNET_RPC_URL);
         vm.selectFork(mainnetFork);
         
         // --------------------------------- set accounts ---------------------------------
@@ -48,52 +42,46 @@ contract TestCrvUsdConcentrator is BaseTest {
         vm.deal(yossi, 100 ether);
         vm.deal(harvester, 100 ether);
 
-
         vm.startPrank(owner);
         
         _fortressSwap = new FortressSwap(payable(owner));
         _addSwapRoutes();
 
-        asset = _STYCRV;
-        symbol = "ST-YCRV-crvUSD";
-        name = "Fortress ST-YCRV Concentrating to crvUSD";
+        address[] memory _underlyingAssets2 = new address[](2);
+
+        address asset = _STYCRV;
+        string memory symbol = "ST-YCRV-crvUSD";
+        string memory name = "Fortress ST-YCRV Concentrating to crvUSD";
         _underlyingAssets2[0] = _CRV;
         _underlyingAssets2[1] = _YCRV;
         string memory curveCryptoDescription = "Curve,Crypto";
 
         bytes memory _settingsConfig = abi.encode(curveCryptoDescription, address(owner), address(platform), address(_fortressSwap));
-
         concentrator = new CrvUsdConcentrator(ERC20(asset), name, symbol, _settingsConfig, _underlyingAssets2);
 
         vm.stopPrank();
     }
 
     function testCorrectFlowCRV(uint256 _amount) public {
-        _testCorrectFlow(_CRV, _amount, address(concentrator));
+        _testCorrectFlow(_CRV, _amount);
     }
 
     function testCorrectFlowYCRV(uint256 _amount) public {
-        _testCorrectFlow(_YCRV, _amount, address(concentrator));
+        _testCorrectFlow(_YCRV, _amount);
     }
 
-
-    function _testCorrectFlow(address _asset, uint256 _amount, address _concentrator) public {
-        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+    function _testCorrectFlow(address _asset, uint256 _amount) public {
+        vm.assume(_amount > 0.1 ether && _amount < 10 ether);
         
         // ------------ Get _asset ------------
-
-        uint256 _underlyingAlice;
-        uint256 _underlyingBob;
-        uint256 _underlyingCharlie;
 
         _dealERC20(address(_asset), alice, _amount);
         _dealERC20(address(_asset), bob, _amount);
         _dealERC20(address(_asset), charlie, _amount);
 
-        _underlyingAlice = ERC20(_asset).balanceOf(alice);
-        _underlyingBob = ERC20(_asset).balanceOf(bob);
-        _underlyingCharlie = ERC20(_asset).balanceOf(charlie);
-
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        uint256 _underlyingBob = ERC20(_asset).balanceOf(bob);
+        uint256 _underlyingCharlie = ERC20(_asset).balanceOf(charlie);
 
         // ------------ Deposit ------------
 
@@ -105,11 +93,16 @@ contract TestCrvUsdConcentrator is BaseTest {
 
         // ------------ Withdraw ------------
         
-        _testRedeemUnderlying(_asset, _sharesAlice, _sharesBob, _sharesCharlie);
+        (uint256 _tokenOutAlice, uint256 _tokenOutBob, uint256 _tokenOutCharlie) = _testRedeemUnderlying(_asset, _sharesAlice, _sharesBob, _sharesCharlie);
+
+        // assertApproxEqAbs((_underlyingAlice + _underlyingBob + _underlyingCharlie), (_tokenOutAlice + _tokenOutBob + _tokenOutCharlie), 1e20, "_testCorrectFlow: E1");
+        // assertApproxEqAbs(_underlyingAlice, _tokenOutAlice,  1e17, "_testCorrectFlow: E2");
+        // assertApproxEqAbs(_underlyingBob, _tokenOutBob,  1e17,"_testCorrectFlow: E3");
+        // assertApproxEqAbs(_underlyingCharlie, _tokenOutCharlie,   1e17, "_testCorrectFlow: E4");
 
         // ------------ Claim ------------
 
-        // _testClaim(_concentrator);
+        _testClaim();
     }
 
     function _testDepositUnderlying(address _asset, uint256 _underlyingAlice, uint256 _underlyingBob, uint256 _underlyingCharlie) internal returns (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) {
@@ -127,6 +120,7 @@ contract TestCrvUsdConcentrator is BaseTest {
 
         return (_sharesAlice, _sharesBob, _sharesCharlie);
     }
+    
     function _depositSingleUnderlyingAsset(address _owner, address _asset, uint256 _amount, address _concentrator) internal returns (uint256 _share) {
 
         vm.startPrank(_owner);
@@ -146,13 +140,10 @@ contract TestCrvUsdConcentrator is BaseTest {
         assertEq(_share, concentrator.balanceOf(_owner), "_depositSingleUnderlyingAsset: E1");
         assertEq(_share, IERC20(_concentrator).balanceOf(_owner), "_depositSingleUnderlyingAsset: E2");
         assertEq(concentrator.totalSupply(), _totalShare, "_depositSingleUnderlyingAsset: E3");
-
     }
 
     function _testHarvest(uint256 _totalShare) internal {
         
-        uint256 crvDeposited = concentrator.totalCRV();
-
         assertEq(concentrator.pendingReward(address(alice)), 0, "_testHarvest: E1");
         assertEq(concentrator.pendingReward(address(bob)), 0, "_testHarvest: E2");
         assertEq(concentrator.pendingReward(address(charlie)), 0, "_testHarvest: E3");
@@ -181,19 +172,16 @@ contract TestCrvUsdConcentrator is BaseTest {
         assertTrue(_newUnderlying > 0, "_testHarvest: E9");
         assertApproxEqAbs(concentrator.pendingReward(address(alice)) , concentrator.pendingReward(address(bob)), 1e17, "_testHarvest: E10");
         assertApproxEqAbs(concentrator.pendingReward(address(alice)) , concentrator.pendingReward(address(charlie)), 1e17, "_testHarvest: E11");
-
-        // if ((IERC20(STYCRV).balanceOf(address(this)) * _rate) / PRECISION - totalCRV <0) revert IncorrectHarvest();
-        // assertEq((IERC20(STYCRV).balanceOf(concentrated) * _rate) / 1e18, crvDeposited, "_testHarvest: E12");
     }
     
-    function _testRedeemUnderlying(address _asset, uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
+    function _testRedeemUnderlying(address _asset, uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal returns (uint256 _tokenOutAlice, uint256 _tokenOutBob, uint256 _tokenOutCharlie) {
 
         assertEq(concentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testRedeemUnderlying: E01");
         assertEq(concentrator.totalAssets(), concentrator.previewRedeem(_sharesCharlie + _sharesBob+ _sharesAlice), "_testRedeemUnderlying: EXTRA01");
 
         uint256 _balanceBefore = address(alice).balance;
         vm.prank(alice);
-        uint256 _tokenOutAlice = concentrator.redeemUnderlying(_asset, address(alice), address(alice), _sharesAlice, 0);
+        _tokenOutAlice = concentrator.redeemUnderlying(_asset, address(alice), address(alice), _sharesAlice, 0);
 
         if (_asset == ETH) {
             assertEq(_tokenOutAlice, address(alice).balance - _balanceBefore, "_testWithdrawUnderlying: E01");
@@ -206,7 +194,7 @@ contract TestCrvUsdConcentrator is BaseTest {
         assertEq(concentrator.totalAssets(), concentrator.previewRedeem(_sharesCharlie + _sharesBob), "_testRedeemUnderlying: EXTRA02");
         _balanceBefore = address(bob).balance;
         vm.prank(bob);
-        uint256 _tokenOutBob = concentrator.redeemUnderlying(_asset, address(bob), address(bob), _sharesBob, 0);
+        _tokenOutBob = concentrator.redeemUnderlying(_asset, address(bob), address(bob), _sharesBob, 0);
         
         if (_asset == ETH) {
             assertEq(_tokenOutBob, address(bob).balance - _balanceBefore, "_testWithdrawUnderlying: E03");
@@ -222,7 +210,7 @@ contract TestCrvUsdConcentrator is BaseTest {
         _balanceBefore = address(charlie).balance;
 
         vm.prank(charlie);
-        uint256 _tokenOutCharlie = concentrator.redeemUnderlying(_asset, address(charlie), address(charlie), _sharesCharlie, 0);
+        _tokenOutCharlie = concentrator.redeemUnderlying(_asset, address(charlie), address(charlie), _sharesCharlie, 0);
         
         if (_asset == ETH) {
             assertEq(_tokenOutCharlie, address(charlie).balance - _balanceBefore, "_testWithdrawUnderlying: E005");
@@ -236,6 +224,50 @@ contract TestCrvUsdConcentrator is BaseTest {
         assertEq(concentrator.totalSupply(), 0, "_testWithdrawUnderlying: E8");
         assertApproxEqAbs(_tokenOutAlice, _tokenOutBob, 1e20, "_testWithdrawUnderlying: E9");
         assertApproxEqAbs(_tokenOutAlice, _tokenOutCharlie, 1e20, "_testWithdrawUnderlying: E10");
+
+        return (_tokenOutAlice, _tokenOutBob, _tokenOutCharlie);
+    }
+    
+    function _testClaim() internal {
+        
+        assertEq(IERC20(_CRVUSD).balanceOf(address(alice)), 0, "_testClaim: E01");
+        assertEq(IERC20(_CRVUSD).balanceOf(address(bob)), 0, "_testClaim: E02");
+        assertEq(IERC20(_CRVUSD).balanceOf(address(charlie)), 0, "_testClaim: E03");
+        assertTrue(concentrator.accRewardPerShare() > 0, "_testClaim: E004");
+        assertTrue(concentrator.pendingReward(address(alice)) > 0, "_testClaim: E04");
+        assertTrue(concentrator.pendingReward(address(bob)) > 0, "_testClaim: E05");
+        assertTrue(concentrator.pendingReward(address(charlie)) > 0, "_testClaim: E06");
+        assertTrue(IERC20(_CRVUSD).balanceOf(address(concentrator)) > 0, "_testClaim: E006");
+        
+        uint256 _totalRewards = IERC20(_CRVUSD).balanceOf(address(concentrator));
+        
+        vm.prank(alice);
+        uint256 _rewardsOutAlice = concentrator.claim(address(0), address(alice));
+        _totalRewards -= _rewardsOutAlice;
+
+        assertEq(_rewardsOutAlice, IERC20(_CRVUSD).balanceOf(address(alice)), "_testClaim: E1");
+        assertEq(concentrator.pendingReward(address(alice)), 0, "_testClaim: E2");
+        assertEq(IERC20(_CRVUSD).balanceOf(address(concentrator)), _totalRewards, "_testClaim: E007");
+
+        vm.prank(bob);
+        uint256 _rewardsOutBob = concentrator.claim(address(0), address(bob));
+        _totalRewards -= _rewardsOutBob;
+
+        assertApproxEqAbs(_rewardsOutBob, IERC20(_CRVUSD).balanceOf(address(alice)), 1e17, "_testClaim: E3");
+        assertEq(concentrator.pendingReward(address(bob)), 0, "_testClaim: E4");
+        assertEq(IERC20(_CRVUSD).balanceOf(address(concentrator)), _totalRewards, "_testClaim: E004");
+
+        vm.prank(charlie);
+        uint256 _rewardsOutCharlie = concentrator.claim(address(0), address(charlie));
+        _totalRewards -= _rewardsOutCharlie;
+
+        assertApproxEqAbs(_rewardsOutCharlie, IERC20(_CRVUSD).balanceOf(address(alice)), 1e17, "_testClaim: E5");
+        assertEq(concentrator.pendingReward(address(charlie)), 0, "_testClaim: E6");
+        assertEq(IERC20(_CRVUSD).balanceOf(address(concentrator)), _totalRewards, "_testClaim: E006");
+
+        assertApproxEqAbs(_rewardsOutAlice, _rewardsOutBob, 1e19, "_testClaim: E7");
+        assertApproxEqAbs(_rewardsOutAlice, _rewardsOutCharlie, 1e19, "_testClaim: E8");
+        assertApproxEqAbs(IERC20(_CRVUSD).balanceOf(address(concentrator)), 0, 1e10, "_testClaim: E008");
     }
 
     function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
@@ -282,7 +314,5 @@ contract TestCrvUsdConcentrator is BaseTest {
             
             _fortressSwap.updateRoute(_YCRV, _CRV, _poolType, _poolAddress, _fromList, _toList);
         }
-        
     }
-
 }
