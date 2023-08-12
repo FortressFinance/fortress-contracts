@@ -68,7 +68,7 @@ contract TestCrvUsdConcentrator is BaseTest {
 
     function testCorrectFlowYCRV(uint256 _amount) public {
         _testCorrectFlow(_YCRV, _amount);
-    // }
+    }
 
     function testDepositCap(uint256 _amount) public {
         _testDepositCap(_CRV, _amount);
