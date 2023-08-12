@@ -77,8 +77,6 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         uint256 rewards;
         /// @notice The reward per share already paid for the user, with 1e18 precision
         uint256 rewardPerSharePaid;
-        /// @notice The balance of CRV
-        uint256 crvDepositedBalance;
     }
 
     /// @notice The fees settings
@@ -319,6 +317,28 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         return _shares;
     }
 
+    /// @dev Burns exact amount of shares from owner and sends assets to _receiver. If the _owner is whitelisted, no withdrawal fee is applied
+    /// @param _shares - The amount of shares to burn
+    /// @param _receiver - The address of the receiver of assets
+    /// @param _owner - The owner of shares
+    /// @return _assets - The amount of assets sent to the _receiver
+    function redeem(uint256 _shares, address _receiver, address _owner) public override nonReentrant returns (uint256 _assets) {
+        if (_shares > maxRedeem(_owner)) revert InsufficientBalance();
+
+        _updateRewards(_owner);
+
+        // If the _owner is whitelisted, we can skip the preview and just convert the shares to assets
+        _assets = feelessRedeemerWhitelist[_owner] ? convertToAssets(_shares) : previewRedeem(_shares);
+
+        _withdraw(msg.sender, _receiver, _owner, _assets, _shares);
+
+        IERC20(STYCRV).safeTransfer(_receiver, _assets);
+
+        totalCRV -= (_assets * ISTYCRV(STYCRV).pricePerShare()) / PRECISION;
+        
+        return _assets;
+    }
+
     /// @notice that this function is vulnerable to a sandwich/frontrunning attacke if called without asserting the returned value
     /// @notice If the _owner is whitelisted, no withdrawal fee is applied
     /// @dev Burns exact shares from owner and sends assets of unwrapped underlying tokens to _receiver
@@ -354,6 +374,25 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         totalCRV = (totalCRV < _yCrvAssets) ? 0 : totalCRV - _yCrvAssets;
 
         return _underlyingAmount;
+    }
+    
+    /// @dev Mints exact vault shares to _receiver by depositing assets
+    /// @param _shares - The amount of shares to mint
+    /// @param _receiver - The address of the receiver of shares
+    /// @return _assets - The amount of assets deposited
+    function mint(uint256 _shares, address _receiver) external override nonReentrant returns (uint256 _assets) {
+        if (_shares >= maxMint(msg.sender)) revert InsufficientDepositCap();
+
+        _updateRewards(_receiver);
+
+        _assets = previewMint(_shares);
+        _deposit(msg.sender, _receiver, _assets, _shares);
+
+        IERC20(STYCRV).safeTransferFrom(msg.sender, address(this), _assets);
+        
+        totalCRV += (_assets * ISTYCRV(STYCRV).pricePerShare()) / PRECISION;
+
+        return _assets;
     }
     
     /// @dev Claims all rewards for _owner and sends them to _receiver

@@ -68,15 +68,23 @@ contract TestCrvUsdConcentrator is BaseTest {
 
     function testCorrectFlowYCRV(uint256 _amount) public {
         _testCorrectFlow(_YCRV, _amount);
-    }
+    // }
 
     function testDepositCap(uint256 _amount) public {
         _testDepositCap(_CRV, _amount);
     }
 
+    function testMint(uint256 _amount) public {
+        _testMint(_YCRV, _amount);
+    }
+
+    // function testWithdraw(uint256 _amount) public {
+    //     _testWithdraw(_YCRV, _amount);
+    // }
+
     function _testCorrectFlow(address _asset, uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
-        
+  
         // ------------ Get _asset ------------
 
         _dealERC20(address(_asset), alice, _amount);
@@ -330,7 +338,216 @@ contract TestCrvUsdConcentrator is BaseTest {
         vm.expectRevert();
         concentrator.depositUnderlying(_asset, address(alice), _amount);
         vm.stopPrank();
-    }    
+    } 
+
+    function _testMint(address _asset, uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        // ------------ Get _asset ------------
+        
+        _dealERC20(address(_asset), alice, _amount);
+        _dealERC20(address(_asset), bob, _amount);
+        _dealERC20(address(_asset), charlie, _amount);
+
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        uint256 _underlyingBob = ERC20(_asset).balanceOf(bob);
+        uint256 _underlyingCharlie = ERC20(_asset).balanceOf(charlie);
+
+        // ------------ Deposit ------------
+
+        (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Redeem ------------
+
+        (_underlyingAlice, _underlyingBob, _underlyingCharlie) = _testRedeemInt(_sharesAlice, _sharesBob, _sharesCharlie); 
+
+        // ------------ Mint ------------
+
+        (_sharesAlice, _sharesBob, _sharesCharlie) = _testMintInt(_underlyingAlice, _underlyingBob, _underlyingCharlie);
+        
+        // ------------ Harvest rewards ------------
+
+         _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
+
+        // // ------------ Withdraw ------------
+        
+        _testRedeemUnderlying(_asset, _sharesAlice, _sharesBob, _sharesCharlie);
+
+        // // ------------ Claim ------------
+
+        _testClaim();
+    }
+
+    function _testWithdraw(address _asset, uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        // ------------ Get _asset ------------
+        
+        _dealERC20(address(_asset), alice, _amount);
+        _dealERC20(address(_asset), bob, _amount);
+        _dealERC20(address(_asset), charlie, _amount);
+
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        uint256 _underlyingBob = ERC20(_asset).balanceOf(bob);
+        uint256 _underlyingCharlie = ERC20(_asset).balanceOf(charlie);
+
+        // ------------ Deposit ------------
+
+        (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest ------------
+
+        _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
+
+        // ------------ Withdraw ------------
+
+        _testWithdrawInt(_sharesAlice, _sharesBob, _sharesCharlie);
+
+        // ------------ Claim ------------
+
+        _testClaim();
+    }
+   
+    function _testRedeemInt(uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal returns (uint256 _underlyingAlice, uint256 _underlyingBob, uint256 _underlyingCharlie) {
+        
+        uint256 _totalSupplyBefore = concentrator.totalSupply();
+        uint256 _totalAssetsBefore = concentrator.totalAssets();
+
+        uint256 _assetsAlice = concentrator.previewRedeem(_sharesAlice);
+        vm.startPrank(alice);
+        _underlyingAlice = concentrator.redeem(_sharesAlice, address(alice), address(alice));
+        _totalSupplyBefore -= _sharesAlice;
+        _totalAssetsBefore -= _assetsAlice;
+        vm.stopPrank();
+        
+        assertEq(_underlyingAlice, IERC20(address(concentrator.asset())).balanceOf(address(alice)), "_testRedeemInt: E03");
+        assertEq(_underlyingAlice, _assetsAlice, "_testRedeemInt: E04");
+        assertEq(concentrator.totalAssets(), _totalAssetsBefore, "_testRedeemInt: E05");
+        assertEq(concentrator.totalSupply(), _totalSupplyBefore, "_testRedeemInt: E06");
+
+        uint256 _assetsBob = concentrator.previewRedeem(_sharesBob);
+        vm.startPrank(bob);
+        _underlyingBob = concentrator.redeem(_sharesBob, address(bob), address(bob));
+        _totalSupplyBefore -= _sharesBob;
+        _totalAssetsBefore -= _assetsBob;
+        vm.stopPrank();
+        
+        assertEq(IERC20(address(concentrator)).balanceOf(address(bob)), 0, "_testRedeemInt: E6");
+        assertEq(_underlyingBob, _assetsBob, "_testRedeemInt: E07");
+        assertEq(concentrator.totalAssets(), _totalAssetsBefore, "_testRedeemInt: E08");
+        assertEq(concentrator.totalSupply(), _totalSupplyBefore, "_testRedeemInt: E09");
+        assertEq(_underlyingBob, IERC20(address(concentrator.asset())).balanceOf(address(bob)), "_testRedeemInt: E03");
+
+
+        uint256 _assetsCharlie = concentrator.previewRedeem(_sharesCharlie);
+        vm.startPrank(charlie);
+        _underlyingCharlie = concentrator.redeem(_sharesCharlie, address(charlie), address(charlie));
+        _totalSupplyBefore -= _sharesCharlie;
+        _totalAssetsBefore -= _assetsCharlie;
+        vm.stopPrank();
+
+        assertEq(IERC20(address(concentrator)).balanceOf(address(charlie)), 0, "_testRedeemInt: E9");
+        assertEq(_assetsCharlie, _underlyingCharlie, "_testRedeemInt: E010");
+        assertEq(concentrator.totalAssets(), _totalAssetsBefore, "_testRedeemInt: E011");
+        assertEq(concentrator.totalSupply(), _totalSupplyBefore, "_testRedeemInt: E012");
+        assertEq(_underlyingCharlie, IERC20(address(concentrator.asset())).balanceOf(address(charlie)), "_testRedeemInt: E03");
+
+        assertEq(concentrator.totalAssets(), 0, "_testRedeemInt: E013");
+        assertEq(concentrator.totalSupply(), 0, "_testRedeemInt: E014");
+    }
+   
+    function _testMintInt(uint256 _assetsAlice, uint256 _assetsBob, uint256 _assetsCharlie) internal returns (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) {
+        
+        uint256 _lowestAsset = _assetsAlice < _assetsBob ? _assetsAlice : _assetsBob;
+        _lowestAsset = _lowestAsset < _assetsCharlie ? _lowestAsset : _assetsCharlie;
+
+        uint256 _dirtyTotalSupplyBefore = concentrator.totalSupply();
+        uint256 _dirtyTotalAssetsBefore = concentrator.totalAssets();
+
+        _sharesAlice = concentrator.previewDeposit(_lowestAsset);
+        assertEq(_sharesAlice, _lowestAsset, "_testMint: E01");
+        vm.startPrank(alice);
+        IERC20(address(concentrator.asset())).safeApprove(address(concentrator), _lowestAsset);
+        uint256 _assetsAliceSent = concentrator.mint(_sharesAlice, address(alice));
+        vm.stopPrank();
+        
+        assertEq(IERC20(address(concentrator)).balanceOf(address(alice)), _sharesAlice, "_testMintLP: E3");
+        assertEq(_assetsAliceSent, _lowestAsset, "_testMintLP: E04");
+
+        _sharesBob = concentrator.previewDeposit(_lowestAsset);
+        assertEq(_sharesBob, _lowestAsset, "_testMint: E01");
+        vm.startPrank(bob);
+        IERC20(address(concentrator.asset())).safeApprove(address(concentrator), _lowestAsset);
+        uint256 _assetsBobSent = concentrator.mint(_sharesBob, address(bob));
+        vm.stopPrank();
+        
+        assertEq(IERC20(address(concentrator)).balanceOf(address(bob)), _sharesBob, "_testMintLP: E6");
+        assertEq(_assetsBobSent, _lowestAsset, "_testMintLP: E07");
+
+        _sharesCharlie = concentrator.previewDeposit(_lowestAsset);
+        assertEq(_sharesCharlie, _lowestAsset, "_testMint: E01");
+        vm.startPrank(charlie);
+        IERC20(address(concentrator.asset())).safeApprove(address(concentrator), _lowestAsset);
+        uint256 _assetsCharlieSent = concentrator.mint(_sharesCharlie, address(charlie));
+        vm.stopPrank();
+
+        assertEq(IERC20(address(concentrator)).balanceOf(address(charlie)), _sharesCharlie, "_testMintLP: E9");
+        assertEq(_assetsCharlieSent, _lowestAsset, "_testMintLP: E010");
+
+        uint256 _dirtyTotalSupply = (_sharesCharlie + _sharesBob + _sharesAlice) - _dirtyTotalSupplyBefore;
+        uint256 _dirtyTotalAssets = (_assetsCharlieSent + _assetsBobSent + _assetsAliceSent) - _dirtyTotalAssetsBefore;
+
+        assertEq(concentrator.totalAssets(), _dirtyTotalAssets, "_testMintLP: E11");
+        assertEq(concentrator.totalSupply(), _dirtyTotalSupply, "_testMintLP: E12");
+        assertEq(_sharesAlice, _sharesBob, "_testMintLP: E13");
+        assertEq(_assetsAliceSent, _assetsBobSent, "_testMintLP: E14");
+        assertEq(_assetsBobSent, _assetsCharlieSent, "_testMintLP: E15");
+    }
+   
+    function _testWithdrawInt(uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) internal {
+        
+        uint256 _lowestShare = _sharesAlice < _sharesBob ? _sharesAlice : _sharesBob;
+        _lowestShare = _lowestShare < _sharesCharlie ? _lowestShare : _sharesCharlie;
+
+        uint256 _dirtyTotalSupply = concentrator.totalSupply() - (_lowestShare * 3);
+        uint256 _dirtyTotalAssetsBefore = concentrator.totalAssets();
+        
+        vm.startPrank(alice);
+        uint256 _assetsAlice = concentrator.previewRedeem(_lowestShare);
+        uint256 _sharesBurnAlice = concentrator.withdraw(_assetsAlice, address(alice), address(alice));
+        vm.stopPrank();
+
+        assertEq(IERC20(address(concentrator.asset())).balanceOf(address(alice)), _assetsAlice, "_testWithdrawLP: E1");
+        assertApproxEqAbs(_sharesBurnAlice, _lowestShare, 1e16, "_testWithdrawLP: E2");
+        assertApproxEqAbs(concentrator.balanceOf(address(alice)), _sharesAlice - _lowestShare, 1e16, "_testWithdrawLP: E3");
+        
+        vm.startPrank(bob);
+        uint256 _assetsBob = concentrator.previewRedeem(_lowestShare);
+        uint256 _sharesBurnBob = concentrator.withdraw(_assetsBob, address(bob), address(bob));
+        vm.stopPrank();
+        
+        assertEq(IERC20(address(concentrator.asset())).balanceOf(address(bob)), _assetsBob, "_testWithdrawLP: E4");
+        assertApproxEqAbs(_sharesBurnBob, _lowestShare, 1e16, "_testWithdrawLP: E5");
+        assertApproxEqAbs(concentrator.balanceOf(address(bob)), _sharesBob - _lowestShare, 1e16, "_testWithdrawLP: E6");
+        
+        vm.startPrank(charlie);
+        uint256 _assetsCharlie = concentrator.previewRedeem(_lowestShare);
+        uint256 _sharesBurnCharlie = concentrator.withdraw(_assetsCharlie, address(charlie), address(charlie));
+        vm.stopPrank();
+        
+        assertEq(IERC20(address(concentrator.asset())).balanceOf(address(charlie)), _assetsCharlie, "_testWithdrawLP: E7");
+        assertApproxEqAbs(_sharesBurnCharlie, _lowestShare, 1e16, "_testWithdrawLP: E8");
+        assertApproxEqAbs(concentrator.balanceOf(address(charlie)), _sharesCharlie - _lowestShare, 1e16, "_testWithdrawLP: E9");
+        
+        uint256 _dirtyTotalAssets = _dirtyTotalAssetsBefore - (_assetsAlice + _assetsBob + _assetsCharlie);
+
+        assertApproxEqAbs(concentrator.totalAssets(), _dirtyTotalAssets, 1e16, "_testWithdrawLP: E10");
+        assertApproxEqAbs(concentrator.totalSupply(), _dirtyTotalSupply, 1e16, "_testWithdrawLP: E11");
+        assertApproxEqAbs(_sharesBurnAlice, _sharesBurnBob, 1e16, "_testWithdrawLP: E12");
+        assertApproxEqAbs(_sharesBurnAlice, _sharesBurnCharlie, 1e16, "_testWithdrawLP: E13");
+    }
+
+
     function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
         deal({ token: address(_token), to: _recipient, give: _amount});
     }
