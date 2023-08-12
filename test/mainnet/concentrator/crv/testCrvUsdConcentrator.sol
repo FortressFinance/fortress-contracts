@@ -78,9 +78,9 @@ contract TestCrvUsdConcentrator is BaseTest {
         _testMint(_YCRV, _amount);
     }
 
-    // function testWithdraw(uint256 _amount) public {
-    //     _testWithdraw(_YCRV, _amount);
-    // }
+    function testWithdraw(uint256 _amount) public {
+        _testWithdraw(_YCRV, _amount);
+    }
 
     function _testCorrectFlow(address _asset, uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
