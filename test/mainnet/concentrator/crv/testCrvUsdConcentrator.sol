@@ -82,9 +82,24 @@ contract TestCrvUsdConcentrator is BaseTest {
         _testWithdraw(_YCRV, _amount);
     }
 
+    function testTransfer(uint256 _amount) public {
+        _testCorrectFlowTransfer(_YCRV, _amount);
+    }
+
+    function testDepositNoAsset(uint256 _amount) public {
+        _testDepositNoAsset(_amount, _CRV);
+    }
+
+    function testDepositWrongAsset(uint256 _amount) public {
+        _testDepositWrongAsset(_amount, _CRVUSD);
+    }
+
+    function testWithdrawNoShare(uint256 _amount) public {
+        _testWithdrawNoShare(_amount, _CRV);
+    }    
     function _testCorrectFlow(address _asset, uint256 _amount) public {
         vm.assume(_amount > 0.1 ether && _amount < 10 ether);
-  
+    
         // ------------ Get _asset ------------
 
         _dealERC20(address(_asset), alice, _amount);
@@ -107,10 +122,40 @@ contract TestCrvUsdConcentrator is BaseTest {
         
         (uint256 _tokenOutAlice, uint256 _tokenOutBob, uint256 _tokenOutCharlie) = _testRedeemUnderlying(_asset, _sharesAlice, _sharesBob, _sharesCharlie);
 
-        // assertApproxEqAbs((_underlyingAlice + _underlyingBob + _underlyingCharlie), (_tokenOutAlice + _tokenOutBob + _tokenOutCharlie), 1e20, "_testCorrectFlow: E1");
-        // assertApproxEqAbs(_underlyingAlice, _tokenOutAlice,  1e17, "_testCorrectFlow: E2");
-        // assertApproxEqAbs(_underlyingBob, _tokenOutBob,  1e17,"_testCorrectFlow: E3");
-        // assertApproxEqAbs(_underlyingCharlie, _tokenOutCharlie,   1e17, "_testCorrectFlow: E4");
+        assertApproxEqAbs((_underlyingAlice + _underlyingBob + _underlyingCharlie), (_tokenOutAlice + _tokenOutBob + _tokenOutCharlie), 1e20, "_testCorrectFlow: E1");
+        assertApproxEqAbs(_underlyingAlice, _tokenOutAlice,  1e17, "_testCorrectFlow: E2");
+        assertApproxEqAbs(_underlyingBob, _tokenOutBob,  1e17,"_testCorrectFlow: E3");
+        assertApproxEqAbs(_underlyingCharlie, _tokenOutCharlie,   1e17, "_testCorrectFlow: E4");
+
+        // ------------ Claim ------------
+
+        _testClaim();
+    }
+
+    function _testCorrectFlowTransfer(address _asset, uint256 _amount) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        // ------------ Get _asset ------------
+        
+        _dealERC20(address(_asset), alice, _amount);
+        _dealERC20(address(_asset), bob, _amount);
+        _dealERC20(address(_asset), charlie, _amount);
+
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        uint256 _underlyingBob = ERC20(_asset).balanceOf(bob);
+        uint256 _underlyingCharlie = ERC20(_asset).balanceOf(charlie);
+
+        // ------------ Deposit ------------
+
+        (uint256 _sharesAlice, uint256 _sharesBob, uint256 _sharesCharlie) = _testDepositUnderlying(_asset, _underlyingAlice, _underlyingBob, _underlyingCharlie);
+
+        // ------------ Harvest rewards ------------
+
+        _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
+
+        // ------------ Transfer ------------
+        
+        _testTransfer();
 
         // ------------ Claim ------------
 
@@ -340,6 +385,28 @@ contract TestCrvUsdConcentrator is BaseTest {
         vm.stopPrank();
     } 
 
+    function _testTransfer() internal {
+
+        uint256 _sharesAlice = concentrator.balanceOf(address(alice));
+        uint256 _sharesBob = concentrator.balanceOf(address(bob));
+        uint256 _sharesCharlie = concentrator.balanceOf(address(charlie));
+
+        assertEq(concentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testTransfer: E01");
+
+        vm.prank(alice);
+        concentrator.transfer(address(yossi), _sharesAlice);
+        vm.prank(bob);
+        concentrator.transfer(address(yossi), _sharesBob);
+        vm.prank(charlie);
+        concentrator.transfer(address(yossi), _sharesCharlie);
+
+        assertEq(concentrator.balanceOf(address(alice)), 0, "_testTransfer: E1");
+        assertEq(concentrator.balanceOf(address(bob)), 0, "_testTransfer: E2");
+        assertEq(concentrator.balanceOf(address(charlie)), 0, "_testTransfer: E3");
+        assertEq(concentrator.totalSupply(), (_sharesAlice + _sharesBob + _sharesCharlie), "_testTransfer: E04");
+        assertEq(concentrator.balanceOf(address(yossi)), (_sharesAlice + _sharesBob + _sharesCharlie), "_testTransfer: E05");
+    }
+
     function _testMint(address _asset, uint256 _amount) public {
         vm.assume(_amount > 0.01 ether && _amount < 5 ether);
         
@@ -550,6 +617,66 @@ contract TestCrvUsdConcentrator is BaseTest {
 
     function _dealERC20(address _token, address _recipient , uint256 _amount) internal {
         deal({ token: address(_token), to: _recipient, give: _amount});
+    }
+
+    function _testDepositNoAsset(uint256 _amount, address _asset) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+
+        vm.startPrank(alice);
+        
+        IERC20(_asset).safeApprove(address(concentrator), _amount);
+        vm.expectRevert();
+        concentrator.deposit(_amount, address(alice));
+        vm.expectRevert();
+        concentrator.mint(_amount, address(alice));
+        vm.expectRevert();
+        concentrator.depositUnderlying(_asset, address(alice), _amount);
+
+        vm.stopPrank();
+    }
+
+    function _testDepositWrongAsset(uint256 _amount, address _asset) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        _dealERC20(address(_asset), alice, _amount);
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(concentrator), _underlyingAlice);
+        vm.expectRevert();
+        concentrator.depositUnderlying(_asset, address(alice), _underlyingAlice);
+
+        vm.stopPrank();
+    }
+
+    function _testWithdrawNoShare(uint256 _amount, address _asset) public {
+        vm.assume(_amount > 0.01 ether && _amount < 5 ether);
+        
+        _dealERC20(address(_asset), alice, _amount);
+        uint256 _underlyingAlice = ERC20(_asset).balanceOf(alice);
+        
+        vm.startPrank(alice);
+        IERC20(_asset).safeApprove(address(concentrator), _underlyingAlice);
+        uint256 _share = concentrator.depositUnderlying(_asset, address(alice), _underlyingAlice);
+        vm.stopPrank();
+        assertEq(_share, IERC20(address(concentrator)).balanceOf(alice), "testWithdrawNotOwner: E1");
+
+        vm.startPrank(bob);
+        
+        vm.expectRevert();
+        concentrator.withdraw(_share, bob, alice);
+        vm.expectRevert();
+        concentrator.withdraw(_share, bob, bob);
+        vm.expectRevert();
+        concentrator.redeem(_share, bob, alice);
+        vm.expectRevert();
+        concentrator.redeem(_share, bob, bob);
+        vm.expectRevert();
+        concentrator.redeemUnderlying(_asset, bob, alice, _share, 0);
+        vm.expectRevert();
+        concentrator.redeemUnderlying(_asset, bob, bob, _share, 0);
+        
+        vm.stopPrank();
     }
 
     function _addSwapRoutes() internal {

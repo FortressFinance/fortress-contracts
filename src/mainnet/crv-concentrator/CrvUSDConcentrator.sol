@@ -431,6 +431,40 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
 
         return (_underlyingAmount, _rewards);
     }
+    
+    /// @dev Adds updating of rewards to the original function
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        _updateRewards(msg.sender);
+
+        balanceOf[msg.sender] -= amount;
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked { balanceOf[to] += amount; }
+
+        emit Transfer(msg.sender, to, amount);
+
+        return true;
+    }
+
+    /// @dev Adds updating of rewards to the original function
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        uint256 allowed = allowance[from][msg.sender]; // Saves gas for limited approvals.
+
+        if (allowed != type(uint256).max) allowance[from][msg.sender] = allowed - amount;
+
+        _updateRewards(from);
+
+        balanceOf[from] -= amount;
+
+        // Cannot overflow because the sum of all user
+        // balances can't exceed the max uint256 value.
+        unchecked { balanceOf[to] += amount; }
+
+        emit Transfer(from, to, amount);
+
+        return true;
+    }
 
     // /// @dev Redeem shares and claim rewards in a single transaction
     // /// @param _shares - The amount of shares to redeem
