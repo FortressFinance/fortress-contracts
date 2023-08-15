@@ -529,8 +529,7 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
 
     function _harvest(address _receiver, uint256 _minBounty) internal returns (uint256 _rewards) {
 
-        uint256 _rate = ISTYCRV(STYCRV).pricePerShare();
-        uint256 _adjustedAUM = (totalCRV * PRECISION) / _rate;
+        uint256 _adjustedAUM = (totalCRV * PRECISION) / ISTYCRV(STYCRV).pricePerShare();
         if (!(totalAUM - _adjustedAUM > 0)) revert NoPendingRewards();
         _rewards = ISTYCRV(STYCRV).withdraw(totalAUM - _adjustedAUM);
 
