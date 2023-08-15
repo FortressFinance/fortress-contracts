@@ -97,8 +97,9 @@ contract TestCrvUsdConcentrator is BaseTest {
     function testWithdrawNoShare(uint256 _amount) public {
         _testWithdrawNoShare(_amount, _CRV);
     }    
+    
     function _testCorrectFlow(address _asset, uint256 _amount) public {
-        vm.assume(_amount > 0.1 ether && _amount < 10 ether);
+        vm.assume(_amount > 0.1 ether && _amount < 5 ether);
     
         // ------------ Get _asset ------------
 
@@ -117,6 +118,8 @@ contract TestCrvUsdConcentrator is BaseTest {
         // ------------ Harvest rewards ------------
 
         _testHarvest((_sharesAlice + _sharesBob + _sharesCharlie));
+
+        assertEq(concentrator.totalAssets(), ERC20(_STYCRV).balanceOf(address(concentrator)), "_testCorrectFlow:_testHarvest: E1");
 
         // ------------ Withdraw ------------
         

@@ -530,10 +530,9 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
     function _harvest(address _receiver, uint256 _minBounty) internal returns (uint256 _rewards) {
 
         uint256 _rate = ISTYCRV(STYCRV).pricePerShare();
-        uint256 _crvBalanceSnapshot = (IERC20(STYCRV).balanceOf(address(this)) * _rate)/PRECISION;
-        uint256 _accruedCRV = _crvBalanceSnapshot - totalCRV;
-        if (_accruedCRV <=0) revert NoPendingRewards();
-        _rewards = ISTYCRV(STYCRV).withdraw((_accruedCRV * PRECISION)/_rate); 
+        uint256 _adjustedAUM = (totalCRV * PRECISION) / _rate;
+        if (!(totalAUM - _adjustedAUM > 0)) revert NoPendingRewards();
+        _rewards = ISTYCRV(STYCRV).withdraw(totalAUM - _adjustedAUM);
 
         Fees memory _fees = fees;
         uint256 _platformFee = _fees.platformFeePercentage;
@@ -553,10 +552,8 @@ contract CrvUsdConcentrator is ReentrancyGuard, ERC4626  {
         _approve(YCRV, address(settings.swap), _rewards);
         _rewards = IFortressSwap(settings.swap).swap(YCRV, CRVUSD, _rewards);
 
-        totalAUM = IERC20(STYCRV).balanceOf(address(this));
+        totalAUM = _adjustedAUM;
         
-        if ((IERC20(STYCRV).balanceOf(address(this)) * _rate) / PRECISION - totalCRV < 0) revert IncorrectHarvest();
-
         emit Harvest(msg.sender, _receiver, _rewards, _platformFee);
 
         return _rewards;
